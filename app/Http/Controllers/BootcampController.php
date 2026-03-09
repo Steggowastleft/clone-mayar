@@ -1,0 +1,223 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Inertia\Inertia;
+use App\Models\Bootcamp;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class BootcampController extends Controller
+{
+    public function index()
+    {
+        $bootcamps = Bootcamp::orderBy('created_at', 'desc')->get();
+
+        return Inertia::render('bootcamps/index', [
+            'bootcamps' => $bootcamps,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'judul'                    => 'required|string|max:255',
+            'kategori'                 => 'nullable|string|max:255',
+            'tipePembayaran'           => 'nullable|string|max:100',
+            'harga'                    => 'nullable|numeric|min:0',
+            'hargaCoret'               => 'nullable|numeric|min:0',
+            'deskripsi'                => 'nullable|string',
+            'instruksi'                => 'nullable|string',
+            'syaratKetentuan'          => 'nullable|string',
+            'maxPeserta'               => 'nullable|integer|min:0',
+            'batasNilaiQuiz'           => 'nullable|numeric|min:0|max:100',
+            'redirectUrl'              => 'nullable|url|max:500',
+            'bisaAffiliate'            => 'nullable',
+            'tanggalMulaiJual'         => 'nullable|date',
+            'tanggalTutupDaftar'       => 'nullable|date',
+            'tanggalMulaiPembelajaran' => 'nullable|date',
+            'tanggalBatasPembelajaran' => 'nullable|date',
+            'cover'                    => 'nullable|image|max:5120',
+        ]);
+
+        $coverPath = null;
+        if ($request->hasFile('cover')) {
+            $coverPath = $request->file('cover')->store('bootcamp-covers', 'public');
+        }
+
+        $bootcamp = Bootcamp::create([
+            'name'                       => $request->judul,
+            'batch'                      => 'Batch 1',
+            'status'                     => 'unpublished',
+            'kategori'                   => $request->kategori,
+            'tipe_pembayaran'            => $request->tipePembayaran,
+            'harga'                      => $request->harga ?? 0,
+            'harga_coret'                => $request->hargaCoret,
+            'deskripsi'                  => $request->deskripsi,
+            'instruksi'                  => $request->instruksi,
+            'syarat_ketentuan'           => $request->syaratKetentuan,
+            'max_peserta'                => $request->maxPeserta,
+            'batas_nilai_quiz'           => $request->batasNilaiQuiz,
+            'redirect_url'               => $request->redirectUrl,
+            'bisa_affiliate'             => $request->bisaAffiliate ? true : false,
+            'tanggal_mulai_jual'         => $request->tanggalMulaiJual,
+            'tanggal_tutup_daftar'       => $request->tanggalTutupDaftar,
+            'tanggal_mulai_pembelajaran' => $request->tanggalMulaiPembelajaran,
+            'tanggal_batas_pembelajaran' => $request->tanggalBatasPembelajaran,
+            'cover'                      => $coverPath,
+            'participants'               => 0,
+            'date'                       => now()->format('Y-m-d'),
+        ]);
+
+        return redirect()->route('bootcamps.show', $bootcamp->id);
+    }
+
+    public function show(Bootcamp $bootcamp)
+    {
+        // Load semua relasi sekaligus
+        $bootcamp->load(['sesis', 'babs.materis', 'assignments.files']);
+
+        return Inertia::render('bootcamps/detail', [
+            'bootcamp' => $bootcamp->toArray(),
+
+            // Sesi list
+            'sesiList' => $bootcamp->sesis->map(fn($s) => [
+                'id'              => $s->id,
+                'judul'           => $s->judul,
+                'deskripsi'       => $s->deskripsi,
+                'is_online'       => (bool) $s->is_online,
+                'link_sesi'       => $s->link_sesi,
+                'lokasi'          => $s->lokasi,
+                'lat'             => $s->lat,
+                'lng'             => $s->lng,
+                'nama_pemateri'   => $s->nama_pemateri,
+                'profil_pemateri' => $s->profil_pemateri,
+                'waktu_mulai'     => $s->waktu_mulai?->format('d M Y, H:i'),
+                'waktu_selesai'   => $s->waktu_selesai?->format('H:i'),
+            ])->values()->toArray(),
+
+            // Bab list
+            'babList' => $bootcamp->babs->map(fn($b) => [
+                'id'        => $b->id,
+                'judul'     => $b->judul,
+                'deskripsi' => $b->deskripsi,
+                'urutan'    => $b->urutan,
+                'materis'   => $b->materis->map(fn($m) => [
+                    'id'     => $m->id,
+                    'judul'  => $m->judul,
+                    'tipe'   => $m->tipe,
+                    'konten' => $m->konten,
+                    'durasi' => $m->durasi,
+                    'urutan' => $m->urutan,
+                ])->values()->toArray(),
+            ])->values()->toArray(),
+
+            // Assignment list
+            'assignmentList' => $bootcamp->assignments->map(fn($a) => [
+                'id'            => $a->id,
+                'judul'         => $a->judul,
+                'tugas'         => $a->tugas,
+                'is_wajib'      => (bool) $a->is_wajib,
+                'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
+                'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
+                'files'         => $a->files->map(fn($f) => [
+                    'id'   => $f->id,
+                    'name' => $f->name,
+                    'url'  => $f->url,
+                    'size' => $f->size,
+                ])->values()->toArray(),
+            ])->values()->toArray(),
+        ]);
+    }
+
+    public function update(Request $request, Bootcamp $bootcamp)
+    {
+        $request->validate([
+            'judul'                    => 'required|string|max:255',
+            'kategori'                 => 'nullable|string|max:255',
+            'tipePembayaran'           => 'nullable|string|max:100',
+            'harga'                    => 'nullable|numeric|min:0',
+            'hargaCoret'               => 'nullable|numeric|min:0',
+            'deskripsi'                => 'nullable|string',
+            'instruksi'                => 'nullable|string',
+            'syaratKetentuan'          => 'nullable|string',
+            'maxPeserta'               => 'nullable|integer|min:0',
+            'batasNilaiQuiz'           => 'nullable|numeric|min:0|max:100',
+            'redirectUrl'              => 'nullable|url|max:500',
+            'bisaAffiliate'            => 'nullable',
+            'tanggalMulaiJual'         => 'nullable|date',
+            'tanggalTutupDaftar'       => 'nullable|date',
+            'tanggalMulaiPembelajaran' => 'nullable|date',
+            'tanggalBatasPembelajaran' => 'nullable|date',
+            'cover'                    => 'nullable|image|max:5120',
+        ]);
+
+        $data = [
+            'name'                       => $request->judul,
+            'kategori'                   => $request->kategori,
+            'tipe_pembayaran'            => $request->tipePembayaran,
+            'harga'                      => $request->harga ?? 0,
+            'harga_coret'                => $request->hargaCoret,
+            'deskripsi'                  => $request->deskripsi,
+            'instruksi'                  => $request->instruksi,
+            'syarat_ketentuan'           => $request->syaratKetentuan,
+            'max_peserta'                => $request->maxPeserta,
+            'batas_nilai_quiz'           => $request->batasNilaiQuiz,
+            'redirect_url'               => $request->redirectUrl,
+            'bisa_affiliate'             => $request->bisaAffiliate ? true : false,
+            'tanggal_mulai_jual'         => $request->tanggalMulaiJual,
+            'tanggal_tutup_daftar'       => $request->tanggalTutupDaftar,
+            'tanggal_mulai_pembelajaran' => $request->tanggalMulaiPembelajaran,
+            'tanggal_batas_pembelajaran' => $request->tanggalBatasPembelajaran,
+        ];
+
+        if ($request->hasFile('cover')) {
+            if ($bootcamp->cover) {
+                Storage::disk('public')->delete($bootcamp->cover);
+            }
+            $data['cover'] = $request->file('cover')->store('bootcamp-covers', 'public');
+        }
+
+        $bootcamp->update($data);
+
+        return redirect()->route('bootcamps.show', $bootcamp->id);
+    }
+
+    /**
+     * Update status — pakai back() bukan redirect agar
+     * router.reload({ only: ['bootcamp'] }) dari frontend bisa bekerja.
+     */
+    public function updateStatus(Request $request, Bootcamp $bootcamp)
+    {
+        $request->validate([
+            'status' => 'required|in:published,unpublished,unlisted',
+        ]);
+
+        $bootcamp->update(['status' => $request->status]);
+
+        // back() mengembalikan response ke halaman yang sama (detail)
+        // sehingga Inertia partial reload bisa mengambil prop 'bootcamp' yang sudah ter-update
+        return back();
+    }
+
+    public function duplicate(Bootcamp $bootcamp)
+    {
+        $new         = $bootcamp->replicate();
+        $new->name   = 'DUPLICATE - ' . $bootcamp->name;
+        $new->status = 'unpublished';
+        $new->save();
+
+        return redirect()->route('bootcamps.show', $new->id);
+    }
+
+    public function destroy(Bootcamp $bootcamp)
+    {
+        if ($bootcamp->cover) {
+            Storage::disk('public')->delete($bootcamp->cover);
+        }
+
+        $bootcamp->delete();
+
+        return redirect()->route('bootcamps.index');
+    }
+}
