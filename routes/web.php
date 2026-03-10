@@ -70,17 +70,21 @@ Route::post('/login',  [AuthenticatedSessionController::class, 'store']);
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 // ══════════════════════════════════════════════════════════════
-// AUTH PESERTA — hanya bisa diakses jika BELUM login sebagai peserta
+// AUTH PESERTA
 // ══════════════════════════════════════════════════════════════
 
-Route::middleware('guest:peserta')->prefix('peserta')->name('peserta.')->group(function () {
-    Route::get('/login',     [PesertaAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login',    [PesertaAuthController::class, 'login']);
-    Route::get('/register',  [PesertaAuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [PesertaAuthController::class, 'register']);
+// Endpoint checkout (dipanggil via fetch dari CheckoutDialog — tidak perlu guard)
+Route::post('/peserta/check-email',       [PesertaAuthController::class, 'checkEmail']);
+Route::post('/peserta/login-checkout',    [PesertaAuthController::class, 'loginCheckout']);
+Route::post('/peserta/register-checkout', [PesertaAuthController::class, 'registerCheckout']);
+
+// Halaman login terpisah (untuk akses dashboard langsung)
+Route::middleware('guest:peserta')->group(function () {
+    Route::get('/peserta/login',  [PesertaAuthController::class, 'showLogin'])->name('peserta.login');
+    Route::post('/peserta/login', [PesertaAuthController::class, 'login']);
 });
 
-// Logout peserta — di luar group agar selalu bisa diakses
+// Logout peserta
 Route::post('/peserta/logout', [PesertaAuthController::class, 'logout'])
     ->name('peserta.logout');
 

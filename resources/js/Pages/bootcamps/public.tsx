@@ -541,7 +541,6 @@ export default function BootcampPublic(props: Props) {
         bootcampId={bootcamp.id}
         bootcampName={bootcamp.name}
         harga={bootcamp.harga}
-        peserta={peserta}
       />
     </>
   );

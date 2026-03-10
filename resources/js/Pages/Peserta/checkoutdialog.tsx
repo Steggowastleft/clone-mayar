@@ -6,7 +6,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, Lock, ArrowRight, BookOpen } from "lucide-react";
+import {
+  Loader2, CheckCircle2, Lock, ArrowRight,
+  Mail, KeyRound, User, ChevronLeft,
+} from "lucide-react";
 
 // ─────────────────────────────────────────────
 // Types
@@ -23,12 +26,7 @@ type KustomField = {
   is_required: boolean;
 };
 
-type Peserta = {
-  id: number;
-  nama: string;
-  email: string;
-  no_hp?: string;
-} | null;
+type Step = "email" | "password" | "register" | "form" | "success";
 
 type Props = {
   open: boolean;
@@ -36,32 +34,22 @@ type Props = {
   bootcampId: number;
   bootcampName: string;
   harga?: number;
-  peserta: Peserta; // null = belum login
 };
 
 // ─────────────────────────────────────────────
 // Dynamic Field Renderer
 // ─────────────────────────────────────────────
 function DynamicField({
-  field,
-  value,
-  onChange,
-  error,
+  field, value, onChange, error,
 }: {
   field: KustomField;
   value: any;
   onChange: (v: any) => void;
   error?: string;
 }) {
-  if (field.type === "divider") {
-    return <hr className="border-gray-100 my-1" />;
-  }
-  if (field.type === "title") {
-    return <p className="text-sm font-semibold text-gray-800 pt-1">{field.label}</p>;
-  }
-  if (field.type === "text_notes") {
-    return <p className="text-xs text-gray-500 leading-relaxed">{field.label}</p>;
-  }
+  if (field.type === "divider")    return <hr className="border-gray-100 my-1" />;
+  if (field.type === "title")      return <p className="text-sm font-semibold text-gray-800 pt-1">{field.label}</p>;
+  if (field.type === "text_notes") return <p className="text-xs text-gray-500 leading-relaxed">{field.label}</p>;
 
   return (
     <div className="space-y-1.5">
@@ -71,150 +59,215 @@ function DynamicField({
       </Label>
 
       {field.type === "multi_line" && (
-        <textarea
-          rows={3}
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
+        <textarea rows={3} value={value || ""} onChange={(e) => onChange(e.target.value)}
           placeholder={field.help_text || ""}
-          maxLength={250}
-          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-        />
+          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
       )}
 
       {field.type === "checkbox" && (
         <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={!!value}
-            onChange={(e) => onChange(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600"
-          />
+          <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600" />
           <span className="text-sm text-gray-700">{field.help_text || field.label}</span>
         </label>
       )}
 
       {field.type === "datepicker" && (
-        <Input
-          type="date"
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          className={error ? "border-red-400" : ""}
-        />
+        <Input type="date" value={value || ""} onChange={(e) => onChange(e.target.value)}
+          className={error ? "border-red-400" : ""} />
       )}
 
-      {(field.type === "single_line" || field.type === "number" || field.type === "url") && (
+      {(["single_line", "number", "url"] as FieldType[]).includes(field.type) && (
         <Input
           type={field.type === "number" ? "number" : field.type === "url" ? "url" : "text"}
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
+          value={value || ""} onChange={(e) => onChange(e.target.value)}
           placeholder={field.help_text || ""}
-          maxLength={field.type === "single_line" ? 99 : undefined}
-          className={error ? "border-red-400" : ""}
-        />
+          className={error ? "border-red-400" : ""} />
       )}
 
-      {field.help_text && !["single_line", "multi_line", "url", "number"].includes(field.type) && (
-        <p className="text-xs text-gray-400">{field.help_text}</p>
-      )}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────
-// Locked Field (nama, email, no_hp dari profil)
+// Step indicator
 // ─────────────────────────────────────────────
-function LockedField({ label, value }: { label: string; value: string }) {
+function StepDots({ current }: { current: number }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-        {label}
-        <span className="text-xs text-red-500">*</span>
-        <Lock className="h-3 w-3 text-gray-300" />
-      </Label>
-      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-        {value || "-"}
-      </div>
+    <div className="flex items-center gap-1.5 justify-center mb-1">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={`rounded-full transition-all duration-300 ${
+          i === current
+            ? "w-5 h-1.5 bg-blue-600"
+            : i < current
+            ? "w-1.5 h-1.5 bg-blue-300"
+            : "w-1.5 h-1.5 bg-gray-200"
+        }`} />
+      ))}
     </div>
   );
+}
+
+function getCsrf(): string {
+  return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
 }
 
 // ─────────────────────────────────────────────
 // Main Dialog
 // ─────────────────────────────────────────────
-export function CheckoutDialog({
-  open, onOpenChange, bootcampId, bootcampName, harga, peserta,
-}: Props) {
-  const [step, setStep]         = useState<"auth" | "form" | "success">("form");
-  const [fields, setFields]     = useState<KustomField[]>([]);
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [errors, setErrors]     = useState<Record<string, string>>({});
-  const [loading, setLoading]   = useState(false);
-  const [fetching, setFetching] = useState(false);
+export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, harga }: Props) {
+  const [step, setStep]           = useState<Step>("email");
+  const [email, setEmail]         = useState("");
+  const [nama, setNama]           = useState("");
+  const [password, setPassword]   = useState("");
+  const [showPw, setShowPw]       = useState(false);
+  const [fields, setFields]       = useState<KustomField[]>([]);
+  const [formData, setFormData]   = useState<Record<string, any>>({});
+  const [errors, setErrors]       = useState<Record<string, string>>({});
+  const [loading, setLoading]     = useState(false);
+  const [fetching, setFetching]   = useState(false);
+  // Setelah auth berhasil, simpan data peserta
+  const [peserta, setPeserta]     = useState<{ id: number; nama: string; email: string; no_hp?: string } | null>(null);
 
-  // Kalau belum login, tampilkan step auth
   useEffect(() => {
     if (open) {
-      setStep(peserta ? "form" : "auth");
-      if (peserta) fetchFields();
+      // Reset setiap kali dialog dibuka
+      setStep("email");
+      setEmail(""); setNama(""); setPassword("");
+      setFormData({}); setErrors({}); setPeserta(null);
     }
-  }, [open, peserta]);
+  }, [open]);
 
+  // ── Step dot index ───────────────────────────
+  const dotIndex = step === "email" || step === "password" || step === "register" ? 0
+    : step === "form" ? 1
+    : 2;
+
+  // ── Fetch kustom form ────────────────────────
   const fetchFields = async () => {
     setFetching(true);
     try {
-      const res = await fetch(`/bootcamps/${bootcampId}/kustom-form`);
+      const res  = await fetch(`/bootcamps/${bootcampId}/kustom-form`);
       const data = await res.json();
       setFields(data.fields || []);
-    } catch {
-      setFields([]);
-    } finally {
-      setFetching(false);
-    }
+    } catch { setFields([]); }
+    finally  { setFetching(false); }
   };
 
-  const handleSubmit = async () => {
-    // Validasi field wajib
-    const newErrors: Record<string, string> = {};
-    fields.forEach((f) => {
-      if (f.is_required && !formData[f.id]) {
-        newErrors[f.id] = `${f.label} wajib diisi.`;
-      }
-    });
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  // ── STEP 1: Cek email ────────────────────────
+  const handleCheckEmail = async () => {
+    if (!email) { setErrors({ email: "Email wajib diisi." }); return; }
+    if (!/\S+@\S+\.\S+/.test(email)) { setErrors({ email: "Format email tidak valid." }); return; }
+    setErrors({});
     setLoading(true);
     try {
-      const res = await fetch(`/bootcamps/${bootcampId}/daftar`, {
+      const res  = await fetch("/peserta/check-email", {
         method:  "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-TOKEN": (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
+        body:    JSON.stringify({ email }),
       });
-
       const data = await res.json();
+      // exists: true  → minta password (login)
+      // exists: false → minta buat password + nama (register)
+      setStep(data.exists ? "password" : "register");
+    } catch { setErrors({ email: "Terjadi kesalahan, coba lagi." }); }
+    finally  { setLoading(false); }
+  };
 
+  // ── STEP 2a: Login peserta yang sudah ada ────
+  const handleLogin = async () => {
+    if (!password) { setErrors({ password: "Password wajib diisi." }); return; }
+    setErrors({});
+    setLoading(true);
+    try {
+      const res  = await fetch("/peserta/login-checkout", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
+        body:    JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPeserta(data.peserta);
+        await fetchFields();
+        setStep("form");
+      } else {
+        setErrors({ password: data.message || "Password salah." });
+      }
+    } catch { setErrors({ password: "Terjadi kesalahan, coba lagi." }); }
+    finally  { setLoading(false); }
+  };
+
+  // ── STEP 2b: Register peserta baru ───────────
+  const handleRegister = async () => {
+    const errs: Record<string, string> = {};
+    if (!nama)                          errs.nama     = "Nama wajib diisi.";
+    if (!password || password.length < 8) errs.password = "Password minimal 8 karakter.";
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
+    setLoading(true);
+    try {
+      const res  = await fetch("/peserta/register-checkout", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
+        body:    JSON.stringify({ email, nama, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPeserta(data.peserta);
+        await fetchFields();
+        setStep("form");
+      } else {
+        setErrors(data.errors || { email: "Gagal membuat akun." });
+      }
+    } catch { setErrors({ email: "Terjadi kesalahan, coba lagi." }); }
+    finally  { setLoading(false); }
+  };
+
+  // ── STEP 3: Submit checkout ──────────────────
+  const handleCheckout = async () => {
+    const errs: Record<string, string> = {};
+    fields.forEach((f) => {
+      if (f.is_required && !formData[f.id]) errs[f.id] = `${f.label} wajib diisi.`;
+    });
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
+    setLoading(true);
+    try {
+      const res  = await fetch(`/bootcamps/${bootcampId}/daftar`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
+        body:    JSON.stringify(formData),
+      });
+      const data = await res.json();
       if (res.ok) {
         setStep("success");
-        setTimeout(() => {
-          window.location.href = data.redirect || "/peserta/dashboard";
-        }, 2000);
+        setTimeout(() => { window.location.href = data.redirect || "/peserta/dashboard"; }, 2000);
       } else if (res.status === 409) {
-        // Sudah terdaftar
         window.location.href = data.redirect;
       } else {
         setErrors(data.errors || {});
       }
-    } catch {
-      setErrors({ general: "Terjadi kesalahan. Coba lagi." });
-    } finally {
-      setLoading(false);
-    }
+    } catch { setErrors({ general: "Terjadi kesalahan. Coba lagi." }); }
+    finally  { setLoading(false); }
+  };
+
+  // ─────────────────────────────────────────────
+  // Title & description per step
+  // ─────────────────────────────────────────────
+  const titles: Record<Step, string> = {
+    email:    `Daftar: ${bootcampName}`,
+    password: "Masukkan Password",
+    register: "Buat Password",
+    form:     "Lengkapi Data",
+    success:  "Pendaftaran Berhasil! 🎉",
+  };
+  const descs: Record<Step, string> = {
+    email:    "Masukkan email kamu untuk melanjutkan.",
+    password: `Hai! Kami mengenali email ${email}. Masukkan password kamu.`,
+    register: "Email baru! Buat password untuk akunmu.",
+    form:     "Lengkapi data berikut untuk mendaftar.",
+    success:  "Kamu akan diarahkan ke halaman kelas...",
   };
 
   return (
@@ -222,47 +275,137 @@ export function CheckoutDialog({
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col overflow-hidden p-0">
 
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-gray-900">
-              {step === "success" ? "Pendaftaran Berhasil! 🎉" : `Daftar: ${bootcampName}`}
-            </DialogTitle>
-            <DialogDescription>
-              {step === "auth"    && "Masuk atau buat akun untuk melanjutkan pendaftaran."}
-              {step === "form"    && "Lengkapi data berikut untuk mendaftar bootcamp ini."}
-              {step === "success" && "Kamu akan diarahkan ke halaman kelas..."}
-            </DialogDescription>
+        <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+          {step !== "email" && step !== "success" && (
+            <button
+              onClick={() => {
+                if (step === "password" || step === "register") setStep("email");
+                if (step === "form") setStep(peserta ? "email" : "register");
+              }}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 mb-3 transition"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+            </button>
+          )}
+          <StepDots current={dotIndex} />
+          <DialogHeader className="mt-2">
+            <DialogTitle className="text-base font-bold text-gray-900">{titles[step]}</DialogTitle>
+            <DialogDescription className="text-xs">{descs[step]}</DialogDescription>
           </DialogHeader>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
 
-          {/* ── STEP: AUTH ── */}
-          {step === "auth" && (
-            <div className="space-y-3 py-4">
-              <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="h-7 w-7 text-blue-600" />
+          {/* ── EMAIL ── */}
+          {step === "email" && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Email <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="email"
+                    placeholder="email@kamu.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCheckEmail()}
+                    className={`pl-9 ${errors.email ? "border-red-400" : ""}`}
+                  />
+                </div>
+                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
               </div>
-              <p className="text-sm text-gray-600 text-center">
-                Kamu perlu masuk atau daftar akun terlebih dahulu untuk mengikuti bootcamp ini.
-              </p>
-              <a
-                href={`/peserta/login?redirect=/bootcamp/${bootcampId}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
-              >
-                Masuk <ArrowRight className="h-4 w-4" />
-              </a>
-              <a
-                href={`/peserta/register?redirect=/bootcamp/${bootcampId}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 border border-blue-200 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-50 transition"
-              >
-                Buat Akun Baru
-              </a>
             </div>
           )}
 
-          {/* ── STEP: FORM ── */}
+          {/* ── PASSWORD (existing user) ── */}
+          {step === "password" && (
+            <div className="space-y-4">
+              {/* Email locked */}
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-600">
+                <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="flex-1 truncate">{email}</span>
+                <Lock className="h-3.5 w-3.5 text-gray-300" />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Password <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type={showPw ? "text" : "password"}
+                    placeholder="Password kamu"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                    className={`pl-9 pr-10 ${errors.password ? "border-red-400" : ""}`}
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
+                    {showPw ? "Sembunyikan" : "Tampilkan"}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* ── REGISTER (new user) ── */}
+          {step === "register" && (
+            <div className="space-y-4">
+              {/* Email locked */}
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-600">
+                <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="flex-1 truncate">{email}</span>
+                <Lock className="h-3.5 w-3.5 text-gray-300" />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Nama Lengkap <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Nama lengkap kamu"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    className={`pl-9 ${errors.nama ? "border-red-400" : ""}`}
+                  />
+                </div>
+                {errors.nama && <p className="text-xs text-red-500">{errors.nama}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Buat Password <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type={showPw ? "text" : "password"}
+                    placeholder="Min. 8 karakter"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                    className={`pl-9 pr-10 ${errors.password ? "border-red-400" : ""}`}
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
+                    {showPw ? "Sembunyikan" : "Tampilkan"}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+                <p className="text-xs text-gray-400">Password ini akan dipakai untuk login ke akun pesertamu.</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── FORM CHECKOUT ── */}
           {step === "form" && (
             <div className="space-y-4">
               {fetching ? (
@@ -271,20 +414,27 @@ export function CheckoutDialog({
                 </div>
               ) : (
                 <>
-                  {/* 3 field locked dari profil */}
+                  {/* 3 field locked dari akun */}
                   {peserta && (
-                    <div className="space-y-3 pb-3 border-b border-gray-100">
+                    <div className="space-y-2 pb-3 border-b border-gray-100">
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Data Akun (Terkunci)
+                        Data Akun
                       </p>
-                      <LockedField label="Nama"         value={peserta.nama} />
-                      <LockedField label="Email"        value={peserta.email} />
-                      <LockedField label="No Handphone" value={peserta.no_hp || "-"} />
+                      {[
+                        { label: "Nama",  value: peserta.nama },
+                        { label: "Email", value: peserta.email },
+                      ].map((f) => (
+                        <div key={f.label} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600">
+                          <Lock className="h-3.5 w-3.5 text-gray-300 shrink-0" />
+                          <span className="text-gray-400 w-12 text-xs">{f.label}</span>
+                          <span className="flex-1 truncate font-medium text-gray-700">{f.value}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {/* Field kustom dari admin */}
-                  {fields.length > 0 && (
+                  {/* Field kustom */}
+                  {fields.length > 0 ? (
                     <div className="space-y-3">
                       {fields.map((field) => (
                         <DynamicField
@@ -296,6 +446,8 @@ export function CheckoutDialog({
                         />
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-4">Tidak ada form tambahan.</p>
                   )}
 
                   {errors.general && (
@@ -306,38 +458,56 @@ export function CheckoutDialog({
             </div>
           )}
 
-          {/* ── STEP: SUCCESS ── */}
+          {/* ── SUCCESS ── */}
           {step === "success" && (
             <div className="flex flex-col items-center justify-center py-8 space-y-3">
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center">
                 <CheckCircle2 className="h-9 w-9 text-emerald-500" />
               </div>
               <p className="text-sm text-gray-600 text-center">
-                Pendaftaran kamu berhasil! Mengalihkan ke halaman kelas...
+                Pendaftaran berhasil! Mengalihkan ke halaman kelas...
               </p>
               <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        {step === "form" && (
+        {/* Footer CTA */}
+        {step !== "success" && (
           <div className="px-6 py-4 border-t border-gray-100 shrink-0">
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={loading}>
-                Batal
+            {step === "email" && (
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                onClick={handleCheckEmail} disabled={loading}>
+                {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Memeriksa...</>
+                  : <>Lanjutkan <ArrowRight className="h-4 w-4 ml-1" /></>}
               </Button>
-              <Button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                onClick={handleSubmit}
-                disabled={loading || fetching}
-              >
-                {loading
-                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Mendaftar...</>
-                  : "Daftar Sekarang"
-                }
+            )}
+            {step === "password" && (
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                onClick={handleLogin} disabled={loading}>
+                {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Masuk...</>
+                  : <>Masuk & Lanjutkan <ArrowRight className="h-4 w-4 ml-1" /></>}
               </Button>
-            </div>
+            )}
+            {step === "register" && (
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                onClick={handleRegister} disabled={loading}>
+                {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Membuat akun...</>
+                  : <>Buat Akun & Lanjutkan <ArrowRight className="h-4 w-4 ml-1" /></>}
+              </Button>
+            )}
+            {step === "form" && (
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={loading}>
+                  Batal
+                </Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  onClick={handleCheckout} disabled={loading || fetching}>
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Mendaftar...</>
+                    : "Daftar Sekarang"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>

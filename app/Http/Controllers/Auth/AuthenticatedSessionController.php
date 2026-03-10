@@ -16,7 +16,7 @@ class AuthenticatedSessionController extends Controller
     public function create(): Response
     {
         Log::info('Displaying login page');
-        return Inertia::render('Auth/Login', [
+        return Inertia::render('Auth/login', [
             'canResetPassword' => false,
             'status' => session('status'),
         ]);
