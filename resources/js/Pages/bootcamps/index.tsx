@@ -1,4 +1,4 @@
-import AppLayout from "@/layouts/app-layout";
+import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router, useForm } from "@inertiajs/react";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -225,8 +225,7 @@ export default function Index({ bootcamps }: IndexProps) {
   ];
 
   return (
-    <AppLayout>
-      <Head title="Bootcamp Dashboard" />
+    <DashboardLayout title="Kelas Cohort / Bootcamp">
 
       <div className="flex gap-0 min-h-screen">
         {/* MAIN CONTENT */}
@@ -520,6 +519,6 @@ export default function Index({ bootcamps }: IndexProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </DashboardLayout>
   );
 }

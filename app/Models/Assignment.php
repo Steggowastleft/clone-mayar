@@ -29,4 +29,9 @@ class Assignment extends Model
     {
         return $this->hasMany(AssignmentFile::class);
     }
+
+    public function submissions()
+    {
+    return $this->hasMany(\App\Models\Submission::class);
+    }
 }

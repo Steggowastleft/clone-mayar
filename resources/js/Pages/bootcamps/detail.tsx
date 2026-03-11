@@ -13,7 +13,9 @@ import TabTransaksi  from "./detail/transaksi";
 import TabDetail     from "./detail/detail";
 import TabSesiMeeting from "./detail/sesi-meeting";
 import TabModul      from "./detail/modul";
-import TabAssignment from "./detail/assignment";
+import TabGrade, { type SubmissionItem, type AssignmentOption } from "./detail/grade";
+import TabAssignment, { type Assignment } from "./detail/assignment";
+import TabPeserta, { type PesertaItem } from "./detail/peserta";
 
 // Sidebar
 import { SidebarPanel } from "./detail/components/sidebarpanel";
@@ -45,7 +47,10 @@ type Props = {
   bootcamp: Bootcamp;
   sesiList?: any[];
   babList?:  any[];
-  assignmentList?: any[];
+  assignments?: AssignmentOption[];
+  submissions?: SubmissionItem[];
+  assignmentList?: Assignment[];
+  pesertaList?: PesertaItem[];
 };
 
 // ─────────────────────────────────────────────
@@ -64,7 +69,7 @@ function TabPlaceholder({ label }: { label: string }) {
 // ─────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────
-export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], assignmentList = []}: Props) {
+export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], assignments = [], submissions = [], assignmentList = [], pesertaList = [] }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
   const tabs = [
@@ -75,7 +80,6 @@ export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], 
     { id: "assignment", label: "ASSIGNMENT",         icon: <CheckSquare className="h-3 w-3" /> },
     { id: "grade",      label: "GRADE & SUBMISSION", icon: <Award className="h-3 w-3" /> },
     { id: "peserta",    label: "PESERTA",            icon: <Users2 className="h-3 w-3" /> },
-    { id: "email",      label: "EMAIL",              icon: <Mail className="h-3 w-3" /> },
     { id: "analytic",   label: "ANALYTIC",           icon: <BarChart3 className="h-3 w-3" /> },
     { id: "integrasi",  label: "INTEGRASI",          icon: <Puzzle className="h-3 w-3" /> },
     { id: "track",      label: "TRACK",              icon: <Route className="h-3 w-3" /> },
@@ -89,6 +93,8 @@ export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], 
       case "sesi":      return <TabSesiMeeting bootcampId={bootcamp.id} initialSesiList={sesiList} />;
       case "modul":     return <TabModul bootcampId={bootcamp.id} initialBabList={babList} />;
       case "assignment": return <TabAssignment bootcampId={bootcamp.id} initialAssignmentList={assignmentList} />;
+      case "peserta":    return <TabPeserta bootcampId={bootcamp.id} pesertaList={pesertaList} />;
+      case "grade":     return <TabGrade bootcampId={bootcamp.id} assignments={assignments} submissions={submissions} />;
       default:          return <TabPlaceholder label={tabs.find((t) => t.id === activeTab)?.label || activeTab} />;
     }
   };

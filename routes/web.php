@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BabController;
 use App\Http\Controllers\MateriController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\GradeController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\BootcampPublicController;
 use App\Http\Controllers\KustomFormController;
@@ -143,6 +144,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/bootcamps/{bootcamp}/assignment',               [AssignmentController::class, 'store'])->name('assignment.store');
     Route::post('/bootcamps/{bootcamp}/assignment/{assignment}',  [AssignmentController::class, 'update'])->name('assignment.update');
     Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}',[AssignmentController::class, 'destroy'])->name('assignment.destroy');
+
+    // Grade submission
+    Route::post('/submissions/{submission}/grade', [GradeController::class, 'store'])->name('submission.grade');
 
     // Landing Page
     Route::post('/bootcamps/{bootcamp}/landing/instruktur',  [LandingController::class, 'instruktur']);

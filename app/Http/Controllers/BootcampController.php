@@ -75,12 +75,58 @@ class BootcampController extends Controller
     public function show(Bootcamp $bootcamp)
     {
         // Load semua relasi sekaligus
-        $bootcamp->load(['sesis', 'babs.materis', 'assignments.files']);
+        $bootcamp->load([
+            'sesis',
+            'babs.materis',
+            'assignments.files',
+            'assignments.submissions.peserta',
+            'pendaftaran.peserta',
+            'assignments.submissions',
+        ]);
+
+        // Flatten submissions dari semua assignment
+        $submissions = $bootcamp->assignments->flatMap(function ($assignment) {
+            return $assignment->submissions->map(fn($s) => [
+                'id'               => $s->id,
+                'assignment_id'    => $assignment->id,
+                'assignment_judul' => $assignment->judul,
+                'peserta_id'       => $s->peserta_id,
+                'peserta_nama'     => $s->peserta->nama,
+                'peserta_email'    => $s->peserta->email,
+                'peserta_no_hp'    => $s->peserta->no_hp ?? null,
+                'waktu_kirim'      => $s->waktu_kirim?->toISOString(),
+                'submission_url'   => $s->submission_url,
+                'submission_teks'  => $s->submission_teks,
+                'grade'            => $s->grade,
+            ]);
+        })->values()->toArray();
 
         return Inertia::render('bootcamps/detail', [
-            'bootcamp' => $bootcamp->toArray(),
 
-            // Sesi list
+            // ── Bootcamp (tanpa relasi) ──────────────────────────────
+            'bootcamp' => [
+                'id'                         => $bootcamp->id,
+                'name'                       => $bootcamp->name,
+                'batch'                      => $bootcamp->batch,
+                'status'                     => $bootcamp->status,
+                'date'                       => $bootcamp->date,
+                'participants'               => $bootcamp->participants,
+                'kategori'                   => $bootcamp->kategori,
+                'harga'                      => $bootcamp->harga,
+                'deskripsi'                  => $bootcamp->deskripsi,
+                'instruksi'                  => $bootcamp->instruksi,
+                'syarat_ketentuan'           => $bootcamp->syarat_ketentuan,
+                'cover'                      => $bootcamp->cover,
+                'cover_url'                  => $bootcamp->cover
+                                                    ? asset('storage/' . $bootcamp->cover)
+                                                    : null,
+                'tanggal_mulai_jual'         => $bootcamp->tanggal_mulai_jual,
+                'tanggal_tutup_daftar'       => $bootcamp->tanggal_tutup_daftar,
+                'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran,
+                'tanggal_batas_pembelajaran' => $bootcamp->tanggal_batas_pembelajaran,
+            ],
+
+            // ── Sesi list ────────────────────────────────────────────
             'sesiList' => $bootcamp->sesis->map(fn($s) => [
                 'id'              => $s->id,
                 'judul'           => $s->judul,
@@ -96,7 +142,7 @@ class BootcampController extends Controller
                 'waktu_selesai'   => $s->waktu_selesai?->format('H:i'),
             ])->values()->toArray(),
 
-            // Bab list
+            // ── Bab + Materi list ────────────────────────────────────
             'babList' => $bootcamp->babs->map(fn($b) => [
                 'id'        => $b->id,
                 'judul'     => $b->judul,
@@ -112,7 +158,7 @@ class BootcampController extends Controller
                 ])->values()->toArray(),
             ])->values()->toArray(),
 
-            // Assignment list
+            // ── Assignment list (tab Assignment) ─────────────────────
             'assignmentList' => $bootcamp->assignments->map(fn($a) => [
                 'id'            => $a->id,
                 'judul'         => $a->judul,
@@ -127,6 +173,65 @@ class BootcampController extends Controller
                     'size' => $f->size,
                 ])->values()->toArray(),
             ])->values()->toArray(),
+
+            // ── Tab Grade: dropdown assignments ──────────────────────
+            'assignments' => $bootcamp->assignments->map(fn($a) => [
+                'id'    => $a->id,
+                'judul' => $a->judul,
+            ])->values()->toArray(),
+
+            // ── Tab Grade: semua submissions ─────────────────────────
+            'submissions' => $submissions,
+
+            // ── Tab Peserta ───────────────────────────────────────────
+            'pesertaList' => $bootcamp->pendaftaran->map(function ($p) use ($bootcamp) {
+                $peserta = $p->peserta;
+
+                // Guard: skip jika peserta null
+                if (!$peserta) return null;
+
+                // Hitung progress: materi selesai / total materi
+                $totalMateri = $bootcamp->babs->sum(fn($b) => $b->materis->count());
+                $progress    = 0; // akan diimplementasi dengan tabel progress_materis
+
+                // Hitung nilai rata-rata dari submissions
+                $submissions = $bootcamp->assignments->flatMap(fn($a) => $a->submissions)
+                    ->where('peserta_id', $peserta->id)
+                    ->whereNotNull('grade');
+                $nilaiRata = $submissions->count() > 0
+                    ? round($submissions->avg('grade'), 1)
+                    : null;
+
+                // Decode form_data JSON jika masih string
+                $formData = $p->form_data;
+                if (is_string($formData)) {
+                    $formData = json_decode($formData, true);
+                }
+
+                // Ambil nilai dari dalam form_data (format: {key: {label, value}})
+                $formFlat = [];
+                if (is_array($formData)) {
+                    foreach ($formData as $key => $field) {
+                        if (isset($field['label']) && isset($field['value'])) {
+                            $formFlat[$field['label']] = $field['value'];
+                        }
+                    }
+                }
+
+                return [
+                    'id'             => $p->id,
+                    'nama'           => $peserta->nama,
+                    'email'          => $peserta->email,
+                    'no_hp'          => $peserta->no_hp ?? null,
+                    'status'         => $p->status,
+                    'tanggal_daftar' => $p->tanggal_daftar
+                                        ? \Carbon\Carbon::parse($p->tanggal_daftar)->toISOString()
+                                        : $p->created_at->toISOString(),
+                    'progress'       => $progress,
+                    'nilai_rata'     => $nilaiRata,
+                    'form_data'      => $formFlat,
+                ];
+            })->filter()->values()->toArray(),
         ]);
     }
 
@@ -183,10 +288,6 @@ class BootcampController extends Controller
         return redirect()->route('bootcamps.show', $bootcamp->id);
     }
 
-    /**
-     * Update status — pakai back() bukan redirect agar
-     * router.reload({ only: ['bootcamp'] }) dari frontend bisa bekerja.
-     */
     public function updateStatus(Request $request, Bootcamp $bootcamp)
     {
         $request->validate([
@@ -195,8 +296,6 @@ class BootcampController extends Controller
 
         $bootcamp->update(['status' => $request->status]);
 
-        // back() mengembalikan response ke halaman yang sama (detail)
-        // sehingga Inertia partial reload bisa mengambil prop 'bootcamp' yang sudah ter-update
         return back();
     }
 
