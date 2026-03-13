@@ -80,7 +80,7 @@ Route::post('/peserta/login-checkout',    [PesertaAuthController::class, 'loginC
 Route::post('/peserta/register-checkout', [PesertaAuthController::class, 'registerCheckout']);
 
 // Halaman login terpisah (untuk akses dashboard langsung)
-Route::middleware('guest:peserta')->group(function () {
+Route::middleware('guest.peserta')->group(function () {
     Route::get('/peserta/login',  [PesertaAuthController::class, 'showLogin'])->name('peserta.login');
     Route::post('/peserta/login', [PesertaAuthController::class, 'login']);
 });

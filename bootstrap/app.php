@@ -25,7 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Alias middleware peserta — DIGABUNG di sini, bukan ->withMiddleware kedua
         $middleware->alias([
-            'auth.peserta' => \App\Http\Middleware\PesertaAuth::class,
+            'auth.peserta'  => \App\Http\Middleware\PesertaAuth::class,
+            'guest.peserta' => \App\Http\Middleware\PesertaGuest::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
