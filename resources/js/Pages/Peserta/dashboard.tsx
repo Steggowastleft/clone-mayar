@@ -1,5 +1,7 @@
-import { Head, router } from "@inertiajs/react";
-import { BookOpen, Clock, Award, LogOut, User, ChevronRight, Play } from "lucide-react";
+import { Head, router, usePage } from "@inertiajs/react";
+import { useState, useEffect } from "react";
+import { BookOpen, Clock, Award, LogOut, User, ChevronRight, Play, Star } from "lucide-react";
+import RatingDialog, { type RatingData } from "./ratingdialog";
 
 type BootcampItem = {
   id: number;
@@ -10,6 +12,7 @@ type BootcampItem = {
   status: string;
   tanggal_aktif?: string;
   tanggal_expired?: string;
+  rating?: number | null;
 };
 
 type Peserta = {
@@ -25,7 +28,9 @@ type Props = {
   bootcamps: BootcampItem[];
 };
 
-export default function PesertaDashboard({ peserta, bootcamps }: Props) {
+export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps }: Props) {
+  const [bootcamps, setBootcamps] = useState(initialBootcamps);
+  const [ratingTarget, setRatingTarget] = useState<BootcampItem | null>(null);
   const handleLogout = () => {
     router.post("/peserta/logout");
   };
@@ -149,6 +154,28 @@ export default function PesertaDashboard({ peserta, bootcamps }: Props) {
                           Masuk Kelas <ChevronRight className="h-3 w-3" />
                         </span>
                       </div>
+
+                      {/* Rating */}
+                      <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          {b.rating ? (
+                            <>
+                              {[1,2,3,4,5].map((s) => (
+                                <Star key={s} className={`h-3.5 w-3.5 ${s <= b.rating! ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}`} />
+                              ))}
+                              <span className="text-xs text-gray-400 ml-1">Ulasanmu</span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">Belum ada ulasan</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRatingTarget(b); }}
+                          className="text-xs font-semibold text-yellow-600 hover:text-yellow-700 border border-yellow-200 hover:bg-yellow-50 px-2.5 py-1 rounded-lg transition"
+                        >
+                          {b.rating ? "Edit Ulasan" : "Beri Ulasan"}
+                        </button>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -157,6 +184,20 @@ export default function PesertaDashboard({ peserta, bootcamps }: Props) {
           </div>
         </div>
       </div>
+      {/* Rating Dialog */}
+      {ratingTarget && (
+        <RatingDialog
+          open={!!ratingTarget}
+          onOpenChange={(v) => { if (!v) setRatingTarget(null); }}
+          bootcampId={ratingTarget.id}
+          bootcampName={ratingTarget.name}
+          existingRating={ratingTarget.rating ? { id: 0, bintang: ratingTarget.rating, tampil_anonim: false } : null}
+          onSuccess={(r) => {
+            setBootcamps((prev) => prev.map((b) => b.id === ratingTarget.id ? { ...b, rating: r.bintang } : b));
+            setRatingTarget(null);
+          }}
+        />
+      )}
     </>
   );
 }

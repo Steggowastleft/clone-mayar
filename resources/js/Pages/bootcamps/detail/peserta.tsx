@@ -194,6 +194,7 @@ const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 export default function TabPeserta({ bootcampId, pesertaList }: Props) {
   const [search, setSearch]         = useState("");
+  const [progressFilter, setProgressFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [rowsPerPage, setRowsPerPage]   = useState(10);
   const [page, setPage]             = useState(1);
@@ -207,7 +208,12 @@ export default function TabPeserta({ bootcampId, pesertaList }: Props) {
       || p.nama.toLowerCase().includes(q)
       || p.email.toLowerCase().includes(q)
       || (p.no_hp || "").includes(q);
-    return matchStatus && matchSearch;
+    const matchProgress =
+      progressFilter === "all"    ? true :
+      progressFilter === "0"      ? p.progress === 0 :
+      progressFilter === "75"     ? p.progress >= 75 && p.progress < 100 :
+      progressFilter === "100"    ? p.progress === 100 : true;
+    return matchStatus && matchSearch && matchProgress;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
@@ -262,6 +268,19 @@ export default function TabPeserta({ bootcampId, pesertaList }: Props) {
                 <SelectItem value="aktif">Aktif</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="ditolak">Ditolak</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filter progress */}
+            <Select value={progressFilter} onValueChange={(v) => { setProgressFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-8 w-36 text-xs border-gray-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Progress</SelectItem>
+                <SelectItem value="0">0% — Belum mulai</SelectItem>
+                <SelectItem value="75">≥75% — Hampir selesai</SelectItem>
+                <SelectItem value="100">100% — Selesai</SelectItem>
               </SelectContent>
             </Select>
             <button

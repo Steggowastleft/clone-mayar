@@ -1,4 +1,5 @@
 import { Head, router } from "@inertiajs/react";
+import axios from "axios";
 import { useState } from "react";
 import {
   BookOpen, ChevronDown, ChevronUp, Play, FileText,
@@ -16,6 +17,7 @@ type Materi = {
   konten?: string;
   durasi?: string;
   urutan: number;
+  is_selesai?: boolean; // sudah ditandai selesai oleh peserta ini
 };
 
 type Bab = {
@@ -25,6 +27,14 @@ type Bab = {
   materis: Materi[];
 };
 
+type Submission = {
+  id: number;
+  submission_url?: string;
+  submission_teks?: string;
+  grade?: number | null;
+  waktu_kirim?: string;
+};
+
 type Assignment = {
   id: number;
   judul: string;
@@ -32,6 +42,7 @@ type Assignment = {
   is_wajib: boolean;
   tanggal_mulai?: string;
   tanggal_akhir?: string;
+  submission?: Submission | null; // submission milik peserta ini
 };
 
 type Props = {
@@ -39,6 +50,13 @@ type Props = {
   bootcamp: { id: number; name: string; batch: string };
   babList: Bab[];
   assignments: Assignment[];
+  progressPersen: number; // 0-100
+};
+
+type SubmitForm = {
+  tipe: "url" | "teks";
+  url: string;
+  teks: string;
 };
 
 // ─────────────────────────────────────────────
@@ -117,7 +135,10 @@ function Sidebar({
                           : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      <Play className="h-3 w-3 shrink-0 opacity-60" />
+                      {m.is_selesai
+                        ? <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                        : <Play className="h-3 w-3 shrink-0 opacity-60" />
+                      }
                       <span className="flex-1 line-clamp-2">{m.judul}</span>
                       {m.durasi && <span className="text-gray-400 text-xs shrink-0">{m.durasi}</span>}
                     </button>
@@ -173,12 +194,19 @@ function Sidebar({
 // ─────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────
-export default function PesertaKelas({ peserta, bootcamp, babList, assignments }: Props) {
-  const firstMateri = babList[0]?.materis[0] ?? null;
+export default function PesertaKelas({ peserta, bootcamp, babList: initialBabList, assignments: initialAssignments, progressPersen: initialProgress }: Props) {
+  const firstMateri = initialBabList[0]?.materis[0] ?? null;
   const [activeMateri,     setActiveMateri]     = useState<Materi | null>(firstMateri);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [activeSection,    setActiveSection]    = useState<"materi" | "assignment">("materi");
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
+  const [assignments,      setAssignments]      = useState<Assignment[]>(initialAssignments);
+  const [submitForm,       setSubmitForm]       = useState<SubmitForm>({ tipe: "url", url: "", teks: "" });
+  const [submitErrors,     setSubmitErrors]     = useState<Record<string, string>>({});
+  const [isSubmitting,     setIsSubmitting]     = useState(false);
+  const [submitSuccess,    setSubmitSuccess]    = useState(false);
+  const [progress,         setProgress]         = useState(initialProgress);
+  const [babList,          setBabList]          = useState(initialBabList);
 
   const handleSelectMateri = (m: Materi) => {
     setActiveMateri(m);
@@ -191,6 +219,25 @@ export default function PesertaKelas({ peserta, bootcamp, babList, assignments }
     setActiveAssignment(a);
     setActiveSection("assignment");
     setSidebarOpen(false);
+  };
+
+  const handleTandaiSelesai = async (materi: Materi) => {
+    if (materi.is_selesai) return;
+    try {
+      const res = await axios.post(`/peserta/bootcamp/${bootcamp.id}/materi/${materi.id}/selesai`);
+      setProgress(res.data.progress ?? progress);
+      // Update is_selesai di babList
+      setBabList((prev) => prev.map((b) => ({
+        ...b,
+        materis: b.materis.map((m) => m.id === materi.id ? { ...m, is_selesai: true } : m),
+      })));
+      // Update activeMateri juga
+      if (activeMateri?.id === materi.id) {
+        setActiveMateri({ ...activeMateri, is_selesai: true });
+      }
+    } catch (e) {
+      console.error("Gagal tandai selesai", e);
+    }
   };
 
   return (
@@ -212,7 +259,17 @@ export default function PesertaKelas({ peserta, bootcamp, babList, assignments }
             </div>
             <span className="text-sm font-semibold text-gray-800 truncate">{bootcamp.name}</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Progress bar */}
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold text-gray-500">{progress}%</span>
+            </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-600">
               <User className="h-3.5 w-3.5 text-gray-400" />
               <span className="hidden sm:block">{peserta.nama}</span>
@@ -258,16 +315,105 @@ export default function PesertaKelas({ peserta, bootcamp, babList, assignments }
 
                 {/* Konten materi */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  {activeMateri.konten ? (
-                    <div
-                      className="prose prose-sm max-w-none text-gray-700"
-                      dangerouslySetInnerHTML={{ __html: activeMateri.konten }}
-                    />
-                  ) : (
+                  {!activeMateri.konten ? (
                     <div className="flex flex-col items-center justify-center py-12 text-gray-300">
                       <FileText className="h-12 w-12 mb-3" />
                       <p className="text-sm">Konten materi belum tersedia</p>
                     </div>
+                  ) : activeMateri.tipe === "video" ? (
+                    /* ── VIDEO: embed YouTube/Drive atau fallback link ── */
+                    (() => {
+                      const url = activeMateri.konten;
+                      const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+                      if (ytMatch) {
+                        return (
+                          <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                              className="w-full h-full"
+                              allowFullScreen
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            />
+                          </div>
+                        );
+                      }
+                      if (driveMatch) {
+                        return (
+                          <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                            <iframe
+                              src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
+                              className="w-full h-full"
+                              allowFullScreen
+                            />
+                          </div>
+                        );
+                      }
+                      // fallback: tampilkan sebagai link
+                      return (
+                        <div className="flex flex-col items-center justify-center py-10 gap-3">
+                          <Play className="h-10 w-10 text-blue-400" />
+                          <p className="text-sm text-gray-500">Video tidak dapat di-embed. Buka langsung:</p>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition"
+                          >
+                            <Play className="h-4 w-4" /> Tonton Video
+                          </a>
+                        </div>
+                      );
+                    })()
+                  ) : activeMateri.tipe === "link" || activeMateri.tipe === "dokumen" ? (
+                    /* ── LINK / DOKUMEN: tombol klik langsung ── */
+                    <div className="flex flex-col items-center justify-center py-10 gap-4">
+                      <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center">
+                        {activeMateri.tipe === "dokumen"
+                          ? <FileText className="h-7 w-7 text-blue-500" />
+                          : <Play className="h-7 w-7 text-blue-500" />
+                        }
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-700 mb-1">
+                          {activeMateri.tipe === "dokumen" ? "Dokumen tersedia" : "Link materi tersedia"}
+                        </p>
+                        <p className="text-xs text-gray-400 break-all max-w-sm">{activeMateri.konten}</p>
+                      </div>
+                      <a
+                        href={activeMateri.konten}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition shadow-sm"
+                      >
+                        {activeMateri.tipe === "dokumen" ? <FileText className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        {activeMateri.tipe === "dokumen" ? "Buka Dokumen" : "Buka Link"}
+                      </a>
+                    </div>
+                  ) : (
+                    /* ── TEKS: render biasa ── */
+                    <div
+                      className="prose prose-sm max-w-none text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: activeMateri.konten }}
+                    />
+                  )}
+                </div>
+
+                {/* Tandai Selesai */}
+                <div className="mt-4 flex justify-end">
+                  {activeMateri.is_selesai ? (
+                    <div className="flex items-center gap-2 text-green-600 text-sm font-semibold">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Sudah Selesai
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleTandaiSelesai(activeMateri)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Tandai Selesai
+                    </button>
                   )}
                 </div>
               </div>
@@ -308,12 +454,170 @@ export default function PesertaKelas({ peserta, bootcamp, babList, assignments }
                   />
                 </div>
 
-                {/* Area submit (placeholder — akan dikembangkan) */}
-                <div className="bg-white rounded-xl border border-dashed border-gray-200 p-6 text-center">
-                  <ClipboardList className="h-10 w-10 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 font-medium">Submit Jawaban</p>
-                  <p className="text-xs text-gray-400 mt-1">Fitur submission akan segera hadir</p>
-                </div>
+                {/* ── Area Submit ── */}
+                {(() => {
+                  const sub = activeAssignment.submission;
+
+                  // Sudah submit & sudah dinilai
+                  if (sub && sub.grade !== null && sub.grade !== undefined) {
+                    return (
+                      <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Submission Kamu</h3>
+                        <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200 mb-4">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="h-8 w-8 text-green-500" />
+                            <div>
+                              <p className="text-sm font-bold text-green-700">Sudah Dinilai</p>
+                              <p className="text-xs text-green-600">Instruktur telah memberikan penilaian</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-black text-green-600">{sub.grade}</p>
+                            <p className="text-xs text-green-500">/ 100</p>
+                          </div>
+                        </div>
+                        {sub.submission_url && (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-400 mb-1">Link yang dikumpulkan:</p>
+                            <a href={sub.submission_url} target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline break-all">{sub.submission_url}</a>
+                          </div>
+                        )}
+                        {sub.submission_teks && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">Jawaban yang dikumpulkan:</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{sub.submission_teks}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Sudah submit tapi belum dinilai
+                  if (sub) {
+                    return (
+                      <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Submission Kamu</h3>
+                        <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-xl border border-yellow-200 mb-4">
+                          <ClipboardList className="h-8 w-8 text-yellow-500" />
+                          <div>
+                            <p className="text-sm font-bold text-yellow-700">Menunggu Penilaian</p>
+                            <p className="text-xs text-yellow-600">Instruktur belum memberikan nilai</p>
+                          </div>
+                        </div>
+                        {sub.submission_url && (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-400 mb-1">Link yang dikumpulkan:</p>
+                            <a href={sub.submission_url} target="_blank" rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline break-all">{sub.submission_url}</a>
+                          </div>
+                        )}
+                        {sub.submission_teks && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">Jawaban yang dikumpulkan:</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{sub.submission_teks}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Belum submit
+                  return (
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-4">Kumpulkan Jawaban</h3>
+
+                      {/* Toggle tipe */}
+                      <div className="flex gap-2 mb-4">
+                        {(["url", "teks"] as const).map((t) => (
+                          <button key={t}
+                            onClick={() => { setSubmitForm({ ...submitForm, tipe: t }); setSubmitErrors({}); }}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                              submitForm.tipe === t
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
+                            }`}
+                          >
+                            {t === "url" ? "🔗 Link / URL" : "📝 Teks"}
+                          </button>
+                        ))}
+                      </div>
+
+                      {submitForm.tipe === "url" ? (
+                        <div className="space-y-1.5 mb-4">
+                          <label className="text-xs font-medium text-gray-600">Link Jawaban</label>
+                          <input
+                            type="url"
+                            placeholder="https://drive.google.com/... atau link lainnya"
+                            value={submitForm.url}
+                            onChange={(e) => setSubmitForm({ ...submitForm, url: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          {submitErrors.url && <p className="text-xs text-red-500">{submitErrors.url}</p>}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 mb-4">
+                          <label className="text-xs font-medium text-gray-600">Jawaban Kamu</label>
+                          <textarea
+                            rows={5}
+                            placeholder="Tulis jawaban kamu di sini..."
+                            value={submitForm.teks}
+                            onChange={(e) => setSubmitForm({ ...submitForm, teks: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          />
+                          {submitErrors.teks && <p className="text-xs text-red-500">{submitErrors.teks}</p>}
+                        </div>
+                      )}
+
+                      {submitSuccess && (
+                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-medium">
+                          ✅ Jawaban berhasil dikumpulkan!
+                        </div>
+                      )}
+
+                      <button
+                        disabled={isSubmitting}
+                        onClick={() => {
+                          // Validasi
+                          const errs: Record<string, string> = {};
+                          if (submitForm.tipe === "url" && !submitForm.url.trim()) errs.url = "Link wajib diisi.";
+                          if (submitForm.tipe === "teks" && !submitForm.teks.trim()) errs.teks = "Jawaban wajib diisi.";
+                          if (Object.keys(errs).length) { setSubmitErrors(errs); return; }
+                          setSubmitErrors({});
+                          setIsSubmitting(true);
+
+                          const payload: Record<string, string> = {};
+                          if (submitForm.tipe === "url") payload.submission_url = submitForm.url.trim();
+                          else payload.submission_teks = submitForm.teks.trim();
+
+                          router.post(`/peserta/assignments/${activeAssignment.id}/submit`, payload, {
+                            preserveScroll: true,
+                            onSuccess: (page) => {
+                              setIsSubmitting(false);
+                              setSubmitSuccess(true);
+                              setSubmitForm({ tipe: "url", url: "", teks: "" });
+                              // Update local assignments state
+                              const newSub = (page.props as any).newSubmission;
+                              if (newSub) {
+                                setAssignments((prev) => prev.map((a) =>
+                                  a.id === activeAssignment.id ? { ...a, submission: newSub } : a
+                                ));
+                                setActiveAssignment({ ...activeAssignment, submission: newSub });
+                              }
+                            },
+                            onError: (e) => {
+                              setIsSubmitting(false);
+                              setSubmitErrors(e);
+                            },
+                          });
+                        }}
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition"
+                      >
+                        {isSubmitting ? "Mengumpulkan..." : "Kumpulkan Jawaban"}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

@@ -82,6 +82,7 @@ class BootcampController extends Controller
             'assignments.submissions.peserta',
             'pendaftaran.peserta',
             'assignments.submissions',
+            'ratings.peserta',
         ]);
 
         // Flatten submissions dari semua assignment
@@ -183,6 +184,17 @@ class BootcampController extends Controller
             // ── Tab Grade: semua submissions ─────────────────────────
             'submissions' => $submissions,
 
+            // ── Tab Rating ───────────────────────────────────────────
+            'ratings' => $bootcamp->ratings->map(fn($r) => [
+                'id'           => $r->id,
+                'bintang'      => $r->bintang,
+                'ulasan'       => $r->ulasan,
+                'tampil_anonim'=> (bool) $r->tampil_anonim,
+                'foto_url'     => $r->foto_url,
+                'nama_peserta' => $r->tampil_anonim ? 'Anonim' : $r->peserta->nama,
+                'created_at'   => $r->created_at->toISOString(),
+            ])->values()->toArray(),
+
             // ── Tab Peserta ───────────────────────────────────────────
             'pesertaList' => $bootcamp->pendaftaran->map(function ($p) use ($bootcamp) {
                 $peserta = $p->peserta;
@@ -190,9 +202,17 @@ class BootcampController extends Controller
                 // Guard: skip jika peserta null
                 if (!$peserta) return null;
 
-                // Hitung progress: materi selesai / total materi
-                $totalMateri = $bootcamp->babs->sum(fn($b) => $b->materis->count());
-                $progress    = 0; // akan diimplementasi dengan tabel progress_materis
+                // Hitung progress dari tabel progress_materis
+                $totalMateri     = $bootcamp->babs->sum(fn($b) => $b->materis->count());
+                $totalAssignment = $bootcamp->assignments->count();
+                $totalItem       = $totalMateri + $totalAssignment;
+                $materiDibaca    = \App\Models\ProgressMateri::where('peserta_id', $peserta->id)
+                                    ->where('bootcamp_id', $bootcamp->id)->count();
+                $assignSubmit    = $bootcamp->assignments->flatMap(fn($a) => $a->submissions)
+                                    ->where('peserta_id', $peserta->id)->count();
+                $progress = $totalItem > 0
+                    ? (int) round((($materiDibaca + $assignSubmit) / $totalItem) * 100)
+                    : 0;
 
                 // Hitung nilai rata-rata dari submissions
                 $submissions = $bootcamp->assignments->flatMap(fn($a) => $a->submissions)

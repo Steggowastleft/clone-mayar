@@ -20,6 +20,9 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Peserta\PesertaAuthController;
 use App\Http\Controllers\Peserta\PesertaDashboardController;
 use App\Http\Controllers\Peserta\PendaftaranController;
+use App\Http\Controllers\Peserta\PesertaSubmissionController;
+use App\Http\Controllers\Peserta\PesertaProgressController;
+use App\Http\Controllers\Peserta\RatingController;
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIK — tidak perlu login apapun
@@ -96,6 +99,10 @@ Route::post('/peserta/logout', [PesertaAuthController::class, 'logout'])
 Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(function () {
     Route::get('/dashboard',        [PesertaDashboardController::class, 'index'])->name('dashboard');
     Route::get('/kelas/{bootcamp}', [PesertaDashboardController::class, 'kelas'])->name('kelas');
+    Route::post('/assignments/{assignment}/submit', [PesertaSubmissionController::class, 'store'])->name('assignment.submit');
+    Route::post('/bootcamp/{bootcamp}/materi/{materi}/selesai', [PesertaProgressController::class, 'tandaiMateri'])->name('materi.selesai');
+    Route::post('/bootcamp/{bootcamp}/rating',  [RatingController::class, 'store'])->name('rating.store');
+    Route::delete('/bootcamp/{bootcamp}/rating', [RatingController::class, 'destroy'])->name('rating.destroy');
 });
 
 Route::middleware('auth.peserta')

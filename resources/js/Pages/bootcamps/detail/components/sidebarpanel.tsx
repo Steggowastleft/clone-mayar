@@ -150,8 +150,6 @@ export function SidebarPanel({ bootcamp }: { bootcamp: Bootcamp }) {
 
   const customButtons = [
     { icon: <ShieldCheck className="h-4 w-4" />, label: "KUSTOM FORM", onClick: () => setKustomFormOpen(true) },
-    { icon: <Tag className="h-4 w-4" />,         label: "TAG PRODUK" },
-    { icon: <ArrowUpDown className="h-4 w-4" />, label: "UPSELL & CROSSSELL" },
     { icon: <Star className="h-4 w-4" />,        label: "RATING & REVIEW" },
     { icon: <Award className="h-4 w-4" />,       label: "SERTIFIKAT" },
     { icon: <Settings className="h-4 w-4" />,    label: "PENGATURAN CHECKOUT" },
@@ -263,7 +261,7 @@ export function SidebarPanel({ bootcamp }: { bootcamp: Bootcamp }) {
 
           <div className="border-t border-gray-100 pt-2 space-y-2">
             {customButtons.map((b) => (
-              <button key={b.label} className={btnClass}>{b.icon} {b.label}</button>
+              <button key={b.label} className={btnClass} onClick={b.onClick}>{b.icon} {b.label}</button>
             ))}
           </div>
         </div>

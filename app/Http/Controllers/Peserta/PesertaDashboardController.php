@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Peserta;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pendaftaran;
+use App\Models\Rating;
+use App\Models\ProgressMateri;
+use App\Models\Submission;
+use App\Http\Controllers\Peserta\PesertaProgressController;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -18,6 +22,10 @@ class PesertaDashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Load ratings peserta
+        $myRatings = Rating::where('peserta_id', $peserta->id)
+            ->pluck('bintang', 'bootcamp_id');
+
         $bootcamps = $pendaftaran->map(fn($p) => [
             'id'             => $p->bootcamp->id,
             'name'           => $p->bootcamp->name,
@@ -27,6 +35,7 @@ class PesertaDashboardController extends Controller
             'status'         => $p->status,
             'tanggal_aktif'  => $p->tanggal_aktif?->format('d M Y'),
             'tanggal_expired'=> $p->tanggal_expired?->format('d M Y'),
+            'rating'         => $myRatings->get($p->bootcamp->id),
         ]);
 
         return Inertia::render('Peserta/dashboard', [
@@ -49,10 +58,25 @@ class PesertaDashboardController extends Controller
         $pendaftaran = Pendaftaran::where('bootcamp_id', $bootcampId)
             ->where('peserta_id', $peserta->id)
             ->where('status', 'active')
-            ->with(['bootcamp.babs.materis', 'bootcamp.assignments'])
+            ->with([
+                'bootcamp.babs.materis',
+                'bootcamp.assignments',
+            ])
             ->firstOrFail();
 
         $bootcamp = $pendaftaran->bootcamp;
+
+        // Load progress materi milik peserta ini
+        $myProgress = ProgressMateri::where('peserta_id', $peserta->id)
+            ->where('bootcamp_id', $bootcamp->id)
+            ->pluck('materi_id')
+            ->toArray();
+
+        // Load submissions milik peserta ini
+        $mySubmissions = Submission::where('peserta_id', $peserta->id)
+            ->whereIn('assignment_id', $bootcamp->assignments->pluck('id'))
+            ->get()
+            ->keyBy('assignment_id');
 
         return Inertia::render('Peserta/kelas', [
             'peserta'  => [
@@ -74,17 +98,29 @@ class PesertaDashboardController extends Controller
                     'tipe'   => $m->tipe,
                     'konten' => $m->konten,
                     'durasi' => $m->durasi,
-                    'urutan' => $m->urutan,
+                    'urutan'     => $m->urutan,
+                    'is_selesai' => in_array($m->id, $myProgress),
                 ])->values(),
             ])->values(),
-            'assignments' => $bootcamp->assignments->map(fn($a) => [
-                'id'            => $a->id,
-                'judul'         => $a->judul,
-                'tugas'         => $a->tugas,
-                'is_wajib'      => $a->is_wajib,
-                'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
-                'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
-            ])->values(),
+            'progressPersen' => PesertaProgressController::hitungProgress($bootcamp, $peserta->id),
+            'assignments' => $bootcamp->assignments->map(function ($a) use ($mySubmissions) {
+                $sub = $mySubmissions->get($a->id);
+                return [
+                    'id'            => $a->id,
+                    'judul'         => $a->judul,
+                    'tugas'         => $a->tugas,
+                    'is_wajib'      => $a->is_wajib,
+                    'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
+                    'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
+                    'submission'    => $sub ? [
+                        'id'              => $sub->id,
+                        'submission_url'  => $sub->submission_url,
+                        'submission_teks' => $sub->submission_teks,
+                        'grade'           => $sub->grade,
+                        'waktu_kirim'     => $sub->waktu_kirim?->toISOString(),
+                    ] : null,
+                ];
+            })->values(),
         ]);
     }
 }

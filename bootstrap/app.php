@@ -18,9 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Bypass CSRF sementara
+        // Inertia handles CSRF via X-XSRF-TOKEN cookie automatically
+        // Only need to bypass for non-Inertia endpoints
         $middleware->validateCsrfTokens(except: [
             'login',
             'logout',
+            'peserta/check-email',
+            'peserta/login-checkout',
+            'peserta/register-checkout',
+            'peserta/bootcamp/*/rating',
         ]);
 
         // Alias middleware peserta — DIGABUNG di sini, bukan ->withMiddleware kedua

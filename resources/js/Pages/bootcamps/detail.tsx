@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   BarChart3, BookOpen, Clock, CheckSquare, Award,
-  Users2, Mail, Puzzle, Route, Handshake,
+  Users2, Mail, Puzzle, Route, Handshake, Star,
 } from "lucide-react";
 
 // Tab components
@@ -16,6 +16,7 @@ import TabModul      from "./detail/modul";
 import TabGrade, { type SubmissionItem, type AssignmentOption } from "./detail/grade";
 import TabAssignment, { type Assignment } from "./detail/assignment";
 import TabPeserta, { type PesertaItem } from "./detail/peserta";
+import TabRating, { type RatingItem } from "./detail/rating";
 
 // Sidebar
 import { SidebarPanel } from "./detail/components/sidebarpanel";
@@ -51,6 +52,7 @@ type Props = {
   submissions?: SubmissionItem[];
   assignmentList?: Assignment[];
   pesertaList?: PesertaItem[];
+  ratings?: RatingItem[];
 };
 
 // ─────────────────────────────────────────────
@@ -69,7 +71,7 @@ function TabPlaceholder({ label }: { label: string }) {
 // ─────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────
-export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], assignments = [], submissions = [], assignmentList = [], pesertaList = [] }: Props) {
+export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], assignments = [], submissions = [], assignmentList = [], pesertaList = [], ratings = [] }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
   const tabs = [
@@ -80,10 +82,8 @@ export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], 
     { id: "assignment", label: "ASSIGNMENT",         icon: <CheckSquare className="h-3 w-3" /> },
     { id: "grade",      label: "GRADE & SUBMISSION", icon: <Award className="h-3 w-3" /> },
     { id: "peserta",    label: "PESERTA",            icon: <Users2 className="h-3 w-3" /> },
-    { id: "analytic",   label: "ANALYTIC",           icon: <BarChart3 className="h-3 w-3" /> },
-    { id: "integrasi",  label: "INTEGRASI",          icon: <Puzzle className="h-3 w-3" /> },
-    { id: "track",      label: "TRACK",              icon: <Route className="h-3 w-3" /> },
-    { id: "affiliator", label: "AFFILIATOR",         icon: <Handshake className="h-3 w-3" /> },
+    { id: "rating",     label: "RATING",             icon: <Star   className="h-3 w-3" /> },
+    { id: "email",      label: "EMAIL",              icon: <Mail className="h-3 w-3" /> },
   ];
 
   const renderTab = () => {
@@ -94,6 +94,7 @@ export default function BootcampDetail({ bootcamp, sesiList = [], babList = [], 
       case "modul":     return <TabModul bootcampId={bootcamp.id} initialBabList={babList} />;
       case "assignment": return <TabAssignment bootcampId={bootcamp.id} initialAssignmentList={assignmentList} />;
       case "peserta":    return <TabPeserta bootcampId={bootcamp.id} pesertaList={pesertaList} />;
+      case "rating":     return <TabRating ratings={ratings} />;
       case "grade":     return <TabGrade bootcampId={bootcamp.id} assignments={assignments} submissions={submissions} />;
       default:          return <TabPlaceholder label={tabs.find((t) => t.id === activeTab)?.label || activeTab} />;
     }

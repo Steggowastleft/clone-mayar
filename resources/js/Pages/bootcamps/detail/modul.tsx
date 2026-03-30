@@ -13,8 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   Plus, Pencil, Trash2, ChevronDown, ChevronRight,
-  BookOpen, Loader2, FileText, Video, Link,
+  BookOpen, Loader2, FileText, Video, Link, Music,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +42,8 @@ export type Bab = {
   materis?: Materi[];
 };
 
-const emptyBabForm = { judul: "", deskripsi: "" };
+const emptyBabForm  = { judul: "", deskripsi: "" };
+const emptyMateriForm = { judul: "", tipe: "video" as Materi["tipe"], konten: "", durasi: "" };
 
 // ─────────────────────────────────────────────
 // Ikon tipe materi
@@ -59,10 +64,16 @@ function BabCard({
   bab,
   bootcampId,
   onEdit,
+  onAddMateri,
+  onEditMateri,
+  onDeleteMateri,
 }: {
   bab: Bab;
   bootcampId: number;
   onEdit: (bab: Bab) => void;
+  onAddMateri: (babId: number) => void;
+  onEditMateri: (materi: Materi, babId: number) => void;
+  onDeleteMateri: (materi: Materi, babId: number) => void;
 }) {
   const [expanded,  setExpanded]  = useState(true);
   const [hapusOpen, setHapusOpen] = useState(false);
@@ -146,7 +157,10 @@ function BabCard({
 
             {/* Tombol tambah materi */}
             <div className="px-4 py-2.5">
-              <button className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium">
+              <button
+                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium"
+                onClick={() => onAddMateri(bab.id)}
+              >
                 <Plus className="h-3.5 w-3.5" /> Tambah Materi
               </button>
             </div>
@@ -197,6 +211,16 @@ export default function TabModul({
   const [babForm,      setBabForm]      = useState(emptyBabForm);
   const [errors,       setErrors]       = useState<Record<string, string>>({});
 
+  // ── State Materi ──
+  const [materiOpen,      setMateriOpen]      = useState(false);
+  const [materiSubmitting,setMateriSubmitting] = useState(false);
+  const [materiForm,      setMateriForm]      = useState(emptyMateriForm);
+  const [materiErrors,    setMateriErrors]    = useState<Record<string, string>>({});
+  const [editingMateri,   setEditingMateri]   = useState<Materi | null>(null);
+  const [activeBabId,     setActiveBabId]     = useState<number | null>(null);
+  const [hapusMateriOpen,   setHapusMateriOpen]   = useState(false);
+  const [deletingMateri,    setDeletingMateri]    = useState<{ materi: Materi; babId: number } | null>(null);
+
   // Sync dari Inertia partial reload
   const page = usePage<{ babList?: Bab[] }>();
   useEffect(() => {
@@ -215,6 +239,99 @@ export default function TabModul({
     setEditingBab(null);
     setBabForm(emptyBabForm);
     setErrors({});
+  };
+
+  // ── Materi handlers ──
+  const handleOpenAddMateri = (babId: number) => {
+    setActiveBabId(babId);
+    setEditingMateri(null);
+    setMateriForm(emptyMateriForm);
+    setMateriErrors({});
+    setMateriOpen(true);
+  };
+
+  const handleOpenEditMateri = (materi: Materi, babId: number) => {
+    setActiveBabId(babId);
+    setEditingMateri(materi);
+    setMateriForm({ judul: materi.judul, tipe: materi.tipe, konten: materi.konten || "", durasi: materi.durasi || "" });
+    setMateriErrors({});
+    setMateriOpen(true);
+  };
+
+  const handleCloseMateriDialog = () => {
+    setMateriOpen(false);
+    setEditingMateri(null);
+    setMateriForm(emptyMateriForm);
+    setMateriErrors({});
+    setActiveBabId(null);
+  };
+
+  const validateMateri = () => {
+    const e: Record<string, string> = {};
+    if (!materiForm.judul.trim()) e.judul = "Judul materi wajib diisi.";
+    if (!materiForm.konten.trim()) e.konten = "Konten wajib diisi.";
+    setMateriErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmitMateri = () => {
+    if (!validateMateri() || !activeBabId) return;
+    setMateriSubmitting(true);
+
+    const isEdit = !!editingMateri;
+    const url = isEdit
+      ? `/bootcamps/${bootcampId}/bab/${activeBabId}/materi/${editingMateri!.id}`
+      : `/bootcamps/${bootcampId}/bab/${activeBabId}/materi`;
+
+    const payload = {
+      judul:  materiForm.judul.trim(),
+      tipe:   materiForm.tipe,
+      konten: materiForm.konten.trim(),
+      durasi: materiForm.durasi.trim(),
+    };
+
+    const opts = {
+      preserveScroll: true as const,
+      onSuccess: () => {
+        setMateriSubmitting(false);
+        toast.success(isEdit ? "Materi berhasil diperbarui!" : "Materi berhasil ditambahkan!");
+        handleCloseMateriDialog();
+        router.reload({ only: ["babList"] });
+      },
+      onError: (e: Record<string, string>) => {
+        setMateriSubmitting(false);
+        toast.error("Gagal menyimpan materi.");
+        setMateriErrors(e);
+      },
+    };
+
+    if (isEdit) {
+      router.put(url, payload, opts);
+    } else {
+      router.post(url, payload, opts);
+    }
+  };
+
+  const handleDeleteMateri = (materi: Materi, babId: number) => {
+    setDeletingMateri({ materi, babId });
+    setHapusMateriOpen(true);
+  };
+
+  const confirmDeleteMateri = () => {
+    if (!deletingMateri) return;
+    router.delete(`/bootcamps/${bootcampId}/bab/${deletingMateri.babId}/materi/${deletingMateri.materi.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success("Materi berhasil dihapus.");
+        setHapusMateriOpen(false);
+        setDeletingMateri(null);
+        router.reload({ only: ["babList"] });
+      },
+      onError: () => {
+        toast.error("Gagal menghapus materi.");
+        setHapusMateriOpen(false);
+      },
+    });
   };
 
   // ── Validasi ──
@@ -298,6 +415,9 @@ export default function TabModul({
                 bab={bab}
                 bootcampId={bootcampId}
                 onEdit={handleOpenEdit}
+              onAddMateri={handleOpenAddMateri}
+              onEditMateri={handleOpenEditMateri}
+              onDeleteMateri={handleDeleteMateri}
               />
             ))}
           </div>
@@ -365,6 +485,106 @@ export default function TabModul({
                 }
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Tambah/Edit Materi ── */}
+      <Dialog open={materiOpen} onOpenChange={handleCloseMateriDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingMateri ? "Edit Materi" : "Tambah Materi"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+
+            {/* Judul */}
+            <div className="space-y-1.5">
+              <Label>Judul Materi <span className="text-red-500">*</span></Label>
+              <Input
+                placeholder="Contoh: Pengenalan React"
+                value={materiForm.judul}
+                onChange={(e) => setMateriForm({ ...materiForm, judul: e.target.value })}
+              />
+              {materiErrors.judul && <p className="text-xs text-red-500">{materiErrors.judul}</p>}
+            </div>
+
+            {/* Tipe */}
+            <div className="space-y-1.5">
+              <Label>Tipe Materi</Label>
+              <Select
+                value={materiForm.tipe}
+                onValueChange={(v) => setMateriForm({ ...materiForm, tipe: v as Materi["tipe"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="video">🎬 Video</SelectItem>
+                  <SelectItem value="dokumen">📄 Dokumen</SelectItem>
+                  <SelectItem value="link">🔗 Link</SelectItem>
+                  <SelectItem value="teks">📝 Teks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Konten */}
+            <div className="space-y-1.5">
+              <Label>
+                {materiForm.tipe === "teks" ? "Isi Konten" : "URL / Link"}
+                <span className="text-red-500"> *</span>
+              </Label>
+              {materiForm.tipe === "teks" ? (
+                <Textarea
+                  placeholder="Tulis isi materi di sini..."
+                  rows={4}
+                  value={materiForm.konten}
+                  onChange={(e) => setMateriForm({ ...materiForm, konten: e.target.value })}
+                />
+              ) : (
+                <Input
+                  placeholder={materiForm.tipe === "video" ? "https://youtube.com/..." : "https://..."}
+                  value={materiForm.konten}
+                  onChange={(e) => setMateriForm({ ...materiForm, konten: e.target.value })}
+                />
+              )}
+              {materiErrors.konten && <p className="text-xs text-red-500">{materiErrors.konten}</p>}
+            </div>
+
+            {/* Durasi (opsional) */}
+            <div className="space-y-1.5">
+              <Label>Durasi <span className="text-gray-400 text-xs">(opsional)</span></Label>
+              <Input
+                placeholder="Contoh: 15 menit"
+                value={materiForm.durasi}
+                onChange={(e) => setMateriForm({ ...materiForm, durasi: e.target.value })}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={handleCloseMateriDialog}>
+                Batal
+              </Button>
+              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleSubmitMateri} disabled={materiSubmitting}>
+                {materiSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                {editingMateri ? "Simpan Perubahan" : "Tambah Materi"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirm Hapus Materi ── */}
+      <Dialog open={hapusMateriOpen} onOpenChange={setHapusMateriOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Materi?</DialogTitle>
+            <DialogDescription>
+              Materi <strong>{deletingMateri?.materi.judul}</strong> akan dihapus permanen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setHapusMateriOpen(false)}>Batal</Button>
+            <Button variant="destructive" className="flex-1" onClick={confirmDeleteMateri}>Hapus</Button>
           </div>
         </DialogContent>
       </Dialog>
