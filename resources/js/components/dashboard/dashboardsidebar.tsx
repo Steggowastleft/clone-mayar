@@ -46,24 +46,24 @@ const NAV_MAIN: NavItem[] = [
 ];
 
 const NAV_PRODUK: NavItem[] = [
-  { label: "Semua Produk",          icon: <Package        className="h-4 w-4" />, href: "/produk" },
+  { label: "Semua Produk",          icon: <Package        className="h-4 w-4" />, href: "/semua-produk" },
   { label: "Link Pembayaran",       icon: <Link2          className="h-4 w-4" />, href: "/link-pembayaran" },
-  { label: "Produk Fisik",          icon: <Box            className="h-4 w-4" />, href: "/produk-fisik",   badge: "Beta" },
+  { label: "Produk Fisik",          icon: <Box            className="h-4 w-4" />, href: "/produk-fisik", badge: "Beta" },
   { label: "Produk Digital",        icon: <BookOpen       className="h-4 w-4" />, href: "/produk-digital" },
   { label: "Kelas Online (OD)",     icon: <MonitorPlay    className="h-4 w-4" />, href: "/kelas-online" },
   { label: "Kelas Cohort / Bootcamp", icon: <GraduationCap className="h-4 w-4" />, href: "/bootcamps" },
   { label: "Webinar",               icon: <Video          className="h-4 w-4" />, href: "/webinar" },
   { label: "Event & Acara",         icon: <CalendarDays   className="h-4 w-4" />, href: "/event" },
-  { label: "Coaching & Mentoring",  icon: <Headphones     className="h-4 w-4" />, href: "/coaching" },
-  { label: "Penggalangan Dana",     icon: <Heart          className="h-4 w-4" />, href: "/donasi" },
-  { label: "Paket Berlangganan",    icon: <PackageOpen    className="h-4 w-4" />, href: "/paket" },
+  { label: "Coaching & Mentoring",  icon: <Headphones     className="h-4 w-4" />, href: "/coaching-mentoring" },
+  { label: "Penggalangan Dana",     icon: <Heart          className="h-4 w-4" />, href: "/penggalangan-dana" },
+  { label: "Paket Berlangganan",    icon: <PackageOpen    className="h-4 w-4" />, href: "/paket-berlangganan" },
   { label: "E-Book",                icon: <BookMarked     className="h-4 w-4" />, href: "/ebook" },
   { label: "Podcast",               icon: <Mic            className="h-4 w-4" />, href: "/podcast" },
-  { label: "Audio Book",            icon: <AudioIcon      className="h-4 w-4" />, href: "/audiobook" },
+  { label: "Audio Book",            icon: <AudioIcon      className="h-4 w-4" />, href: "/audio-book" },
   { label: "Tulisan",               icon: <PenLine        className="h-4 w-4" />, href: "/tulisan" },
-  { label: "Web Komik",             icon: <BookImage      className="h-4 w-4" />, href: "/webkomik" },
-  { label: "Creator Support Page",  icon: <Globe          className="h-4 w-4" />, href: "/creator-support" },
-  { label: "Membership & SaaS",     icon: <Crown          className="h-4 w-4" />, href: "/membership" },
+  { label: "Web Komik",             icon: <BookImage      className="h-4 w-4" />, href: "/web-komik" },
+  { label: "Creator Support Page",  icon: <Globe          className="h-4 w-4" />, href: "/creator-support-page" },
+  { label: "Membership & SaaS",     icon: <Crown          className="h-4 w-4" />, href: "/membership-saas" },
 ];
 
 // ─────────────────────────────────────────────

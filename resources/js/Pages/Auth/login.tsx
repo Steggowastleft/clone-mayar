@@ -3,15 +3,27 @@ import { Head, router } from "@inertiajs/react";
 import { Eye, EyeOff, Loader2, ArrowRight, Zap } from "lucide-react";
 
 export default function PenjualLogin() {
-  const [form, setForm]       = useState({ email: "", password: "" });
-  const [showPw, setShowPw]   = useState(false);
-  const [errors, setErrors]   = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
     setLoading(true);
+
     router.post("/login", form, {
-      onError:  (e) => { setErrors(e); setLoading(false); },
+      onSuccess: () => {
+        console.log("SUCCESS LOGIN");
+
+        // 🔥 PAKSA PINDAH
+        window.location.replace("/dashboard");
+      },
+      onError: (err) => {
+        console.log("ERROR", err);
+        setErrors(err);
+      },
       onFinish: () => setLoading(false),
     });
   };
@@ -202,68 +214,75 @@ export default function PenjualLogin() {
             {/* Form */}
             <div className="space-y-4">
               {/* Email */}
-              <div className="anim-2 space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email</label>
-                <input
-                  type="email"
-                  placeholder="email@kamu.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className={`inp ${errors.email ? "inp-err" : ""}`}
-                />
-                {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
-              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
 
-              {/* Password */}
-              <div className="anim-3 space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                <div className="relative">
+                {/* Email */}
+                <div className="anim-2 space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email</label>
                   <input
-                    type={showPw ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                    className={`inp pr-20 ${errors.password ? "inp-err" : ""}`}
+                    type="email"
+                    placeholder="email@kamu.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className={`inp ${errors.email ? "inp-err" : ""}`}
                   />
-                  <button type="button" onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-400 hover:text-blue-600 font-semibold transition">
-                    {showPw ? "Sembunyikan" : "Tampilkan"}
+                  {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
+                </div>
+
+                {/* Password */}
+                <div className="anim-3 space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      className={`inp pr-20 ${errors.password ? "inp-err" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(!showPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-400 hover:text-blue-600 font-semibold transition"
+                    >
+                      {showPw ? "Sembunyikan" : "Tampilkan"}
+                    </button>
+                  </div>
+                  {errors.password && <p className="text-red-400 text-xs">{errors.password}</p>}
+                </div>
+
+                {/* Submit */}
+                <div className="anim-4 pt-1">
+                  <button type="submit" className="btn-primary" disabled={loading}>
+                    {loading
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Masuk...</>
+                      : <>Masuk ke Dashboard <ArrowRight className="h-4 w-4" /></>
+                    }
                   </button>
                 </div>
-                {errors.password && <p className="text-red-400 text-xs">{errors.password}</p>}
-              </div>
 
-              {/* Submit */}
-              <div className="anim-4 pt-1">
-                <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-                  {loading
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Masuk...</>
-                    : <>Masuk ke Dashboard <ArrowRight className="h-4 w-4" /></>
-                  }
-                </button>
-              </div>
+                <p className="anim-4 text-center text-sm text-gray-400 pt-1">
+                  Belum punya akun?{" "}
+                  <a href="/register" className="text-blue-600 font-bold hover:text-blue-700 transition">
+                    Daftar gratis
+                  </a>
+                </p>
 
-              <p className="anim-4 text-center text-sm text-gray-400 pt-1">
-                Belum punya akun?{" "}
-                <a href="/register" className="text-blue-600 font-bold hover:text-blue-700 transition">
-                  Daftar gratis
-                </a>
-              </p>
+                {/* Divider */}
+                <div className="anim-4 flex items-center gap-3 pt-2">
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-gray-300 text-xs">atau</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
 
-              {/* Divider */}
-              <div className="anim-4 flex items-center gap-3 pt-2">
-                <div className="flex-1 h-px bg-gray-100" />
-                <span className="text-gray-300 text-xs">atau</span>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
+                <p className="anim-4 text-center text-xs text-gray-300">
+                  Kamu peserta bootcamp?{" "}
+                  <a href="/peserta/login" className="text-gray-400 hover:text-blue-500 underline transition">
+                    Masuk sebagai peserta
+                  </a>
+                </p>
 
-              <p className="anim-4 text-center text-xs text-gray-300">
-                Kamu peserta bootcamp?{" "}
-                <a href="/peserta/login" className="text-gray-400 hover:text-blue-500 underline transition">
-                  Masuk sebagai peserta
-                </a>
-              </p>
+              </form>
             </div>
           </div>
         </div>
