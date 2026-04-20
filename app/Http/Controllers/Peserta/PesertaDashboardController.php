@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Pendaftaran;
 use App\Models\Rating;
 use App\Models\ProgressMateri;
+use App\Models\QuizAttempt;
+use App\Models\Soal;
 use App\Models\Submission;
 use App\Http\Controllers\Peserta\PesertaProgressController;
 use Illuminate\Support\Facades\Auth;
@@ -60,7 +62,7 @@ class PesertaDashboardController extends Controller
             ->where('status', 'active')
             ->with([
                 'bootcamp.babs.materis',
-                'bootcamp.assignments',
+                'bootcamp.assignments.soals',
             ])
             ->firstOrFail();
 
@@ -71,6 +73,14 @@ class PesertaDashboardController extends Controller
             ->where('bootcamp_id', $bootcamp->id)
             ->pluck('materi_id')
             ->toArray();
+
+        // Load nilai tertinggi quiz per assignment
+        $myQuizBest = QuizAttempt::where('peserta_id', $peserta->id)
+            ->whereIn('assignment_id', $bootcamp->assignments->pluck('id'))
+            ->selectRaw('assignment_id, MAX(nilai) as nilai_tertinggi, COUNT(*) as attempt_ke')
+            ->groupBy('assignment_id')
+            ->get()
+            ->keyBy('assignment_id');
 
         // Load submissions milik peserta ini
         $mySubmissions = Submission::where('peserta_id', $peserta->id)
@@ -98,21 +108,35 @@ class PesertaDashboardController extends Controller
                     'tipe'   => $m->tipe,
                     'konten' => $m->konten,
                     'durasi' => $m->durasi,
-                    'urutan'     => $m->urutan,
-                    'is_selesai' => in_array($m->id, $myProgress),
+                    'urutan'        => $m->urutan,
+                    'is_selesai'    => in_array($m->id, $myProgress),
+                    'assignment_id' => $m->assignment_id,
                 ])->values(),
             ])->values(),
             'progressPersen' => PesertaProgressController::hitungProgress($bootcamp, $peserta->id),
-            'assignments' => $bootcamp->assignments->map(function ($a) use ($mySubmissions) {
-                $sub = $mySubmissions->get($a->id);
+            'assignments' => $bootcamp->assignments->map(function ($a) use ($mySubmissions, $myQuizBest) {
+                $sub  = $mySubmissions->get($a->id);
+                $quiz = $myQuizBest->get($a->id);
                 return [
-                    'id'            => $a->id,
-                    'judul'         => $a->judul,
-                    'tugas'         => $a->tugas,
-                    'is_wajib'      => $a->is_wajib,
-                    'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
-                    'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
-                    'submission'    => $sub ? [
+                    'id'             => $a->id,
+                    'judul'          => $a->judul,
+                    'tugas'          => $a->tugas,
+                    'is_wajib'       => $a->is_wajib,
+                    'tanggal_mulai'  => $a->tanggal_mulai?->format('d M Y'),
+                    'tanggal_akhir'  => $a->tanggal_akhir?->format('d M Y'),
+                    'is_tugas_akhir' => (bool) $a->is_tugas_akhir,
+                    'tipe'           => $a->tipe ?? 'upload',
+                    'soals'          => $a->soals->sortBy('urutan')->map(fn($s) => [
+                        'id'         => $s->id,
+                        'pertanyaan' => $s->pertanyaan,
+                        'tipe_soal'  => $s->tipe_soal,
+                        'pilihan'    => $s->pilihan,
+                        'urutan'     => $s->urutan,
+                        // jawaban_benar TIDAK dikirim ke peserta!
+                    ])->values()->toArray(),
+                    'nilai_tertinggi' => $quiz?->nilai_tertinggi,
+                    'attempt_ke'      => $quiz?->attempt_ke ?? 0,
+                    'submission'      => $sub ? [
                         'id'              => $sub->id,
                         'submission_url'  => $sub->submission_url,
                         'submission_teks' => $sub->submission_teks,

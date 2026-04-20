@@ -23,6 +23,8 @@ use App\Http\Controllers\Peserta\PendaftaranController;
 use App\Http\Controllers\Peserta\PesertaSubmissionController;
 use App\Http\Controllers\Peserta\PesertaProgressController;
 use App\Http\Controllers\Peserta\RatingController;
+use App\Http\Controllers\Peserta\QuizController;
+use App\Http\Controllers\SoalController;
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIK — tidak perlu login apapun
@@ -100,6 +102,7 @@ Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(fu
     Route::get('/dashboard',        [PesertaDashboardController::class, 'index'])->name('dashboard');
     Route::get('/kelas/{bootcamp}', [PesertaDashboardController::class, 'kelas'])->name('kelas');
     Route::post('/assignments/{assignment}/submit', [PesertaSubmissionController::class, 'store'])->name('assignment.submit');
+    Route::post('/assignments/{assignment}/quiz',   [QuizController::class, 'submit'])->name('quiz.submit');
     Route::post('/bootcamp/{bootcamp}/materi/{materi}/selesai', [PesertaProgressController::class, 'tandaiMateri'])->name('materi.selesai');
     Route::post('/bootcamp/{bootcamp}/rating',  [RatingController::class, 'store'])->name('rating.store');
     Route::delete('/bootcamp/{bootcamp}/rating', [RatingController::class, 'destroy'])->name('rating.destroy');
@@ -147,13 +150,19 @@ Route::middleware('auth')->group(function () {
     Route::put('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',        [MateriController::class, 'update'])->name('materi.update');
     Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',     [MateriController::class, 'destroy'])->name('materi.destroy');
 
-    // Assignment
+   // Assignment
     Route::post('/bootcamps/{bootcamp}/assignment',               [AssignmentController::class, 'store'])->name('assignment.store');
     Route::post('/bootcamps/{bootcamp}/assignment/{assignment}',  [AssignmentController::class, 'update'])->name('assignment.update');
+    Route::put('/bootcamps/{bootcamp}/assignment/{assignment}',   [AssignmentController::class, 'update'])->name('assignment.update.put');
     Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}',[AssignmentController::class, 'destroy'])->name('assignment.destroy');
 
     // Grade submission
     Route::post('/submissions/{submission}/grade', [GradeController::class, 'store'])->name('submission.grade');
+
+    // Soal (quiz builder)
+    Route::post('/assignments/{assignment}/soal',              [SoalController::class, 'store'])->name('soal.store');
+    Route::put('/assignments/{assignment}/soal/{soal}',        [SoalController::class, 'update'])->name('soal.update');
+    Route::delete('/assignments/{assignment}/soal/{soal}',     [SoalController::class, 'destroy'])->name('soal.destroy');
 
     // Landing Page
     Route::post('/bootcamps/{bootcamp}/landing/instruktur',  [LandingController::class, 'instruktur']);

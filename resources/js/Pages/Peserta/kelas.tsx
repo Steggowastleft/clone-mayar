@@ -1,5 +1,6 @@
 import { Head, router } from "@inertiajs/react";
 import axios from "axios";
+import QuizPlayer, { type SoalItem } from "./quizplayer";
 import { useState } from "react";
 import {
   BookOpen, ChevronDown, ChevronUp, Play, FileText,
@@ -17,7 +18,8 @@ type Materi = {
   konten?: string;
   durasi?: string;
   urutan: number;
-  is_selesai?: boolean; // sudah ditandai selesai oleh peserta ini
+  is_selesai?: boolean;
+  assignment_id?: number | null; // tugas wajib untuk materi ini
 };
 
 type Bab = {
@@ -40,9 +42,14 @@ type Assignment = {
   judul: string;
   tugas: string;
   is_wajib: boolean;
+  is_tugas_akhir?: boolean;
+  tipe?: "upload" | "quiz";
+  soals?: SoalItem[];
+  nilai_tertinggi?: number | null;
+  attempt_ke?: number;
   tanggal_mulai?: string;
   tanggal_akhir?: string;
-  submission?: Submission | null; // submission milik peserta ini
+  submission?: Submission | null;
 };
 
 type Props = {
@@ -64,6 +71,7 @@ type SubmitForm = {
 // ─────────────────────────────────────────────
 function Sidebar({
   bootcamp, babList, assignments, activeMateriId, onSelectMateri, onSelectAssignment, activeSection, sidebarOpen, onClose,
+  isMateriLocked, isMateriFullyDone, allMateriDone, tugasAkhir, regularAssignments,
 }: {
   bootcamp: { id: number; name: string; batch: string };
   babList: Bab[];
@@ -74,6 +82,11 @@ function Sidebar({
   activeSection: "materi" | "assignment";
   sidebarOpen: boolean;
   onClose: () => void;
+  isMateriLocked: (m: Materi) => boolean;
+  isMateriFullyDone: (m: Materi) => boolean;
+  allMateriDone: boolean;
+  tugasAkhir: Assignment | null;
+  regularAssignments: Assignment[];
 }) {
   const [expandedBab, setExpandedBab] = useState<Record<number, boolean>>(
     Object.fromEntries(babList.map((b) => [b.id, true]))
@@ -128,19 +141,21 @@ function Sidebar({
                   {bab.materis.map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => onSelectMateri(m)}
+                      onClick={() => !isMateriLocked(m) && onSelectMateri(m)}
                       className={`w-full flex items-center gap-2.5 pl-7 pr-4 py-2.5 text-left transition text-xs ${
                         activeMateriId === m.id && activeSection === "materi"
                           ? "bg-blue-50 text-blue-700 font-semibold border-r-2 border-blue-600"
                           : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      {m.is_selesai
+                      {isMateriLocked(m)
+                        ? <Lock className="h-3 w-3 shrink-0 text-gray-300" />
+                        : isMateriFullyDone(m)
                         ? <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
                         : <Play className="h-3 w-3 shrink-0 opacity-60" />
                       }
-                      <span className="flex-1 line-clamp-2">{m.judul}</span>
-                      {m.durasi && <span className="text-gray-400 text-xs shrink-0">{m.durasi}</span>}
+                      <span className={`flex-1 line-clamp-2 ${isMateriLocked(m) ? "text-gray-300" : ""}`}>{m.judul}</span>
+                      {m.durasi && !isMateriLocked(m) && <span className="text-gray-400 text-xs shrink-0">{m.durasi}</span>}
                     </button>
                   ))}
                 </div>
@@ -148,15 +163,46 @@ function Sidebar({
             </div>
           ))}
 
-          {/* Assignment */}
-          {assignments.length > 0 && (
+          {/* Tugas Akhir */}
+          {tugasAkhir && (
+            <div className="px-3 mt-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 py-1">Tugas Akhir</p>
+              <button
+                onClick={() => allMateriDone && onSelectAssignment(tugasAkhir)}
+                className={`w-full flex items-center gap-2.5 px-5 py-2.5 text-left transition text-xs ${
+                  !allMateriDone
+                    ? "opacity-40 cursor-not-allowed"
+                    : activeSection === "assignment" && activeMateriId === tugasAkhir.id
+                    ? "bg-orange-50 text-orange-700 font-semibold border-r-2 border-orange-500"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {tugasAkhir.submission
+                  ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                  : allMateriDone
+                  ? <Award className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                  : <Lock className="h-3.5 w-3.5 shrink-0 text-gray-300" />
+                }
+                <span className="flex-1 line-clamp-2">{tugasAkhir.judul}</span>
+                {!allMateriDone && <span className="text-xs text-gray-300">Terkunci</span>}
+              </button>
+              {!allMateriDone && (
+                <p className="text-xs text-gray-400 px-5 py-1.5 italic">
+                  Selesaikan semua materi untuk membuka tugas ini
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Assignment reguler */}
+          {regularAssignments.length > 0 && (
             <>
               <div className="px-3 mt-3 mb-1">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 py-1">
                   Assignment
                 </p>
               </div>
-              {assignments.map((a) => (
+              {regularAssignments.map((a) => (
                 <button
                   key={a.id}
                   onClick={() => onSelectAssignment(a)}
@@ -221,8 +267,44 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
     setSidebarOpen(false);
   };
 
+
+  // ── Gated Learning Helpers ──────────────────────────────────
+
+  // Flatten semua materi dari semua bab (berurutan)
+  const allMateris = babList.flatMap((b) => b.materis ?? []);
+
+  // Cek apakah tugas untuk materi tertentu sudah disubmit
+  const isAssignmentSubmitted = (assignmentId?: number | null) => {
+    if (!assignmentId) return true; // tidak ada tugas = otomatis pass
+    const a = assignments.find((a) => a.id === assignmentId);
+    return !!a?.submission;
+  };
+
+  // Cek apakah materi sudah benar-benar selesai (baca + submit tugas)
+  const isMateriFullyDone = (m: Materi) =>
+    !!m.is_selesai && isAssignmentSubmitted(m.assignment_id);
+
+  // Cek apakah semua materi + tugas reguler selesai (syarat buka Tugas Akhir)
+  const allMateriDone = allMateris.every((m) => isMateriFullyDone(m));
+
+  // Tugas Akhir
+  const tugasAkhir = assignments.find((a) => a.is_tugas_akhir) ?? null;
+
+  // Cek apakah materi terkunci
+  const isMateriLocked = (materi: Materi): boolean => {
+    const idx = allMateris.findIndex((m) => m.id === materi.id);
+    if (idx === 0) return false; // materi pertama selalu terbuka
+    const prev = allMateris[idx - 1];
+    return !isMateriFullyDone(prev);
+  };
+
+  // Assignment reguler (bukan tugas akhir, bukan tugas per materi)
+  const regularAssignments = assignments.filter(
+    (a) => !a.is_tugas_akhir && !allMateris.some((m) => m.assignment_id === a.id)
+  );
+
   const handleTandaiSelesai = async (materi: Materi) => {
-    if (materi.is_selesai) return;
+    if (materi.is_selesai || isMateriLocked(materi)) return;
     try {
       const res = await axios.post(`/peserta/bootcamp/${bootcamp.id}/materi/${materi.id}/selesai`);
       setProgress(res.data.progress ?? progress);
@@ -298,6 +380,11 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
             activeSection={activeSection}
             sidebarOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
+            isMateriLocked={isMateriLocked}
+            isMateriFullyDone={isMateriFullyDone}
+            allMateriDone={allMateriDone}
+            tugasAkhir={tugasAkhir}
+            regularAssignments={regularAssignments}
           />
 
           {/* Konten area */}
@@ -400,32 +487,74 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                 </div>
 
                 {/* Tandai Selesai */}
-                <div className="mt-4 flex justify-end">
-                  {activeMateri.is_selesai ? (
-                    <div className="flex items-center gap-2 text-green-600 text-sm font-semibold">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Sudah Selesai
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleTandaiSelesai(activeMateri)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Tandai Selesai
-                    </button>
-                  )}
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    {activeMateri.is_selesai ? (
+                      <div className="flex items-center gap-2 text-green-600 text-sm font-semibold">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Materi Sudah Dibaca
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleTandaiSelesai(activeMateri)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Tandai Selesai Membaca
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Status tugas wajib materi ini */}
+                  {activeMateri.assignment_id && (() => {
+                    const tugasMateri = assignments.find((a) => a.id === activeMateri.assignment_id);
+                    if (!tugasMateri) return null;
+                    const sudahSubmit = !!tugasMateri.submission;
+                    return (
+                      <button
+                        onClick={() => { setActiveAssignment(tugasMateri); setActiveSection("assignment"); }}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${
+                          sudahSubmit
+                            ? "bg-green-50 text-green-600 border-green-200"
+                            : "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100"
+                        }`}
+                      >
+                        {sudahSubmit
+                          ? <><CheckCircle2 className="h-4 w-4" /> Tugas Selesai</>
+                          : <><ClipboardList className="h-4 w-4" /> Kerjakan Tugas Wajib</>
+                        }
+                      </button>
+                    );
+                  })()}
                 </div>
+
+                {/* Warning: harus selesai tugas dulu sebelum lanjut */}
+                {activeMateri.is_selesai && activeMateri.assignment_id && !isAssignmentSubmitted(activeMateri.assignment_id) && (
+                  <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-2">
+                    <Lock className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-orange-700">
+                      Selesaikan tugas wajib di atas untuk membuka materi berikutnya.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {activeSection === "assignment" && activeAssignment && (
               <div className="max-w-3xl mx-auto">
                 <div className="mb-6 flex items-start gap-3">
-                  <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
-                    <ClipboardList className="h-5 w-5 text-orange-500" />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${activeAssignment.is_tugas_akhir ? "bg-purple-50" : "bg-orange-50"}`}>
+                    {activeAssignment.is_tugas_akhir
+                      ? <Award className="h-5 w-5 text-purple-500" />
+                      : <ClipboardList className="h-5 w-5 text-orange-500" />
+                    }
                   </div>
                   <div>
+                    {activeAssignment.is_tugas_akhir && (
+                      <span className="text-xs font-bold text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full mb-1 inline-block">
+                        🏆 TUGAS AKHIR
+                      </span>
+                    )}
                     <h1 className="text-xl font-bold text-gray-900">{activeAssignment.judul}</h1>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {activeAssignment.is_wajib && (
@@ -455,7 +584,27 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                 </div>
 
                 {/* ── Area Submit ── */}
-                {(() => {
+                {activeAssignment.tipe === "quiz" && activeAssignment.soals
+                  ? (
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-4">Quiz</h3>
+                      <QuizPlayer
+                        assignmentId={activeAssignment.id}
+                        soals={activeAssignment.soals}
+                        nilaiTertinggi={activeAssignment.nilai_tertinggi}
+                        attemptKe={activeAssignment.attempt_ke ?? 0}
+                        onSelesai={(result) => {
+                          setAssignments((prev) => prev.map((a) =>
+                            a.id === activeAssignment.id
+                              ? { ...a, nilai_tertinggi: result.nilai_tertinggi, attempt_ke: result.attempt_ke,
+                                  submission: { id: 0, submission_teks: "quiz", grade: result.nilai_tertinggi } }
+                              : a
+                          ));
+                        }}
+                      />
+                    </div>
+                  )
+                  : (() => {
                   const sub = activeAssignment.submission;
 
                   // Sudah submit & sudah dinilai
@@ -617,7 +766,8 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                       </button>
                     </div>
                   );
-                })()}
+                  })()
+                }
               </div>
             )}
 

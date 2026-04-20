@@ -79,6 +79,7 @@ class BootcampController extends Controller
             'sesis',
             'babs.materis',
             'assignments.files',
+            'assignments.soals',
             'assignments.submissions.peserta',
             'pendaftaran.peserta',
             'assignments.submissions',
@@ -165,6 +166,7 @@ class BootcampController extends Controller
                 'judul'         => $a->judul,
                 'tugas'         => $a->tugas,
                 'is_wajib'      => (bool) $a->is_wajib,
+                'is_tugas_akhir' => (bool) $a->is_tugas_akhir,
                 'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
                 'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
                 'files'         => $a->files->map(fn($f) => [
@@ -172,6 +174,15 @@ class BootcampController extends Controller
                     'name' => $f->name,
                     'url'  => $f->url,
                     'size' => $f->size,
+                ])->values()->toArray(),
+                'tipe'           => $a->tipe ?? 'upload',
+                'soals'          => $a->soals->sortBy('urutan')->map(fn($s) => [
+                    'id'           => $s->id,
+                    'pertanyaan'   => $s->pertanyaan,
+                    'tipe_soal'    => $s->tipe_soal,
+                    'pilihan'      => $s->pilihan,
+                    'jawaban_benar'=> $s->jawaban_benar, // penjual boleh lihat
+                    'urutan'       => $s->urutan,
                 ])->values()->toArray(),
             ])->values()->toArray(),
 

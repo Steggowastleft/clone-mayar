@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'peserta/login-checkout',
             'peserta/register-checkout',
             'peserta/bootcamp/*/rating',
+            'assignments/*/soal',
+            'assignments/*/soal/*',
+            'bootcamps/*/daftar',
+            'peserta/login',
+            'peserta/logout',
         ]);
 
         // Alias middleware peserta — DIGABUNG di sini, bukan ->withMiddleware kedua

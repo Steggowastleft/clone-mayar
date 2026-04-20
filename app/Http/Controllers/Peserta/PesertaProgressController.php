@@ -9,6 +9,7 @@ use App\Models\ProgressMateri;
 use App\Models\Materi;
 use App\Models\Bootcamp;
 use App\Models\Submission;
+use App\Models\Pendaftaran;
 
 class PesertaProgressController extends Controller
 {
@@ -29,7 +30,10 @@ class PesertaProgressController extends Controller
         ]);
 
         // Hitung ulang progress
-        $progress = $this->hitungProgress($bootcamp, $peserta->id);
+        $progress = self::hitungProgress($bootcamp, $peserta->id);
+
+        // Update status pendaftaran jika selesai
+        self::cekDanUpdateStatus($bootcamp, $peserta->id, $progress);
 
         return response()->json(['progress' => $progress]);
     }
@@ -59,5 +63,21 @@ class PesertaProgressController extends Controller
         $selesai = $materiDibaca + $assignmentSubmit;
 
         return (int) round(($selesai / $totalItem) * 100);
+    }
+
+    /**
+     * Jika progress 100%, update status pendaftaran jadi 'completed'
+     */
+    public static function cekDanUpdateStatus(Bootcamp $bootcamp, int $pesertaId, int $progress): void
+    {
+        if ($progress < 100) return;
+
+        Pendaftaran::where('bootcamp_id', $bootcamp->id)
+            ->where('peserta_id', $pesertaId)
+            ->where('status', 'active') // hanya update jika masih aktif
+            ->update([
+                'status'          => 'completed',
+                'tanggal_expired' => now(), // tandai waktu selesai
+            ]);
     }
 }
