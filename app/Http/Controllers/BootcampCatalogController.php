@@ -10,23 +10,25 @@ class BootcampCatalogController extends Controller
     public function index()
     {
         $bootcamps = Bootcamp::query()
+            ->where('status', 'published')
             ->latest()
             ->get()
             ->map(function ($bootcamp) {
                 return [
                     'id'            => $bootcamp->id,
-                    'title'         => $bootcamp->title,
-                    'description'   => $bootcamp->description,
-                    'price'         => $bootcamp->price,
-                    'is_free'       => $bootcamp->price == 0,
-                    'thumbnail'     => $bootcamp->thumbnail ?? null,
+                    'name'          => $bootcamp->name,
+                    'deskripsi'     => $bootcamp->deskripsi,
+                    'harga'         => $bootcamp->harga,
+                    'is_free'       => $bootcamp->harga == 0,
+                    'cover_url'     => $bootcamp->cover_url,
                     'peserta_count' => $bootcamp->pendaftaran()->count(),
                     'omset'         => $bootcamp->pendaftaran()->sum('harga_bayar'),
+                    'status'        => $bootcamp->status,
                 ];
             });
 
         return Inertia::render('bootcamps/katalog', [
-    'bootcamps' => $bootcamps
-]);
+            'bootcamps' => $bootcamps
+        ]);
     }
 }
