@@ -55,7 +55,12 @@ use App\Http\Controllers\Peserta\PesertaSubmissionController;
 use App\Http\Controllers\Peserta\PesertaProgressController;
 use App\Http\Controllers\Peserta\RatingController;
 use App\Http\Controllers\Peserta\QuizController;
+use App\Http\Controllers\Peserta\SertifikatController;
 use App\Http\Controllers\SoalController;
+
+// Controllers — Pembayaran & Katalog
+use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\BootcampCatalogController;
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIK — tidak perlu login
@@ -78,6 +83,14 @@ Route::get('/p/{bootcamp}/bootcamp', [BootcampPublicController::class, 'show'])
 // Kustom form checkout (fetch dari frontend)
 Route::get('/bootcamps/{bootcamp}/kustom-form', [PendaftaranController::class, 'getForm'])
     ->name('peserta.kustom-form');
+
+// Katalog bootcamp
+Route::get('/bootcamp-catalog', [BootcampCatalogController::class, 'index'])
+    ->name('bootcamp.catalog');
+
+// Pembayaran (upload bukti transfer - publik)
+Route::post('/pembayaran/upload-bukti', [PembayaranController::class, 'uploadBukti'])
+    ->name('pembayaran.upload-bukti');
 
 // ══════════════════════════════════════════════════════════════
 // AUTH ADMIN
@@ -131,6 +144,7 @@ Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(fu
     Route::post('/bootcamp/{bootcamp}/materi/{materi}/selesai', [PesertaProgressController::class, 'tandaiMateri'])->name('materi.selesai');
     Route::post('/bootcamp/{bootcamp}/rating',  [RatingController::class, 'store'])->name('rating.store');
     Route::delete('/bootcamp/{bootcamp}/rating', [RatingController::class, 'destroy'])->name('rating.destroy');
+    Route::get('/bootcamp/{bootcamp}/sertifikat', [SertifikatController::class, 'show'])->name('sertifikat.show');
 });
 
 Route::middleware('auth.peserta')
