@@ -84,6 +84,7 @@ class BootcampController extends Controller
             'pendaftaran.peserta',
             'assignments.submissions',
             'ratings.peserta',
+            'pembayaran',
         ]);
 
         // Flatten submissions dari semua assignment
@@ -263,6 +264,20 @@ class BootcampController extends Controller
                     'form_data'      => $formFlat,
                 ];
             })->filter()->values()->toArray(),
+
+            // ── Tab Pembayaran ───────────────────────────────────────
+            'pembayaranList' => $bootcamp->pembayaran->map(fn($p) => [
+                'id'             => $p->id,
+                'order_id'       => $p->order_id,
+                'nama_pembeli'   => $p->nama_pembeli,
+                'email_pembeli'  => $p->email_pembeli,
+                'jumlah'         => $p->jumlah,
+                'status'         => $p->status,
+                'bukti_transfer' => $p->bukti_transfer ? asset('storage/' . $p->bukti_transfer) : null,
+                'catatan'        => $p->catatan,
+                'created_at'     => $p->created_at->toISOString(),
+                'confirmed_at'   => $p->confirmed_at?->toISOString(),
+            ])->values()->toArray(),
         ]);
     }
 
