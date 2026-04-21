@@ -59,7 +59,7 @@ class PesertaDashboardController extends Controller
         // Cek akses
         $pendaftaran = Pendaftaran::where('bootcamp_id', $bootcampId)
             ->where('peserta_id', $peserta->id)
-            ->where('status', 'active')
+            ->whereNotIn('status', ['ditolak', 'rejected'])
             ->with([
                 'bootcamp.babs.materis',
                 'bootcamp.assignments.soals',

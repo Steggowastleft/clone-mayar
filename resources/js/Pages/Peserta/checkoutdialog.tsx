@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog, DialogContent, DialogHeader,
   DialogTitle, DialogDescription,
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, CheckCircle2, Lock, ArrowRight,
-  Mail, KeyRound, User, ChevronLeft,
+  Mail, KeyRound, User, ChevronLeft, UserPlus, X, Upload,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────
@@ -26,7 +26,7 @@ type KustomField = {
   is_required: boolean;
 };
 
-type Step = "email" | "password" | "register" | "form" | "success";
+type Step = "pilihan" | "email" | "password" | "register" | "form" | "success";
 
 type Props = {
   open: boolean;
@@ -117,7 +117,7 @@ function getCsrf(): string {
 // Main Dialog
 // ─────────────────────────────────────────────
 export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, harga }: Props) {
-  const [step, setStep]           = useState<Step>("email");
+  const [step, setStep]           = useState<Step>("pilihan");
   const [email, setEmail]         = useState("");
   const [nama, setNama]           = useState("");
   const [password, setPassword]   = useState("");
@@ -133,14 +133,14 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
   useEffect(() => {
     if (open) {
       // Reset setiap kali dialog dibuka
-      setStep("email");
+      setStep("pilihan");
       setEmail(""); setNama(""); setPassword("");
       setFormData({}); setErrors({}); setPeserta(null);
     }
   }, [open]);
 
   // ── Step dot index ───────────────────────────
-  const dotIndex = step === "email" || step === "password" || step === "register" ? 0
+  const dotIndex = step === "pilihan" || step === "email" || step === "password" || step === "register" ? 0
     : step === "form" ? 1
     : 2;
 
@@ -148,10 +148,26 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
   const fetchFields = async () => {
     setFetching(true);
     try {
-      const res  = await fetch(`/bootcamps/${bootcampId}/kustom-form`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000); // 10 detik timeout
+      
+      const res  = await fetch(`/bootcamps/${bootcampId}/kustom-form`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      
+      if (!res.ok) {
+        console.error("Fetch fields failed:", res.status, res.statusText);
+        setFields([]);
+        return;
+      }
+      
       const data = await res.json();
       setFields(data.fields || []);
-    } catch { setFields([]); }
+    } catch (err) { 
+      console.error("Fetch fields error:", err);
+      setFields([]); 
+    }
     finally  { setFetching(false); }
   };
 
@@ -187,14 +203,60 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
         body:    JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (res.ok) {
+      console.log("Login response:", { status: res.status, ok: res.ok, data: JSON.stringify(data, null, 2) });
+      
+      if (res.ok && data.peserta) {
+        console.log("✅ Login berhasil! Cek apakah sudah terdaftar di bootcamp...");
         setPeserta(data.peserta);
-        await fetchFields();
-        setStep("form");
+        
+        // Cek apakah sudah terdaftar di bootcamp ini
+        try {
+          const checkRes = await fetch(`/bootcamps/${bootcampId}/daftar`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
+            body:    JSON.stringify({}),
+          });
+          
+          const checkData = await checkRes.json();
+          console.log("Registration check response:", { status: checkRes.status, data: checkData });
+          
+          if (checkRes.status === 409) {
+            // Sudah terdaftar → langsung redirect ke kelas
+            console.log("✅ Sudah terdaftar! Redirect ke kelas...");
+            window.location.href = checkData.redirect || `/peserta/kelas/${bootcampId}`;
+          } else if (checkRes.ok || checkRes.status === 422) {
+            // Belum terdaftar → tampilkan form checkout
+            console.log("📋 Belum terdaftar, tampilkan form checkout...");
+            setStep("form");
+            fetchFields();
+          } else {
+            setErrors({ password: "Gagal cek status registrasi. Coba lagi." });
+          }
+        } catch (err) {
+          console.error("Check registration error:", err);
+          // Jika error, lanjut ke form checkout (assume belum terdaftar)
+          setStep("form");
+          fetchFields();
+        }
+      } else if (res.status === 422 && data.errors) {
+        const flatErrors: Record<string, string> = {};
+        for (const [key, value] of Object.entries(data.errors)) {
+          if (Array.isArray(value) && value.length > 0) {
+            flatErrors[key] = value[0];
+          } else if (typeof value === 'string') {
+            flatErrors[key] = value;
+          }
+        }
+        setErrors(flatErrors);
+      } else if (res.status === 401) {
+        setErrors({ password: data.message || "Email atau password salah." });
       } else {
-        setErrors({ password: data.message || "Password salah." });
+        setErrors({ password: data.message || "Terjadi kesalahan. Coba lagi." });
       }
-    } catch { setErrors({ password: "Terjadi kesalahan, coba lagi." }); }
+    } catch (err) { 
+      console.error("Login error:", err);
+      setErrors({ password: "Terjadi kesalahan jaringan. Coba lagi." }); 
+    }
     finally  { setLoading(false); }
   };
 
@@ -206,21 +268,54 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setLoading(true);
+    
+    console.log("📤 Sending register request:", { email, nama, password: "***" });
+    
     try {
       const res  = await fetch("/peserta/register-checkout", {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrf() },
         body:    JSON.stringify({ email, nama, password }),
       });
+      
       const data = await res.json();
-      if (res.ok) {
+      console.log("📥 Register response:", { 
+        status: res.status, 
+        ok: res.ok, 
+        data: JSON.stringify(data, null, 2) 
+      });
+      
+      if (res.ok && data.peserta) {
+        console.log("✅ Register berhasil! Pindah ke step form...");
         setPeserta(data.peserta);
-        await fetchFields();
         setStep("form");
+        fetchFields();
+      } else if (res.status === 422) {
+        // Validation error — Laravel mengirim error dengan struktur { field: ['message1', 'message2'] }
+        const errorData = data.errors || data;
+        console.error("❌ Validation errors:", errorData);
+        
+        const flatErrors: Record<string, string> = {};
+        for (const [key, value] of Object.entries(errorData)) {
+          if (Array.isArray(value) && value.length > 0) {
+            flatErrors[key] = value[0]; // Ambil pesan pertama dari array
+          } else if (typeof value === 'string') {
+            flatErrors[key] = value;
+          }
+        }
+        console.log("Flattened errors:", flatErrors);
+        setErrors(flatErrors);
+      } else if (res.status === 500) {
+        console.error("❌ Server error:", data);
+        setErrors({ email: data.message || "Terjadi kesalahan server. Hubungi admin." });
       } else {
-        setErrors(data.errors || { email: "Gagal membuat akun." });
+        console.error("❌ Unknown error:", data);
+        setErrors({ email: data.message || "Gagal membuat akun. Silakan coba lagi." });
       }
-    } catch { setErrors({ email: "Terjadi kesalahan, coba lagi." }); }
+    } catch (err) { 
+      console.error("❌ Network error:", err);
+      setErrors({ email: "Terjadi kesalahan jaringan. Coba lagi." }); 
+    }
     finally  { setLoading(false); }
   };
 
@@ -257,12 +352,14 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
   // ─────────────────────────────────────────────
   const titles: Record<Step, string> = {
     email:    `Daftar: ${bootcampName}`,
+    pilihan:  "Daftar Bootcamp",
     password: "Masukkan Password",
     register: "Buat Password",
     form:     "Lengkapi Data",
     success:  "Pendaftaran Berhasil! 🎉",
   };
   const descs: Record<Step, string> = {
+    pilihan:  "Pilih cara pendaftaran kamu.",
     email:    "Masukkan email kamu untuk melanjutkan.",
     password: `Hai! Kami mengenali email ${email}. Masukkan password kamu.`,
     register: "Email baru! Buat password untuk akunmu.",
@@ -276,9 +373,10 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
 
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
-          {step !== "email" && step !== "success" && (
+          {step !== "pilihan" && step !== "success" && (
             <button
               onClick={() => {
+                if (step === "email") setStep("pilihan");
                 if (step === "password" || step === "register") setStep("email");
                 if (step === "form") setStep(peserta ? "email" : "register");
               }}
@@ -296,6 +394,54 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
+
+          {/* ── PILIHAN: SUDAH PUNYA AKUN / BELUM ── */}
+          {step === "pilihan" && (
+            <div className="space-y-3">
+              {/* Info bootcamp */}
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                <p className="text-xs text-blue-600 font-semibold">Mendaftar ke</p>
+                <p className="text-sm font-bold text-blue-900 mt-0.5">{bootcampName}</p>
+              </div>
+
+              {/* Pilihan login */}
+              <button
+                onClick={() => setStep("email")}
+                className="w-full flex items-center gap-4 p-4 border-2 border-blue-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition group text-left"
+              >
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition">
+                  <KeyRound className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-800">Sudah punya akun</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Masuk dengan email & password</p>
+                </div>
+                <ChevronLeft className="h-4 w-4 text-gray-400 rotate-180 shrink-0" />
+              </button>
+
+              {/* Pilihan register */}
+              <button
+                onClick={() => {
+                  // Tetap lewat email check terlebih dahulu
+                  setStep("email");
+                }}
+                className="w-full flex items-center gap-4 p-4 border-2 border-green-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition group text-left"
+              >
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0 group-hover:bg-green-200 transition">
+                  <UserPlus className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-800">Belum punya akun</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Daftar akun baru, gratis!</p>
+                </div>
+                <ChevronLeft className="h-4 w-4 text-gray-400 rotate-180 shrink-0" />
+              </button>
+
+              <p className="text-xs text-center text-gray-400 pt-1">
+                🔒 Data kamu aman dan tidak akan disalahgunakan
+              </p>
+            </div>
+          )}
 
           {/* ── EMAIL ── */}
           {step === "email" && (
@@ -323,6 +469,10 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
           {/* ── PASSWORD (existing user) ── */}
           {step === "password" && (
             <div className="space-y-4">
+              {/* Info sudah punya akun */}
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700">
+                ✅ Email ini sudah terdaftar. Masukkan password untuk melanjutkan pendaftaran.
+              </div>
               {/* Email locked */}
               <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-600">
                 <Mail className="h-4 w-4 text-gray-400 shrink-0" />
@@ -357,6 +507,10 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
           {/* ── REGISTER (new user) ── */}
           {step === "register" && (
             <div className="space-y-4">
+              {/* Info belum punya akun */}
+              <div className="p-3 bg-green-50 rounded-xl border border-green-100 text-xs text-green-700">
+                🆕 Email ini belum terdaftar. Buat akun baru untuk melanjutkan.
+              </div>
               {/* Email locked */}
               <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-600">
                 <Mail className="h-4 w-4 text-gray-400 shrink-0" />
@@ -402,6 +556,12 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
                 {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                 <p className="text-xs text-gray-400">Password ini akan dipakai untuk login ke akun pesertamu.</p>
               </div>
+
+              {errors.email && (
+                <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-xs text-red-700">{errors.email}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -510,6 +670,271 @@ export function CheckoutDialog({ open, onOpenChange, bootcampId, bootcampName, h
             )}
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────
+// PaymentDialog — untuk bootcamp berbayar
+// Peserta kirim bukti transfer → admin konfirmasi
+// ─────────────────────────────────────────────
+type PaymentStep = "detail" | "upload" | "waiting" | "confirmed";
+
+type PaymentProps = {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  bootcampId: number;
+  bootcampName: string;
+  harga: number;
+};
+
+export function PaymentDialog({ open, onOpenChange, bootcampId, bootcampName, harga }: PaymentProps) {
+  const [step,     setStep]     = useState<PaymentStep>("detail");
+  const [bukti,    setBukti]    = useState<File | null>(null);
+  const [preview,  setPreview]  = useState<string | null>(null);
+  const [catatan,  setCatatan]  = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [errors,   setErrors]   = useState<Record<string, string>>({});
+  const [orderId,  setOrderId]  = useState<string | null>(null);
+  const [nama,     setNama]     = useState("");
+  const [emailByr, setEmailByr] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setStep("detail");
+      setBukti(null); setPreview(null);
+      setCatatan(""); setErrors({});
+      setOrderId(null);
+      setNama(""); setEmailByr("");
+    }
+  }, [open]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBukti(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const handleUpload = async () => {
+    if (!nama.trim()) { setErrors({ bukti: "Nama wajib diisi." }); return; }
+    if (!emailByr.trim()) { setErrors({ bukti: "Email wajib diisi." }); return; }
+    if (!bukti) { setErrors({ bukti: "Upload bukti transfer terlebih dahulu." }); return; }
+    setLoading(true);
+    setErrors({});
+    try {
+      const fd = new FormData();
+      fd.append("bootcamp_id", String(bootcampId));
+      fd.append("nama", nama);
+      fd.append("email", emailByr);
+      fd.append("bukti_transfer", bukti);
+      fd.append("catatan", catatan);
+      const csrfMeta = document.head.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+      if (csrfMeta) fd.append("_token", csrfMeta.content);
+
+      const res  = await fetch("/pembayaran/upload-bukti", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        setOrderId(data.order_id);
+        setStep("waiting");
+      } else {
+        setErrors({ bukti: data.message ?? "Gagal mengirim bukti." });
+      }
+    } catch {
+      setErrors({ bukti: "Terjadi kesalahan, coba lagi." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatHarga = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold">
+            {step === "detail"    && "Detail Pembayaran"}
+            {step === "upload"    && "Upload Bukti Transfer"}
+            {step === "waiting"   && "Menunggu Konfirmasi"}
+            {step === "confirmed" && "Pembayaran Dikonfirmasi!"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-1">
+
+          {/* ── DETAIL PEMBAYARAN ── */}
+          {step === "detail" && (
+            <div className="space-y-4">
+              {/* Info bootcamp */}
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-xs text-blue-600 font-semibold mb-1">Kelas yang didaftarkan</p>
+                <p className="text-sm font-bold text-gray-800">{bootcampName}</p>
+                <p className="text-2xl font-black text-blue-600 mt-2">{formatHarga(harga)}</p>
+              </div>
+
+              {/* Instruksi transfer */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-gray-700">Cara Pembayaran:</p>
+                <div className="space-y-2">
+                  {[
+                    { no: "1", text: "Transfer ke rekening berikut:" },
+                    { no: "2", text: "Screenshot bukti transfer" },
+                    { no: "3", text: "Upload bukti transfer di sini" },
+                    { no: "4", text: "Admin akan mengkonfirmasi dalam 1x24 jam" },
+                    { no: "5", text: "Setelah dikonfirmasi, kamu bisa daftar akun & akses kelas" },
+                  ].map((item) => (
+                    <div key={item.no} className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center shrink-0">
+                        {item.no}
+                      </span>
+                      <p className="text-sm text-gray-600">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Info rekening — ini bisa dikustomisasi penjual */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Info Rekening</p>
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="text-gray-400">Bank:</span> <span className="font-semibold text-gray-800">BCA</span></p>
+                  <p className="text-sm"><span className="text-gray-400">No. Rekening:</span> <span className="font-semibold text-gray-800 select-all">1234567890</span></p>
+                  <p className="text-sm"><span className="text-gray-400">Atas Nama:</span> <span className="font-semibold text-gray-800">Admin Bootcamp</span></p>
+                </div>
+                <p className="text-xs text-orange-600 font-medium">
+                  ⚠️ Transfer tepat {formatHarga(harga)} agar mudah diverifikasi
+                </p>
+              </div>
+
+              <button
+                onClick={() => setStep("upload")}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition"
+              >
+                Sudah Transfer → Upload Bukti
+              </button>
+              <p className="text-xs text-center text-gray-400">
+                Belum transfer? Catat info rekening di atas terlebih dahulu.
+              </p>
+            </div>
+          )}
+
+          {/* ── UPLOAD BUKTI ── */}
+          {step === "upload" && (
+            <div className="space-y-4">
+              {/* Nama & email */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Nama <span className="text-red-500">*</span></p>
+                  <input
+                    type="text" placeholder="Nama lengkap"
+                    value={nama} onChange={e => setNama(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Email <span className="text-red-500">*</span></p>
+                  <input
+                    type="email" placeholder="Email kamu"
+                    value={emailByr} onChange={e => setEmailByr(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {/* Upload area */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Bukti Transfer <span className="text-red-500">*</span>
+                </p>
+                {preview ? (
+                  <div className="relative">
+                    <img src={preview} alt="bukti" className="w-full max-h-48 object-contain rounded-xl border border-gray-200" />
+                    <button
+                      onClick={() => { setBukti(null); setPreview(null); }}
+                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow border border-gray-200"
+                    >
+                      <X className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-blue-50 transition"
+                  >
+                    <Upload className="h-6 w-6 text-gray-400" />
+                    <p className="text-sm text-gray-500">Klik untuk upload screenshot</p>
+                    <p className="text-xs text-gray-400">JPG, PNG, max 5MB</p>
+                  </button>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                {errors.bukti && <p className="text-xs text-red-500 mt-1">{errors.bukti}</p>}
+              </div>
+
+              {/* Catatan */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1.5">Catatan (opsional)</p>
+                <textarea
+                  rows={2}
+                  placeholder="Contoh: Transfer dari BNI atas nama Budi"
+                  value={catatan}
+                  onChange={e => setCatatan(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setStep("detail")}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold rounded-xl text-sm hover:bg-gray-50 transition"
+                >
+                  Kembali
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={loading || !bukti}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Kirim Bukti
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── MENUNGGU KONFIRMASI ── */}
+          {step === "waiting" && (
+            <div className="text-center space-y-4 py-4">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-3xl">⏳</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-800">Bukti Transfer Terkirim!</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Admin akan memverifikasi pembayaranmu dalam <strong>1x24 jam</strong>.
+                </p>
+              </div>
+              <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200 text-left space-y-2">
+                <p className="text-xs font-bold text-yellow-700 uppercase tracking-wide">Selanjutnya:</p>
+                <p className="text-xs text-yellow-700">
+                  Setelah admin mengkonfirmasi, kamu akan mendapat notifikasi dan bisa langsung daftar akun untuk mengakses kelas.
+                </p>
+              </div>
+              {orderId && (
+                <p className="text-xs text-gray-400">ID Pesanan: <span className="font-semibold text-gray-600">{orderId}</span></p>
+              )}
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition"
+              >
+                Tutup
+              </button>
+            </div>
+          )}
+
+        </div>
       </DialogContent>
     </Dialog>
   );

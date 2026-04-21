@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DateRange } from "react-day-picker";
 import {
   Dialog,
   DialogContent,
@@ -51,8 +52,7 @@ export type Assignment = {
 const emptyForm = {
   judul:          "",
   tugas:          "",
-  tanggal_mulai:  undefined as Date | undefined,
-  tanggal_akhir:  undefined as Date | undefined,
+  rangeTanggal: undefined as DateRange | undefined,
   is_wajib:       false,
   is_tugas_akhir: false,
   tipe:           "upload" as "upload" | "quiz",
@@ -351,7 +351,7 @@ function AssignmentCard({
       preserveScroll: true,
       onSuccess: () => {
         toast.success("Tugas berhasil dihapus.");
-        router.reload({ only: ["assignmentList"] });
+        
       },
       onError: () => toast.error("Gagal menghapus tugas."),
     });
@@ -375,11 +375,17 @@ function AssignmentCard({
             </div>
 
             {/* Preview teks (strip HTML) */}
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2"
-              dangerouslySetInnerHTML={{
-                __html: assignment.tugas.replace(/<[^>]*>/g, " ").slice(0, 120) + "..."
-              }}
-            />
+            <p
+  className="text-xs text-gray-400 mt-1 line-clamp-2"
+  dangerouslySetInnerHTML={{
+    __html:
+      ((assignment.tugas ?? "")
+        .replace(/<[^>]*>/g, " ")
+        .trim()
+        .slice(0, 120) || "Belum ada deskripsi tugas") +
+      "..."
+  }}
+/>
 
             {/* Tanggal */}
             <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -571,8 +577,9 @@ export default function TabAssignment({
     setForm({
       judul:         a.judul,
       tugas:         a.tugas,
-      tanggal_mulai: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
-      tanggal_akhir: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,
+      rangeTanggal: {
+      from: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
+      to: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,},
       is_wajib:      a.is_wajib,
       is_tugas_akhir: a.is_tugas_akhir ?? false,
       tipe:           a.tipe ?? "upload",
@@ -601,7 +608,7 @@ export default function TabAssignment({
     const e: Record<string, string> = {};
     if (!form.judul.trim()) e.judul = "Judul wajib diisi.";
     if (!form.tugas.replace(/<[^>]*>/g, "").trim()) e.tugas = "Konten tugas wajib diisi.";
-    if (!form.tanggal_mulai) e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+    if (!form.rangeTanggal?.from) e.tanggal_mulai = "Tanggal mulai wajib diisi.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -626,8 +633,10 @@ export default function TabAssignment({
     fd.append("is_wajib",      form.is_wajib ? "1" : "0");
     fd.append("is_tugas_akhir", form.is_tugas_akhir ? "1" : "0");
     fd.append("tipe", tipeRef.current); // use ref to avoid stale closure
-    if (form.tanggal_mulai) fd.append("tanggal_mulai", format(form.tanggal_mulai, "yyyy-MM-dd"));
-    if (form.tanggal_akhir) fd.append("tanggal_akhir", format(form.tanggal_akhir, "yyyy-MM-dd"));
+    if (form.rangeTanggal?.from) {
+    fd.append("tanggal_mulai", format(form.rangeTanggal.from, "yyyy-MM-dd"));}
+    if (form.rangeTanggal?.to) {
+    fd.append("tanggal_akhir", format(form.rangeTanggal.to, "yyyy-MM-dd"));}
     newFiles.forEach((f, i) => fd.append(`files[${i}]`, f));
     // Kirim id file yang masih dipertahankan (edit mode)
     existingFiles.forEach((f, i) => { if (f.id) fd.append(`existing_files[${i}]`, String(f.id)); });
@@ -767,22 +776,34 @@ export default function TabAssignment({
             {/* Tanggal */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <DateField
-                  label="Tanggal Mulai *"
-                  value={form.tanggal_mulai}
-                  onChange={(d) => setForm({ ...form, tanggal_mulai: d })}
-                  placeholder="Pilih Tanggal Mulai"
-                />
-                {errors.tanggal_mulai && <p className="text-xs text-red-500 mt-1">{errors.tanggal_mulai}</p>}
-                <p className="text-xs text-gray-400 mt-1">Peserta dapat mengirimkan hasil tugas pada tanggal ini</p>
-              </div>
-              <div>
-                <DateField
-                  label="Tanggal Akhir / Deadline"
-                  value={form.tanggal_akhir}
-                  onChange={(d) => setForm({ ...form, tanggal_akhir: d })}
-                  placeholder="Pilih Tanggal Akhir"
-                />
+                <div className="space-y-1">
+  <Label className="text-sm font-medium text-gray-700">
+    Periode Tugas <span className="text-red-500">*</span>
+  </Label>
+
+  <Popover>
+    <PopoverTrigger asChild>
+      <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm">
+        {form.rangeTanggal?.from && form.rangeTanggal?.to
+          ? `${format(form.rangeTanggal.from, "dd MMM yyyy")} - ${format(form.rangeTanggal.to, "dd MMM yyyy")}`
+          : "Pilih rentang tanggal"}
+      </button>
+    </PopoverTrigger>
+
+    <PopoverContent className="w-auto p-0">
+      <CalendarComponent
+        mode="range"
+        selected={form.rangeTanggal}
+        onSelect={(range) => setForm({ ...form, rangeTanggal: range })}
+        numberOfMonths={2}
+      />
+    </PopoverContent>
+  </Popover>
+
+  {errors.tanggal_mulai && (
+    <p className="text-xs text-red-500">{errors.tanggal_mulai}</p>
+  )}
+</div>
                 <p className="text-xs text-gray-400 mt-1">Peserta tidak dapat mengirimkan tugas setelah tanggal ini</p>
               </div>
             </div>

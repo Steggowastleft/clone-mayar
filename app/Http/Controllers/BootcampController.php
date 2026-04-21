@@ -74,7 +74,7 @@ class BootcampController extends Controller
 
     public function show(Bootcamp $bootcamp)
     {
-        // Load semua relasi sekaligus
+        // ── Load semua relasi ────────────────────────────────────
         $bootcamp->load([
             'sesis',
             'babs.materis',
@@ -82,21 +82,19 @@ class BootcampController extends Controller
             'assignments.soals',
             'assignments.submissions.peserta',
             'pendaftaran.peserta',
-            'assignments.submissions',
             'ratings.peserta',
-            'pembayaran',
         ]);
 
-        // Flatten submissions dari semua assignment
+        // ── Submissions (untuk tab Grade) ────────────────────────
         $submissions = $bootcamp->assignments->flatMap(function ($assignment) {
             return $assignment->submissions->map(fn($s) => [
                 'id'               => $s->id,
                 'assignment_id'    => $assignment->id,
                 'assignment_judul' => $assignment->judul,
                 'peserta_id'       => $s->peserta_id,
-                'peserta_nama'     => $s->peserta->nama,
-                'peserta_email'    => $s->peserta->email,
-                'peserta_no_hp'    => $s->peserta->no_hp ?? null,
+                'peserta_nama'     => $s->peserta?->nama ?? '-',
+                'peserta_email'    => $s->peserta?->email ?? '-',
+                'peserta_no_hp'    => $s->peserta?->no_hp ?? null,
                 'waktu_kirim'      => $s->waktu_kirim?->toISOString(),
                 'submission_url'   => $s->submission_url,
                 'submission_teks'  => $s->submission_teks,
@@ -104,9 +102,86 @@ class BootcampController extends Controller
             ]);
         })->values()->toArray();
 
+        $pesertaList = $bootcamp->pendaftaran->map(function ($item) use ($bootcamp) {
+    $peserta = $item->peserta;
+
+    // Ambil submission peserta
+    $submissionPeserta = $bootcamp->assignments
+        ->flatMap->submissions
+        ->where('peserta_id', $item->peserta_id);
+
+    // Hitung nilai rata-rata
+    $nilaiList = $submissionPeserta
+        ->pluck('grade')
+        ->filter(function ($v) {
+            return $v !== null;
+        });
+
+    $nilaiRata = $nilaiList->count()
+        ? round($nilaiList->avg(), 1)
+        : null;
+
+    // Hitung progress
+    $totalAssignment = $bootcamp->assignments->count();
+    $progress = $totalAssignment > 0
+        ? round(($submissionPeserta->count() / $totalAssignment) * 100)
+        : 0;
+
+    // Handle form_data
+    $formData = $item->form_data;
+
+    if (is_string($formData)) {
+        $formData = json_decode($formData, true);
+    }
+
+    $formFlat = [];
+
+    if (is_array($formData)) {
+        foreach ($formData as $field) {
+            if (isset($field['label']) && isset($field['value'])) {
+                $formFlat[$field['label']] = $field['value'];
+            }
+        }
+    }
+
+    return [
+        'id'             => $item->id,
+        'nama'           => $peserta ? $peserta->nama : '-',
+        'email'          => $peserta ? $peserta->email : '-',
+        'no_hp'          => $peserta ? $peserta->no_hp : null,
+        'status'         => $item->status ?? 'pending',
+        'tanggal_daftar' => $item->created_at
+            ? $item->created_at->toISOString()
+            : null,
+        'progress'       => $progress,
+        'nilai_rata'     => $nilaiRata,
+        'form_data'      => $formFlat,
+    ];
+})->values()->toArray();
+
+        // ── Pembayaran List (untuk tab Pembayaran) ───────────────
+        $pembayaranList = \App\Models\Pembayaran::where('bootcamp_id', $bootcamp->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($p) => [
+                'id'            => $p->id,
+                'order_id'      => $p->order_id,
+                'nama_pembeli'  => $p->nama_pembeli,
+                'email_pembeli' => $p->email_pembeli,
+                'jumlah'        => (float) $p->jumlah,
+                'status'        => $p->status,
+                'bukti_url'     => $p->bukti_transfer
+                    ? Storage::url($p->bukti_transfer)
+                    : null,
+                'catatan'       => $p->catatan,
+                'created_at'    => $p->created_at->format('d M Y, H:i'),
+                'confirmed_at'  => $p->confirmed_at?->format('d M Y, H:i'),
+            ])->values()->toArray();
+
+        // ── Render ───────────────────────────────────────────────
         return Inertia::render('bootcamps/detail', [
 
-            // ── Bootcamp (tanpa relasi) ──────────────────────────────
+            // Bootcamp (tanpa relasi)
             'bootcamp' => [
                 'id'                         => $bootcamp->id,
                 'name'                       => $bootcamp->name,
@@ -115,21 +190,21 @@ class BootcampController extends Controller
                 'date'                       => $bootcamp->date,
                 'participants'               => $bootcamp->participants,
                 'kategori'                   => $bootcamp->kategori,
-                'harga'                      => $bootcamp->harga,
+                'harga'                      => (float) ($bootcamp->harga ?? 0),
+                'tipe_pembayaran'            => $bootcamp->tipe_pembayaran,
                 'deskripsi'                  => $bootcamp->deskripsi,
                 'instruksi'                  => $bootcamp->instruksi,
                 'syarat_ketentuan'           => $bootcamp->syarat_ketentuan,
-                'cover'                      => $bootcamp->cover,
                 'cover_url'                  => $bootcamp->cover
-                                                    ? asset('storage/' . $bootcamp->cover)
-                                                    : null,
+                    ? asset('storage/' . $bootcamp->cover)
+                    : null,
                 'tanggal_mulai_jual'         => $bootcamp->tanggal_mulai_jual,
                 'tanggal_tutup_daftar'       => $bootcamp->tanggal_tutup_daftar,
                 'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran,
                 'tanggal_batas_pembelajaran' => $bootcamp->tanggal_batas_pembelajaran,
             ],
 
-            // ── Sesi list ────────────────────────────────────────────
+            // Sesi
             'sesiList' => $bootcamp->sesis->map(fn($s) => [
                 'id'              => $s->id,
                 'judul'           => $s->judul,
@@ -145,7 +220,7 @@ class BootcampController extends Controller
                 'waktu_selesai'   => $s->waktu_selesai?->format('H:i'),
             ])->values()->toArray(),
 
-            // ── Bab + Materi list ────────────────────────────────────
+            // Bab + Materi
             'babList' => $bootcamp->babs->map(fn($b) => [
                 'id'        => $b->id,
                 'judul'     => $b->judul,
@@ -161,123 +236,57 @@ class BootcampController extends Controller
                 ])->values()->toArray(),
             ])->values()->toArray(),
 
-            // ── Assignment list (tab Assignment) ─────────────────────
+            // Assignment List — lengkap dengan tipe, soals, is_wajib, is_tugas_akhir
             'assignmentList' => $bootcamp->assignments->map(fn($a) => [
-                'id'            => $a->id,
-                'judul'         => $a->judul,
-                'tugas'         => $a->tugas,
-                'is_wajib'      => (bool) $a->is_wajib,
+                'id'             => $a->id,
+                'judul'          => $a->judul,
+                'tugas'          => $a->tugas,
+                'tipe'           => $a->tipe ?? 'upload',
+                'is_wajib'       => (bool) $a->is_wajib,
                 'is_tugas_akhir' => (bool) $a->is_tugas_akhir,
-                'tanggal_mulai' => $a->tanggal_mulai?->format('d M Y'),
-                'tanggal_akhir' => $a->tanggal_akhir?->format('d M Y'),
-                'files'         => $a->files->map(fn($f) => [
+                'tanggal_mulai'  => $a->tanggal_mulai?->format('d M Y'),
+                'tanggal_akhir'  => $a->tanggal_akhir?->format('d M Y'),
+                'files'          => $a->files->map(fn($f) => [
                     'id'   => $f->id,
                     'name' => $f->name,
                     'url'  => $f->url,
                     'size' => $f->size,
                 ])->values()->toArray(),
-                'tipe'           => $a->tipe ?? 'upload',
-                'soals'          => $a->soals->sortBy('urutan')->map(fn($s) => [
-                    'id'           => $s->id,
-                    'pertanyaan'   => $s->pertanyaan,
-                    'tipe_soal'    => $s->tipe_soal,
-                    'pilihan'      => $s->pilihan,
-                    'jawaban_benar'=> $s->jawaban_benar, // penjual boleh lihat
-                    'urutan'       => $s->urutan,
+                'soals' => $a->soals->sortBy('urutan')->map(fn($s) => [
+                    'id'            => $s->id,
+                    'pertanyaan'    => $s->pertanyaan,
+                    'tipe_soal'     => $s->tipe_soal,
+                    'pilihan'       => $s->pilihan,
+                    'jawaban_benar' => $s->jawaban_benar, // penjual boleh lihat
+                    'urutan'        => $s->urutan,
                 ])->values()->toArray(),
             ])->values()->toArray(),
 
-            // ── Tab Grade: dropdown assignments ──────────────────────
+            // Assignments dropdown untuk tab Grade
             'assignments' => $bootcamp->assignments->map(fn($a) => [
                 'id'    => $a->id,
                 'judul' => $a->judul,
             ])->values()->toArray(),
 
-            // ── Tab Grade: semua submissions ─────────────────────────
+            // Submissions untuk tab Grade
             'submissions' => $submissions,
 
-            // ── Tab Rating ───────────────────────────────────────────
+            // Peserta
+            'pesertaList' => $pesertaList,
+
+            // Ratings
             'ratings' => $bootcamp->ratings->map(fn($r) => [
                 'id'           => $r->id,
                 'bintang'      => $r->bintang,
                 'ulasan'       => $r->ulasan,
                 'tampil_anonim'=> (bool) $r->tampil_anonim,
                 'foto_url'     => $r->foto_url,
-                'nama_peserta' => $r->tampil_anonim ? 'Anonim' : $r->peserta->nama,
+                'nama_peserta' => $r->tampil_anonim ? 'Anonim' : ($r->peserta?->nama ?? '-'),
                 'created_at'   => $r->created_at->toISOString(),
             ])->values()->toArray(),
 
-            // ── Tab Peserta ───────────────────────────────────────────
-            'pesertaList' => $bootcamp->pendaftaran->map(function ($p) use ($bootcamp) {
-                $peserta = $p->peserta;
-
-                // Guard: skip jika peserta null
-                if (!$peserta) return null;
-
-                // Hitung progress dari tabel progress_materis
-                $totalMateri     = $bootcamp->babs->sum(fn($b) => $b->materis->count());
-                $totalAssignment = $bootcamp->assignments->count();
-                $totalItem       = $totalMateri + $totalAssignment;
-                $materiDibaca    = \App\Models\ProgressMateri::where('peserta_id', $peserta->id)
-                                    ->where('bootcamp_id', $bootcamp->id)->count();
-                $assignSubmit    = $bootcamp->assignments->flatMap(fn($a) => $a->submissions)
-                                    ->where('peserta_id', $peserta->id)->count();
-                $progress = $totalItem > 0
-                    ? (int) round((($materiDibaca + $assignSubmit) / $totalItem) * 100)
-                    : 0;
-
-                // Hitung nilai rata-rata dari submissions
-                $submissions = $bootcamp->assignments->flatMap(fn($a) => $a->submissions)
-                    ->where('peserta_id', $peserta->id)
-                    ->whereNotNull('grade');
-                $nilaiRata = $submissions->count() > 0
-                    ? round($submissions->avg('grade'), 1)
-                    : null;
-
-                // Decode form_data JSON jika masih string
-                $formData = $p->form_data;
-                if (is_string($formData)) {
-                    $formData = json_decode($formData, true);
-                }
-
-                // Ambil nilai dari dalam form_data (format: {key: {label, value}})
-                $formFlat = [];
-                if (is_array($formData)) {
-                    foreach ($formData as $key => $field) {
-                        if (isset($field['label']) && isset($field['value'])) {
-                            $formFlat[$field['label']] = $field['value'];
-                        }
-                    }
-                }
-
-                return [
-                    'id'             => $p->id,
-                    'nama'           => $peserta->nama,
-                    'email'          => $peserta->email,
-                    'no_hp'          => $peserta->no_hp ?? null,
-                    'status'         => $p->status,
-                    'tanggal_daftar' => $p->tanggal_daftar
-                                        ? \Carbon\Carbon::parse($p->tanggal_daftar)->toISOString()
-                                        : $p->created_at->toISOString(),
-                    'progress'       => $progress,
-                    'nilai_rata'     => $nilaiRata,
-                    'form_data'      => $formFlat,
-                ];
-            })->filter()->values()->toArray(),
-
-            // ── Tab Pembayaran ───────────────────────────────────────
-            'pembayaranList' => $bootcamp->pembayaran->map(fn($p) => [
-                'id'             => $p->id,
-                'order_id'       => $p->order_id,
-                'nama_pembeli'   => $p->nama_pembeli,
-                'email_pembeli'  => $p->email_pembeli,
-                'jumlah'         => $p->jumlah,
-                'status'         => $p->status,
-                'bukti_transfer' => $p->bukti_transfer ? asset('storage/' . $p->bukti_transfer) : null,
-                'catatan'        => $p->catatan,
-                'created_at'     => $p->created_at->toISOString(),
-                'confirmed_at'   => $p->confirmed_at?->toISOString(),
-            ])->values()->toArray(),
+            // Pembayaran
+            'pembayaranList' => $pembayaranList,
         ]);
     }
 

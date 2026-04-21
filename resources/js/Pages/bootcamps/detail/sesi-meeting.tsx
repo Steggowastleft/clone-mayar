@@ -7,6 +7,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { Calendar } from "@/components/ui/calendar";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -222,8 +229,13 @@ export default function TabSesiMeeting({
   const [errors,       setErrors]       = useState<Record<string, string>>({});
 
   const [sesiForm,     setSesiForm]  = useState(emptyForm);
-  const [waktuMulai,   setWaktuMulai]   = useState(emptyWaktu);
-  const [waktuSelesai, setWaktuSelesai] = useState(emptyWaktu);
+  const [rangeTanggal, setRangeTanggal] = useState<{
+  from?: Date;
+  to?: Date;
+  }>({});
+
+  const [jamMulai, setJamMulai] = useState("");
+  const [jamSelesai, setJamSelesai] = useState("");
 
   // Peta & geocoding
   const [markerPos,    setMarkerPos]    = useState<[number, number] | null>(null);
@@ -298,56 +310,56 @@ export default function TabSesiMeeting({
 
   // ── Submit (create / update) ──
   const handleSubmit = () => {
-    if (!validate()) return;
-    setIsSubmitting(true);
+  if (!validate()) return;
+  setIsSubmitting(true);
 
-    const formatDT = (w: typeof waktuMulai) => {
-      if (!w.date) return "";
-      return `${format(w.date, "yyyy-MM-dd")} ${w.time || "00:00"}`;
-    };
-
-    const payload = {
-      judul:           sesiForm.judul,
-      deskripsi:       sesiForm.deskripsi,
-      is_online:       isOnline ? 1 : 0,
-      link_sesi:       isOnline ? sesiForm.linkSesi : "",
-      lokasi:          !isOnline ? sesiForm.lokasi : "",
-      lat:             !isOnline && savedLat ? savedLat : "",
-      lng:             !isOnline && savedLng ? savedLng : "",
-      nama_pemateri:   sesiForm.namaPemateri,
-      profil_pemateri: sesiForm.profilPemateri,
-      waktu_mulai:     formatDT(waktuMulai),
-      waktu_selesai:   formatDT(waktuSelesai),
-    };
-
-    const isEdit = !!editingSesi;
-    const url = isEdit
-      ? `/bootcamps/${bootcampId}/sesi/${editingSesi!.id}`
-      : `/bootcamps/${bootcampId}/sesi`;
-
-    const routerOptions = {
-      preserveScroll: true as const,
-      onSuccess: () => {
-        setIsSubmitting(false);
-        toast.success(isEdit ? "Sesi berhasil diperbarui!" : "Sesi berhasil dibuat!");
-        handleCloseDialog();
-        router.reload({ only: ["sesiList"] });
-      },
-      onError: (e: Record<string, string>) => {
-        setIsSubmitting(false);
-        toast.error("Gagal menyimpan sesi. Periksa kembali data Anda.");
-        const serverErrors: Record<string, string> = {};
-        Object.keys(e).forEach((key) => { serverErrors[key] = e[key]; });
-        setErrors(serverErrors);
-      },
-    };
-
-    if (isEdit) {
-      router.put(url, payload, routerOptions);
-    } else {
-      router.post(url, payload, routerOptions);
-    }
+  const formatTanggalJam = (date?: Date, time?: string) => {
+    if (!date) return "";
+    return `${format(date, "yyyy-MM-dd")} ${time || "00:00"}`;
   };
+
+  const payload = {
+    judul:           sesiForm.judul,
+    deskripsi:       sesiForm.deskripsi,
+    is_online:       isOnline ? 1 : 0,
+    link_sesi:       isOnline ? sesiForm.linkSesi : "",
+    lokasi:          !isOnline ? sesiForm.lokasi : "",
+    lat:             !isOnline && savedLat ? savedLat : "",
+    lng:             !isOnline && savedLng ? savedLng : "",
+    nama_pemateri:   sesiForm.namaPemateri,
+    profil_pemateri: sesiForm.profilPemateri,
+
+    // ✅ pakai date range + time
+    waktu_mulai: formatTanggalJam(rangeTanggal.from, jamMulai),
+    waktu_selesai: formatTanggalJam(rangeTanggal.to, jamSelesai),
+  };
+
+  const isEdit = !!editingSesi;
+  const url = isEdit
+    ? `/bootcamps/${bootcampId}/sesi/${editingSesi!.id}`
+    : `/bootcamps/${bootcampId}/sesi`;
+
+  const routerOptions = {
+    preserveScroll: true as const,
+    onSuccess: () => {
+      setIsSubmitting(false);
+      toast.success(isEdit ? "Sesi berhasil diperbarui!" : "Sesi berhasil dibuat!");
+      handleCloseDialog();
+      router.reload({ only: ["sesiList"] });
+    },
+    onError: (e: Record<string, string>) => {
+      setIsSubmitting(false);
+      toast.error("Gagal menyimpan sesi.");
+      setErrors(e);
+    },
+  };
+
+  if (isEdit) {
+    router.put(url, payload, routerOptions);
+  } else {
+    router.post(url, payload, routerOptions);
+  }
+};
 
   // ── Geocoding ──
   useEffect(() => {
@@ -597,13 +609,50 @@ export default function TabSesiMeeting({
             )}
 
             {/* Waktu */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <DateTimePicker label="Waktu Mulai *" value={waktuMulai} onChange={setWaktuMulai} />
-                {errors.waktuMulai && <p className="text-xs text-red-500 mt-1">{errors.waktuMulai}</p>}
-              </div>
-              <DateTimePicker label="Waktu Selesai" value={waktuSelesai} onChange={setWaktuSelesai} />
-            </div>
+            <div className="space-y-3">
+  {/* Date Range */}
+  <div>
+    <Label>Tanggal Sesi *</Label>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="w-full px-3 py-2 border rounded-md text-left text-sm">
+          {rangeTanggal.from && rangeTanggal.to
+            ? `${format(rangeTanggal.from, "dd MMM yyyy")} - ${format(rangeTanggal.to, "dd MMM yyyy")}`
+            : "Pilih rentang tanggal"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="range"
+          selected={rangeTanggal}
+          onSelect={(val) => setRangeTanggal(val || {})}
+          numberOfMonths={2}
+        />
+      </PopoverContent>
+    </Popover>
+  </div>
+
+  {/* Time */}
+  <div className="grid grid-cols-2 gap-3">
+    <div>
+      <Label>Jam Mulai *</Label>
+      <Input
+        type="time"
+        value={jamMulai}
+        onChange={(e) => setJamMulai(e.target.value)}
+      />
+    </div>
+
+    <div>
+      <Label>Jam Selesai</Label>
+      <Input
+        type="time"
+        value={jamSelesai}
+        onChange={(e) => setJamSelesai(e.target.value)}
+      />
+    </div>
+  </div>
+</div>
 
             {/* Pemateri */}
             <div className="space-y-1">

@@ -42,6 +42,7 @@ function StarDisplay({ value, size = "sm" }: { value: number; size?: "sm" | "lg"
 // Rating Card
 // ─────────────────────────────────────────────
 function RatingCard({ rating }: { rating: RatingItem }) {
+  console.log("FOTO URL:", rating.foto_url);
   const nama = rating.tampil_anonim ? "Anonim" : rating.nama_peserta;
   const initial = nama.charAt(0).toUpperCase();
 
@@ -68,7 +69,9 @@ function RatingCard({ rating }: { rating: RatingItem }) {
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-gray-800">{nama}</p>
             <span className="text-xs text-gray-400 shrink-0">
-              {format(new Date(rating.created_at), "d MMM yyyy", { locale: idLocale })}
+              {rating.created_at
+  ? format(new Date(rating.created_at), "d MMM yyyy", { locale: idLocale })
+  : "-"}
             </span>
           </div>
           <StarDisplay value={rating.bintang} />
@@ -76,7 +79,7 @@ function RatingCard({ rating }: { rating: RatingItem }) {
       </div>
 
       {rating.ulasan && (
-        <p className="text-sm text-gray-600 leading-relaxed pl-13 border-t border-gray-50 pt-3">
+        <p className="text-sm text-gray-600 leading-relaxed pl-12 border-t border-gray-50 pt-3">
           {rating.ulasan}
         </p>
       )}

@@ -10,6 +10,7 @@ use App\Models\Materi;
 use App\Models\Bootcamp;
 use App\Models\Submission;
 use App\Models\Pendaftaran;
+use App\Models\Sertifikat;
 
 class PesertaProgressController extends Controller
 {
@@ -72,12 +73,30 @@ class PesertaProgressController extends Controller
     {
         if ($progress < 100) return;
 
-        Pendaftaran::where('bootcamp_id', $bootcamp->id)
+        $updated = Pendaftaran::where('bootcamp_id', $bootcamp->id)
             ->where('peserta_id', $pesertaId)
-            ->where('status', 'active') // hanya update jika masih aktif
+            ->where('status', 'active')
             ->update([
                 'status'          => 'completed',
-                'tanggal_expired' => now(), // tandai waktu selesai
+                'tanggal_expired' => now(),
             ]);
+
+        // Generate sertifikat otomatis
+        if ($updated > 0) {
+            $peserta  = \App\Models\Peserta::find($pesertaId);
+            $bootcamp->loadMissing('instruktur');
+
+            Sertifikat::firstOrCreate(
+                ['peserta_id' => $pesertaId, 'bootcamp_id' => $bootcamp->id],
+                [
+                    'nomor_sertifikat' => Sertifikat::generateNomor(),
+                    'nama_peserta'     => $peserta->nama,
+                    'nama_bootcamp'    => $bootcamp->name,
+                    'nama_instruktur'  => $bootcamp->instruktur()->first()?->nama ?? null,
+                    'tanggal_selesai'  => now()->toDateString(),
+                    'qr_token'         => Sertifikat::generateQrToken(),
+                ]
+            );
+        }
     }
 }

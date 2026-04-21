@@ -14,7 +14,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   User, Mail, Phone, Calendar, BookOpen, Award, X,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 // ─────────────────────────────────────────────
@@ -32,10 +32,22 @@ export type PesertaItem = {
   form_data?: Record<string, any>; // jawaban kustom form
 };
 
+
+
 type Props = {
   bootcampId: number;
   pesertaList: PesertaItem[];
 };
+
+function formatTanggalAman(dateString?: string | null, pattern = "d MMM yyyy") {
+  if (!dateString) return "-";
+
+  const date = new Date(dateString);
+
+  if (!isValid(date)) return "-";
+
+  return format(date, pattern, { locale: idLocale });
+}
 
 // ─────────────────────────────────────────────
 // Status badge
@@ -60,8 +72,11 @@ function StatusBadge({ status }: { status: string }) {
 // ─────────────────────────────────────────────
 // Progress bar
 // ─────────────────────────────────────────────
-function ProgressBar({ value }: { value: number }) {
-  const pct = Math.min(100, Math.max(0, value));
+function ProgressBar({ value }: { value: number | null | undefined }) {
+  const safeValue = Number(value ?? 0);
+  const pct = Number.isNaN(safeValue)
+    ? 0
+    : Math.min(100, Math.max(0, safeValue));
   const color = pct >= 75 ? "bg-green-500" : pct >= 40 ? "bg-blue-500" : "bg-gray-300";
   return (
     <div className="flex items-center gap-2 min-w-[100px]">
@@ -70,6 +85,16 @@ function ProgressBar({ value }: { value: number }) {
       </div>
       <span className="text-xs font-semibold text-gray-500 w-8 text-right">{pct}%</span>
     </div>
+  );
+}
+
+
+function getNomorHP(peserta: PesertaItem) {
+  return (
+    peserta.no_hp ||
+    peserta.form_data?.no_hp ||
+    peserta.form_data?.phone ||
+    ""
   );
 }
 
@@ -102,8 +127,12 @@ function DetailDialog({ peserta, onClose }: { peserta: PesertaItem; onClose: () 
           <div className="bg-gray-50 rounded-xl p-4 space-y-3">
             {[
               { icon: <Mail className="h-4 w-4 text-gray-400" />,     label: "Email",          value: peserta.email },
-              { icon: <Phone className="h-4 w-4 text-gray-400" />,    label: "No HP",          value: peserta.no_hp || "-" },
-              { icon: <Calendar className="h-4 w-4 text-gray-400" />, label: "Tanggal Daftar", value: format(new Date(peserta.tanggal_daftar), "d MMMM yyyy", { locale: idLocale }) },
+              { icon: <Phone className="h-4 w-4 text-gray-400" />,    label: "No HP",          value: getNomorHP(peserta) || "-" },
+            {
+  icon: <Calendar className="h-4 w-4 text-gray-400" />,
+  label: "Tanggal Daftar",
+  value: formatTanggalAman(peserta.tanggal_daftar, "d MMMM yyyy"),
+},
               { icon: <Award className="h-4 w-4 text-gray-400" />,    label: "Nilai Rata-rata", value: peserta.nilai_rata !== null ? `${peserta.nilai_rata}` : "Belum ada nilai" },
             ].map((row) => (
               <div key={row.label} className="flex items-start gap-3">
@@ -125,32 +154,18 @@ function DetailDialog({ peserta, onClose }: { peserta: PesertaItem; onClose: () 
             </div>
           </div>
 
-          {/* Form data kustom */}
-          {peserta.form_data && Object.keys(peserta.form_data).length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Data Form Pendaftaran</p>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                {Object.entries(peserta.form_data).map(([key, val]) => (
-                  <div key={key}>
-                    <p className="text-xs text-gray-400">{key}</p>
-                    <p className="text-sm font-medium text-gray-800">{String(val)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Aksi WhatsApp */}
-          {peserta.no_hp && (
-            <a
-              href={`https://wa.me/${peserta.no_hp.replace(/\D/g, "")}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Hubungi via WhatsApp
-            </a>
-          )}
+{getNomorHP(peserta) && (
+  <a
+    href={`https://wa.me/${getNomorHP(peserta).replace(/\D/g, "")}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition"
+  >
+    <MessageCircle className="h-4 w-4" />
+    Hubungi via WhatsApp
+  </a>
+)}
 
           <Button variant="outline" className="w-full" onClick={onClose}>Tutup</Button>
         </div>
@@ -169,7 +184,7 @@ function exportCSV(pesertaList: PesertaItem[]) {
     p.email,
     p.no_hp || "",
     p.status,
-    format(new Date(p.tanggal_daftar), "dd/MM/yyyy"),
+    formatTanggalAman(p.tanggal_daftar, "dd/MM/yyyy"),
     p.progress,
     p.nilai_rata ?? "",
   ]);
@@ -370,7 +385,7 @@ export default function TabPeserta({ bootcampId, pesertaList }: Props) {
 
                     {/* Tanggal Daftar */}
                     <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap text-sm">
-                      {format(new Date(p.tanggal_daftar), "d MMM yyyy", { locale: idLocale })}
+                      {formatTanggalAman(p.tanggal_daftar, "d MMM yyyy")}
                     </td>
 
                     {/* Progress */}

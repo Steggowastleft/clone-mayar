@@ -157,6 +157,18 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
                         </span>
                       </div>
 
+                      {/* Sertifikat untuk yang sudah selesai */}
+                      {b.status === "completed" && (
+                        <div className="mt-3 pt-3 border-t border-gray-50" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => router.visit(`/peserta/bootcamp/${b.id}/sertifikat`)}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl hover:opacity-90 transition"
+                          >
+                            🏆 Ambil Sertifikat
+                          </button>
+                        </div>
+                      )}
+
                       {/* Rating */}
                       <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">

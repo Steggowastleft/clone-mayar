@@ -71,6 +71,9 @@ export function EditBootcampDialog({
     bisaAffiliate:   (bootcamp as any).bisa_affiliate     || false,
   });
 
+  console.log("tipePembayaran:", form.tipePembayaran);
+  console.log("bootcamp:", bootcamp);
+
   const parseDate = (val?: string): Date | undefined => {
     if (!val) return undefined;
     const d = new Date(val);
@@ -184,41 +187,48 @@ export function EditBootcampDialog({
             </Select>
           </div>
 
-          {/* Harga */}
-          <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-              <Input
-                className="pl-9"
-                placeholder="0"
-                type="number"
-                value={form.harga}
-                onChange={(e) => setForm({ ...form, harga: e.target.value })}
-              />
-            </div>
-          </div>
+        {form.tipePembayaran !== "gratis" && (
+  <>
+    {/* Harga */}
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
+      <div className="relative">
+        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+        <Input
+          className="pl-9"
+          placeholder="0"
+          type="number"
+          value={form.harga}
+          onChange={(e) => setForm({ ...form, harga: e.target.value })}
+        />
+      </div>
+    </div>
 
-          {/* Harga Coret */}
-          <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">
-              Harga Coret (Rp){" "}
-              <span className="text-gray-400 font-normal">(Opsional)</span>
-            </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-              <Input
-                className="pl-9"
-                placeholder="Harus lebih besar dari harga awal"
-                type="number"
-                value={form.hargaCoret}
-                onChange={(e) => setForm({ ...form, hargaCoret: e.target.value })}
-              />
-            </div>
-            {form.harga && form.hargaCoret && Number(form.hargaCoret) <= Number(form.harga) && (
-              <p className="text-xs text-red-500">Harga coret harus lebih besar dari harga awal</p>
-            )}
-          </div>
+    {/* Harga Coret */}
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">
+        Harga Coret (Rp){" "}
+        <span className="text-gray-400 font-normal">(Opsional)</span>
+      </Label>
+      <div className="relative">
+        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+        <Input
+          className="pl-9"
+          placeholder="Harus lebih besar dari harga awal"
+          type="number"
+          value={form.hargaCoret}
+          onChange={(e) => setForm({ ...form, hargaCoret: e.target.value })}
+        />
+      </div>
+
+      {form.harga && form.hargaCoret && Number(form.hargaCoret) <= Number(form.harga) && (
+        <p className="text-xs text-red-500">
+          Harga coret harus lebih besar dari harga awal
+        </p>
+      )}
+    </div>
+  </>
+)}
 
           {/* Deskripsi */}
           <div className="space-y-1">
