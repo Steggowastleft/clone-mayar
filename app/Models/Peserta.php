@@ -44,4 +44,14 @@ class Peserta extends Authenticatable
             ->withPivot(['status', 'form_data', 'harga_bayar', 'tanggal_aktif', 'tanggal_expired'])
             ->withTimestamps();
     }
+
+    public function pembayaran()
+    {
+        return $this->hasMany(Pembayaran::class);
+    }
+
+    public function sertifikat()
+    {
+        return $this->hasMany(Sertifikat::class);
+    }
 }

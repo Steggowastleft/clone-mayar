@@ -92,6 +92,10 @@ Route::get('/bootcamp-catalog', [BootcampCatalogController::class, 'index'])
 Route::post('/pembayaran/upload-bukti', [PembayaranController::class, 'uploadBukti'])
     ->name('pembayaran.upload-bukti');
 
+// Verifikasi sertifikat (publik)
+Route::get('/sertifikat/verify/{token}', [SertifikatController::class, 'verify'])
+    ->name('sertifikat.verify');
+
 // ══════════════════════════════════════════════════════════════
 // AUTH ADMIN
 // ══════════════════════════════════════════════════════════════

@@ -94,4 +94,14 @@ class Bootcamp extends Model
     {
     return $this->hasMany(\App\Models\Rating::class);
     }
+
+    public function pembayaran()
+    {
+        return $this->hasMany(\App\Models\Pembayaran::class);
+    }
+
+    public function sertifikat()
+    {
+        return $this->hasMany(\App\Models\Sertifikat::class);
+    }
 }
