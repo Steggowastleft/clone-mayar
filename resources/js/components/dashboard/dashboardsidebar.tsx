@@ -7,6 +7,7 @@ import {
   PackageOpen, BookMarked, Mic, Headphones as AudioIcon,
   PenLine, BookImage, Globe, Crown, ChevronDown, ChevronRight,
   LogOut, Zap, ChevronLeft, Menu, X,
+  ShoppingCart,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────
@@ -29,41 +30,41 @@ type Props = {
 // Nav structure — mirip Mayar
 // ─────────────────────────────────────────────
 const NAV_MAIN: NavItem[] = [
-  { label: "Beranda",                icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
-  { label: "Pelanggan",              icon: <Users           className="h-4 w-4" />, href: "/pelanggan" },
-  { label: "Transaksi",              icon: <CreditCard      className="h-4 w-4" />, href: "/transaksi" },
-  { label: "Berlangganan",           icon: <RefreshCw       className="h-4 w-4" />, href: "/berlangganan" },
-  { label: "Order",                  icon: <ShoppingBag     className="h-4 w-4" />, href: "/order" },
+  { label: "Beranda", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
+  { label: "Pelanggan", icon: <Users className="h-4 w-4" />, href: "/pelanggan" },
+  { label: "Transaksi", icon: <CreditCard className="h-4 w-4" />, href: "/transaksi" },
+  { label: "Berlangganan", icon: <RefreshCw className="h-4 w-4" />, href: "/berlangganan" },
+  { label: "Order", icon: <ShoppingBag className="h-4 w-4" />, href: "/order" },
   {
     label: "Permintaan Pembayaran",
     icon: <Send className="h-4 w-4" />,
     href: "/permintaan-pembayaran",
     children: [
       { label: "Semua Permintaan", icon: <Send className="h-3.5 w-3.5" />, href: "/permintaan-pembayaran" },
-      { label: "Buat Permintaan",  icon: <Send className="h-3.5 w-3.5" />, href: "/permintaan-pembayaran/buat" },
+      { label: "Buat Permintaan", icon: <Send className="h-3.5 w-3.5" />, href: "/permintaan-pembayaran/buat" },
     ],
   },
 ];
 
 const NAV_PRODUK: NavItem[] = [
-  { label: "Semua Produk",          icon: <Package        className="h-4 w-4" />, href: "/semua-produk" },
-  { label: "Link Pembayaran",       icon: <Link2          className="h-4 w-4" />, href: "/link-pembayaran" },
-  { label: "Produk Fisik",          icon: <Box            className="h-4 w-4" />, href: "/produk-fisik", badge: "Beta" },
-  { label: "Produk Digital",        icon: <BookOpen       className="h-4 w-4" />, href: "/produk-digital" },
-  { label: "Kelas Online (OD)",     icon: <MonitorPlay    className="h-4 w-4" />, href: "/kelas-online" },
+  { label: "Semua Produk", icon: <Package className="h-4 w-4" />, href: "/semua-produk" },
+  { label: "Link Pembayaran", icon: <Link2 className="h-4 w-4" />, href: "/payment-link" },
+  { label: "Produk Fisik", icon: <Box className="h-4 w-4" />, href: "/produk-fisik", badge: "Beta" },
+  { label: "Produk Digital", icon: <BookOpen className="h-4 w-4" />, href: "/produk-digital" },
+  { label: "Kelas Online (OD)", icon: <MonitorPlay className="h-4 w-4" />, href: "/kelas-online" },
   { label: "Kelas Cohort / Bootcamp", icon: <GraduationCap className="h-4 w-4" />, href: "/bootcamps" },
-  { label: "Webinar",               icon: <Video          className="h-4 w-4" />, href: "/webinar" },
-  { label: "Event & Acara",         icon: <CalendarDays   className="h-4 w-4" />, href: "/event" },
-  { label: "Coaching & Mentoring",  icon: <Headphones     className="h-4 w-4" />, href: "/coaching-mentoring" },
-  { label: "Penggalangan Dana",     icon: <Heart          className="h-4 w-4" />, href: "/penggalangan-dana" },
-  { label: "Paket Berlangganan",    icon: <PackageOpen    className="h-4 w-4" />, href: "/paket-berlangganan" },
-  { label: "E-Book",                icon: <BookMarked     className="h-4 w-4" />, href: "/ebook" },
-  { label: "Podcast",               icon: <Mic            className="h-4 w-4" />, href: "/podcast" },
-  { label: "Audio Book",            icon: <AudioIcon      className="h-4 w-4" />, href: "/audio-book" },
-  { label: "Tulisan",               icon: <PenLine        className="h-4 w-4" />, href: "/tulisan" },
-  { label: "Web Komik",             icon: <BookImage      className="h-4 w-4" />, href: "/web-komik" },
-  { label: "Creator Support Page",  icon: <Globe          className="h-4 w-4" />, href: "/creator-support-page" },
-  { label: "Membership & SaaS",     icon: <Crown          className="h-4 w-4" />, href: "/membership-saas" },
+  { label: "Webinar", icon: <Video className="h-4 w-4" />, href: "/webinar" },
+  { label: "Event & Acara", icon: <CalendarDays className="h-4 w-4" />, href: "/event" },
+  { label: "Coaching & Mentoring", icon: <Headphones className="h-4 w-4" />, href: "/coaching-mentoring" },
+  { label: "Penggalangan Dana", icon: <Heart className="h-4 w-4" />, href: "/penggalangan-dana" },
+  { label: "Paket Berlangganan", icon: <PackageOpen className="h-4 w-4" />, href: "/paket-berlangganan" },
+  { label: "E-Book", icon: <BookMarked className="h-4 w-4" />, href: "/ebook" },
+  { label: "Podcast", icon: <Mic className="h-4 w-4" />, href: "/podcast" },
+  { label: "Audio Book", icon: <AudioIcon className="h-4 w-4" />, href: "/audio-book" },
+  { label: "Tulisan", icon: <PenLine className="h-4 w-4" />, href: "/tulisan" },
+  { label: "Web Komik", icon: <BookImage className="h-4 w-4" />, href: "/web-komik" },
+  { label: "Creator Support Page", icon: <Globe className="h-4 w-4" />, href: "/creator-support-page" },
+  { label: "Membership & SaaS", icon: <Crown className="h-4 w-4" />, href: "/membership-saas" },
 ];
 
 // ─────────────────────────────────────────────
@@ -77,7 +78,7 @@ function NavRow({
   depth?: number;
 }) {
   const hasChildren = item.children && item.children.length > 0;
-  const isActive    = item.href === currentPath;
+  const isActive = item.href === currentPath;
   const [open, setOpen] = useState(
     hasChildren ? item.children!.some((c) => c.href === currentPath) : false
   );
@@ -151,10 +152,12 @@ export function DashboardSidebar({ user, currentPath = "" }: Props) {
       <div className="px-4 py-5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-200 shrink-0">
-            <Zap className="h-4 w-4 text-white" fill="currentColor" />
+            <ShoppingCart className="h-4 w-4 text-white" />
           </div>
           {!collapsed && (
-            <span className="font-black text-gray-900 text-base tracking-tight">BootcampOS</span>
+            <span className="font-black text-3xl tracking-wide">
+              AksaCart
+            </span>
           )}
         </div>
         {/* Collapse toggle — desktop only */}

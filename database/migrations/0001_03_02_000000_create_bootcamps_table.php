@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('bootcamps', function (Blueprint $table) {
             $table->id();
+            $table->uuid('user_id')->index();
             $table->string('name');
             $table->string('batch')->default('Batch 1');
             $table->enum('status', ['published', 'unpublished', 'unlisted'])->default('unpublished');

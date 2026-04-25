@@ -1,0 +1,785 @@
+import { useState, useEffect, useRef } from "react";
+import { router, usePage } from "@inertiajs/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Plus, Eye, Pencil, Trash2, Loader2,
+  Calendar, FileText, Paperclip, X,
+  Upload, AlertCircle, CheckCircle2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+export type AssignmentFile = {
+  id?: number;
+  name: string;
+  url?: string;
+  size?: number;
+};
+
+export type Assignment = {
+  id: number;
+  judul: string;
+  tugas: string; // HTML content dari rich text
+  files?: AssignmentFile[];
+  tanggal_mulai?: string;
+  tanggal_akhir?: string;
+  is_wajib: boolean;
+};
+
+const emptyForm = {
+  judul: "",
+  tugas: "",
+  tanggal_mulai: undefined as Date | undefined,
+  tanggal_akhir: undefined as Date | undefined,
+  is_wajib: false,
+};
+
+// ─────────────────────────────────────────────
+// Simple Rich Text Toolbar
+// ─────────────────────────────────────────────
+function RichTextEditor({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isInternalChange = useRef(false);
+
+  useEffect(() => {
+    if (editorRef.current && !isInternalChange.current) {
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
+    }
+    isInternalChange.current = false;
+  }, [value]);
+
+  const execCmd = (cmd: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+  };
+
+  const handleInput = () => {
+    isInternalChange.current = true;
+    onChange(editorRef.current?.innerHTML || "");
+  };
+
+  const fontSizes = ["Normal", "H1", "H2", "H3"];
+  const fonts = ["Default", "Arial", "Georgia", "Courier New", "Verdana"];
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex-wrap">
+        {/* Format buttons */}
+        {[
+          { cmd: "bold",          label: <span className="font-bold text-sm">B</span> },
+          { cmd: "italic",        label: <span className="italic text-sm">I</span> },
+          { cmd: "underline",     label: <span className="underline text-sm">U</span> },
+          { cmd: "strikeThrough", label: <span className="line-through text-sm">S</span> },
+        ].map(({ cmd, label }) => (
+          <button
+            key={cmd}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); execCmd(cmd); }}
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition"
+          >
+            {label}
+          </button>
+        ))}
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Heading select */}
+        <select
+          className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700"
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "Normal") execCmd("formatBlock", "p");
+            else execCmd("formatBlock", v.toLowerCase());
+            e.target.value = "Normal";
+          }}
+          defaultValue="Normal"
+        >
+          {fontSizes.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        {/* Font select */}
+        <select
+          className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700"
+          onChange={(e) => {
+            execCmd("fontName", e.target.value);
+            e.target.value = "Default";
+          }}
+          defaultValue="Default"
+        >
+          {fonts.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* List buttons */}
+        {[
+          { cmd: "insertUnorderedList", label: "≡•" },
+          { cmd: "insertOrderedList",   label: "≡1" },
+        ].map(({ cmd, label }) => (
+          <button
+            key={cmd}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); execCmd(cmd); }}
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 text-xs transition"
+          >
+            {label}
+          </button>
+        ))}
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Link */}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const url = window.prompt("Masukkan URL:");
+            if (url) execCmd("createLink", url);
+          }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition text-xs"
+          title="Tambah Link"
+        >
+          🔗
+        </button>
+
+        {/* Unlink */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); execCmd("unlink"); }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition text-xs"
+          title="Hapus Link"
+        >
+          🔗✕
+        </button>
+
+        {/* Image URL */}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const url = window.prompt("Masukkan URL gambar:");
+            if (url) execCmd("insertImage", url);
+          }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition text-xs"
+          title="Tambah Gambar"
+        >
+          🖼
+        </button>
+      </div>
+
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        data-placeholder={placeholder || "Tulis instruksi tugas di sini..."}
+        className={cn(
+          "min-h-[160px] p-3 text-sm text-gray-800 outline-none",
+          "empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+        )}
+        style={{ lineHeight: 1.6 }}
+        suppressContentEditableWarning
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Date Picker field
+// ─────────────────────────────────────────────
+function DateField({
+  label, value, onChange, placeholder,
+}: {
+  label: string;
+  value: Date | undefined;
+  onChange: (d: Date | undefined) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className={cn(
+            "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md text-sm text-left transition hover:border-gray-300",
+            value ? "text-gray-800" : "text-gray-400"
+          )}>
+            <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
+            {value ? format(value, "dd MMMM yyyy", { locale: idLocale }) : (placeholder || "Pilih tanggal")}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-[600]" align="start">
+          <CalendarComponent
+            mode="single"
+            selected={value}
+            onSelect={(d) => { onChange(d); setOpen(false); }}
+            locale={idLocale}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// File Dropzone
+// ─────────────────────────────────────────────
+function FileDropzone({
+  files,
+  onAdd,
+  onRemove,
+}: {
+  files: File[];
+  onAdd: (f: File[]) => void;
+  onRemove: (i: number) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const added = Array.from(e.dataTransfer.files).slice(0, 5 - files.length);
+    if (added.length) onAdd(added);
+  };
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const added = Array.from(e.target.files || []).slice(0, 5 - files.length);
+    if (added.length) onAdd(added);
+    e.target.value = "";
+  };
+
+  const fmtSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Drop area */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "border-2 border-dashed rounded-lg py-8 flex flex-col items-center justify-center cursor-pointer transition",
+          dragging ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+        )}
+      >
+        <Upload className="h-6 w-6 text-blue-500 mb-2" />
+        <p className="text-sm font-medium text-blue-600">Drag Files or Click to Browse</p>
+        <input ref={inputRef} type="file" multiple className="hidden" onChange={handleSelect} />
+      </div>
+      <p className="text-xs text-gray-400">Ukuran file maksimal 1GB. Maksimal 5 file pendukung.</p>
+
+      {/* File list */}
+      {files.length > 0 && (
+        <div className="space-y-1.5">
+          {files.map((f, i) => (
+            <div key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-md px-3 py-2">
+              <Paperclip className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+              <span className="text-xs text-gray-700 flex-1 truncate">{f.name}</span>
+              <span className="text-xs text-gray-400 shrink-0">{fmtSize(f.size)}</span>
+              <button onClick={() => onRemove(i)} className="text-gray-400 hover:text-red-500 transition shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Assignment Card
+// ─────────────────────────────────────────────
+function AssignmentCard({
+  assignment,
+  bootcampId,
+  onEdit,
+  onView,
+}: {
+  assignment: Assignment;
+  bootcampId: number;
+  onEdit: (a: Assignment) => void;
+  onView: (a: Assignment) => void;
+}) {
+  const [hapusOpen, setHapusOpen] = useState(false);
+
+  const handleHapus = () => {
+    router.delete(`/bootcamps/${bootcampId}/assignment/${assignment.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success("Tugas berhasil dihapus.");
+        router.reload({ only: ["assignmentList"] });
+      },
+      onError: () => toast.error("Gagal menghapus tugas."),
+    });
+  };
+
+  return (
+    <>
+      <div className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold text-gray-800 text-sm">{assignment.judul}</h4>
+              {assignment.is_wajib && (
+                <Badge className="bg-red-100 text-red-700 text-xs border-0">Wajib</Badge>
+              )}
+            </div>
+
+            {/* Preview teks (strip HTML) */}
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2"
+              dangerouslySetInnerHTML={{
+                __html: assignment.tugas.replace(/<[^>]*>/g, " ").slice(0, 120) + "..."
+              }}
+            />
+
+            {/* Tanggal */}
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {assignment.tanggal_mulai && (
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" /> Mulai: {assignment.tanggal_mulai}
+                </span>
+              )}
+              {assignment.tanggal_akhir && (
+                <span className="text-xs text-orange-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> Deadline: {assignment.tanggal_akhir}
+                </span>
+              )}
+            </div>
+
+            {/* Files */}
+            {assignment.files && assignment.files.length > 0 && (
+              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                <Paperclip className="h-3 w-3" /> {assignment.files.length} file pendukung
+              </p>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-1 shrink-0">
+            <button
+              onClick={() => onView(assignment)}
+              className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition"
+              title="Lihat"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onEdit(assignment)}
+              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setHapusOpen(true)}
+              className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition"
+              title="Hapus"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm hapus */}
+      <Dialog open={hapusOpen} onOpenChange={setHapusOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Tugas?</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus tugas <strong>{assignment.judul}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setHapusOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { handleHapus(); setHapusOpen(false); }}
+            >
+              Ya, Hapus
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────
+// View Dialog
+// ─────────────────────────────────────────────
+function ViewDialog({ assignment, open, onClose }: { assignment: Assignment | null; open: boolean; onClose: () => void }) {
+  if (!assignment) return null;
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DialogTitle className="text-lg">{assignment.judul}</DialogTitle>
+            {assignment.is_wajib && (
+              <Badge className="bg-red-100 text-red-700 text-xs border-0">Wajib</Badge>
+            )}
+          </div>
+          <div className="flex gap-4 flex-wrap pt-1">
+            {assignment.tanggal_mulai && (
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> Mulai: {assignment.tanggal_mulai}
+              </span>
+            )}
+            {assignment.tanggal_akhir && (
+              <span className="text-xs text-orange-500 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> Deadline: {assignment.tanggal_akhir}
+              </span>
+            )}
+          </div>
+        </DialogHeader>
+
+        {/* Konten tugas */}
+        <div
+          className="prose prose-sm max-w-none text-gray-700 border border-gray-100 rounded-lg p-4 bg-gray-50"
+          dangerouslySetInnerHTML={{ __html: assignment.tugas }}
+        />
+
+        {/* Files */}
+        {assignment.files && assignment.files.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Files Pendukung</p>
+            <div className="space-y-1.5">
+              {assignment.files.map((f, i) => (
+                <a
+                  key={i}
+                  href={f.url || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-3 py-2 hover:bg-blue-50 hover:border-blue-200 transition"
+                >
+                  <Paperclip className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span className="text-xs text-gray-700 flex-1 truncate">{f.name}</span>
+                  <span className="text-xs text-blue-500">Unduh</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <Button variant="outline" className="w-full" onClick={onClose}>Tutup</Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Tab
+// ─────────────────────────────────────────────
+export default function TabAssignment({
+  bootcampId,
+  initialAssignmentList = [],
+}: {
+  bootcampId: number;
+  initialAssignmentList?: Assignment[];
+}) {
+  const [createOpen,    setCreateOpen]    = useState(false);
+  const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [editingItem,   setEditingItem]   = useState<Assignment | null>(null);
+  const [viewingItem,   setViewingItem]   = useState<Assignment | null>(null);
+  const [assignmentList, setAssignmentList] = useState<Assignment[]>(initialAssignmentList);
+  const [errors,        setErrors]        = useState<Record<string, string>>({});
+
+  // Form state
+  const [form, setForm] = useState(emptyForm);
+  const [newFiles, setNewFiles]           = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<AssignmentFile[]>([]);
+
+  // Sync dari Inertia reload
+  const page = usePage<{ assignmentList?: Assignment[] }>();
+  useEffect(() => {
+    if (page.props.assignmentList) setAssignmentList(page.props.assignmentList);
+  }, [page.props.assignmentList]);
+
+  // ── Buka edit ──
+  const handleOpenEdit = (a: Assignment) => {
+    setEditingItem(a);
+    setForm({
+      judul:         a.judul,
+      tugas:         a.tugas,
+      tanggal_mulai: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
+      tanggal_akhir: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,
+      is_wajib:      a.is_wajib,
+    });
+    setExistingFiles(a.files || []);
+    setNewFiles([]);
+    setCreateOpen(true);
+  };
+
+  const handleClose = () => {
+    setCreateOpen(false);
+    setEditingItem(null);
+    setForm(emptyForm);
+    setNewFiles([]);
+    setExistingFiles([]);
+    setErrors({});
+  };
+
+  // ── Validasi ──
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.judul.trim()) e.judul = "Judul wajib diisi.";
+    if (!form.tugas.replace(/<[^>]*>/g, "").trim()) e.tugas = "Konten tugas wajib diisi.";
+    if (!form.tanggal_mulai) e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  // ── Submit ──
+  const handleSubmit = () => {
+    if (!validate()) return;
+    setIsSubmitting(true);
+
+    const isEdit = !!editingItem;
+    const url = isEdit
+      ? `/bootcamps/${bootcampId}/assignment/${editingItem!.id}`
+      : `/bootcamps/${bootcampId}/assignment`;
+
+    // Gunakan FormData agar bisa kirim files
+    const fd = new FormData();
+    fd.append("judul",         form.judul);
+    fd.append("tugas",         form.tugas);
+    fd.append("is_wajib",      form.is_wajib ? "1" : "0");
+    if (form.tanggal_mulai) fd.append("tanggal_mulai", format(form.tanggal_mulai, "yyyy-MM-dd"));
+    if (form.tanggal_akhir) fd.append("tanggal_akhir", format(form.tanggal_akhir, "yyyy-MM-dd"));
+    newFiles.forEach((f, i) => fd.append(`files[${i}]`, f));
+    // Kirim id file yang masih dipertahankan (edit mode)
+    existingFiles.forEach((f, i) => { if (f.id) fd.append(`existing_files[${i}]`, String(f.id)); });
+    if (isEdit) fd.append("_method", "PUT");
+
+    const routerOptions = {
+      preserveScroll: true as const,
+      forceFormData: true as const,
+      onSuccess: () => {
+        setIsSubmitting(false);
+        toast.success(isEdit ? "Tugas berhasil diperbarui!" : "Tugas berhasil dibuat!");
+        handleClose();
+        router.reload({ only: ["assignmentList"] });
+      },
+      onError: (e: Record<string, string>) => {
+        setIsSubmitting(false);
+        toast.error("Gagal menyimpan tugas.");
+        setErrors(e);
+      },
+    };
+
+    // POST untuk create dan edit (pakai _method: PUT untuk spoof)
+    router.post(url, fd, routerOptions);
+  };
+
+  // ─────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      {/* Header */}
+      <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-gray-800">Assignment</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Kelola tugas untuk peserta bootcamp</p>
+        </div>
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Buat Tugas
+        </Button>
+      </div>
+
+      {/* List */}
+      <div className="p-5">
+        {assignmentList.length === 0 ? (
+          <div className="text-center py-10">
+            <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">Belum ada tugas assignment</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {assignmentList.map((a) => (
+              <AssignmentCard
+                key={a.id}
+                assignment={a}
+                bootcampId={bootcampId}
+                onEdit={handleOpenEdit}
+                onView={(a) => setViewingItem(a)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── View Dialog ── */}
+      <ViewDialog
+        assignment={viewingItem}
+        open={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+      />
+
+      {/* ── Create / Edit Dialog ── */}
+      <Dialog open={createOpen} onOpenChange={(v) => { if (!v) handleClose(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Tugas" : "Buat Tugas (Assignment)"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Perbarui detail tugas." : "Isi detail untuk tugas baru."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            {/* Judul */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Judul <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="Contoh: Tugas 1 - Membuat CRUD Laravel"
+                value={form.judul}
+                onChange={(e) => setForm({ ...form, judul: e.target.value })}
+                className={errors.judul ? "border-red-400" : ""}
+              />
+              {errors.judul && <p className="text-xs text-red-500">{errors.judul}</p>}
+            </div>
+
+            {/* Tugas rich text */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Tugas <span className="text-red-500">*</span>
+              </Label>
+              <RichTextEditor
+                value={form.tugas}
+                onChange={(v) => setForm({ ...form, tugas: v })}
+                placeholder="Tulis instruksi tugas di sini..."
+              />
+              {errors.tugas && <p className="text-xs text-red-500">{errors.tugas}</p>}
+            </div>
+
+            {/* Files pendukung */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Files Pendukung</Label>
+
+              {/* Existing files (edit mode) */}
+              {existingFiles.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {existingFiles.map((f, i) => (
+                    <div key={f.id ?? i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-2">
+                      <Paperclip className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                      <span className="text-xs text-gray-700 flex-1 truncate">{f.name}</span>
+                      <button
+                        onClick={() => setExistingFiles(existingFiles.filter((_, j) => j !== i))}
+                        className="text-gray-400 hover:text-red-500 transition"
+                        title="Hapus file ini"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <FileDropzone
+                files={newFiles}
+                onAdd={(f) => setNewFiles((prev) => [...prev, ...f].slice(0, 5))}
+                onRemove={(i) => setNewFiles(newFiles.filter((_, j) => j !== i))}
+              />
+            </div>
+
+            {/* Tanggal */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <DateField
+                  label="Tanggal Mulai *"
+                  value={form.tanggal_mulai}
+                  onChange={(d) => setForm({ ...form, tanggal_mulai: d })}
+                  placeholder="Pilih Tanggal Mulai"
+                />
+                {errors.tanggal_mulai && <p className="text-xs text-red-500 mt-1">{errors.tanggal_mulai}</p>}
+                <p className="text-xs text-gray-400 mt-1">Peserta dapat mengirimkan hasil tugas pada tanggal ini</p>
+              </div>
+              <div>
+                <DateField
+                  label="Tanggal Akhir / Deadline"
+                  value={form.tanggal_akhir}
+                  onChange={(d) => setForm({ ...form, tanggal_akhir: d })}
+                  placeholder="Pilih Tanggal Akhir"
+                />
+                <p className="text-xs text-gray-400 mt-1">Peserta tidak dapat mengirimkan tugas setelah tanggal ini</p>
+              </div>
+            </div>
+
+            {/* Tugas Wajib */}
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={form.is_wajib}
+                onCheckedChange={(v) => setForm({ ...form, is_wajib: v })}
+              />
+              <Label className="text-sm font-medium text-gray-700 cursor-pointer"
+                onClick={() => setForm({ ...form, is_wajib: !form.is_wajib })}>
+                Tugas Wajib
+              </Label>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" className="flex-1" onClick={handleClose} disabled={isSubmitting}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white uppercase font-semibold tracking-wide"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Menyimpan...</>
+                  : editingItem ? "Simpan Perubahan" : "Buat Tugas (Assignment)"
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

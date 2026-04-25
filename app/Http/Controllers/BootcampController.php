@@ -11,7 +11,9 @@ class BootcampController extends Controller
 {
     public function index()
     {
-        $bootcamps = Bootcamp::orderBy('created_at', 'desc')->get();
+        $bootcamps = Bootcamp::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return Inertia::render('bootcamps/index', [
             'bootcamps' => $bootcamps,
@@ -46,7 +48,9 @@ class BootcampController extends Controller
         }
 
         $bootcamp = Bootcamp::create([
+            'user_id'                    => auth()->id(),
             'name'                       => $request->judul,
+            'nama'                       => $request->judul,
             'batch'                      => 'Batch 1',
             'status'                     => 'unpublished',
             'kategori'                   => $request->kategori,

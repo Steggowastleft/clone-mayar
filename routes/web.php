@@ -13,7 +13,7 @@ use App\Http\Controllers\ProdukDigitalController;
 use App\Http\Controllers\WebinarController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\BundleController;
-use App\Http\Controllers\LinkPembayaranController;
+use App\Http\Controllers\PaymentLinkController;
 use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\AffiliasiController;
 use App\Http\Controllers\AnalitikController;
@@ -145,20 +145,52 @@ Route::middleware('auth')->group(function () {
     Route::get('/transaksi', [TransaksiController::class, 'index'])->name('transaksi.index');
 
     // ── Produk Digital ────────────────────────────────────────
-    Route::get('/produk-digital', [ProdukDigitalController::class, 'index'])->name('produk-digital.index');
-
+    Route::prefix('produk-digital')->name('produk-digital.')->group(function () {
+        // CRUD utama
+        Route::get('/',           [ProdukDigitalController::class, 'index'])->name('index');
+        Route::post('/',          [ProdukDigitalController::class, 'store'])->name('store');
+        Route::get('/{produkDigital}',    [ProdukDigitalController::class, 'show'])->name('show');
+        Route::post('/{produkDigital}',   [ProdukDigitalController::class, 'update'])->name('update');   // POST karena FormData (file upload)
+        Route::delete('/{produkDigital}', [ProdukDigitalController::class, 'destroy'])->name('destroy');
+        // Aksi tambahan
+        Route::patch('/{produkDigital}/status',    [ProdukDigitalController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{produkDigital}/duplicate',  [ProdukDigitalController::class, 'duplicate'])->name('duplicate');
+    });
     // ── Webinar ───────────────────────────────────────────────
     Route::get('/webinar', [WebinarController::class, 'index'])->name('webinar.index');
-
+    Route::get('/webinar', [WebinarController::class, 'index'])->name('webinar.index');
+    Route::post('/webinars', [WebinarController::class, 'store'])->name('webinars.store');
+    Route::get('/webinars/{webinar}', [WebinarController::class, 'show'])->name('webinar.detail');
+    Route::put('/webinars/{webinar}', [WebinarController::class, 'update'])->name('webinar.update');
+    Route::delete('/webinars/{webinar}', [WebinarController::class, 'destroy'])->name('webinar.destroy');
+    Route::patch('/webinars/{webinar}/status', [WebinarController::class, 'toggleStatus'])->name('webinar.toggle-status');
+    Route::post('/webinars/{webinar}/duplicate', [WebinarController::class, 'duplicate'])->name('webinar.duplicate');
     // ── Event ─────────────────────────────────────────────────
-    Route::get('/event', [EventController::class, 'index'])->name('event.index');
+    Route::get('/event',                  [EventController::class, 'index'])->name('event.index');
+    Route::post('/event',                 [EventController::class, 'store'])->name('event.store');
+    Route::get('/event/{event}',          [EventController::class, 'show'])->name('event.show');
+    Route::get('/event/{event}/edit',     [EventController::class, 'edit'])->name('event.edit');
+    Route::put('/event/{event}',          [EventController::class, 'update'])->name('event.update');
+    Route::delete('/event/{event}',       [EventController::class, 'destroy'])->name('event.destroy');
+    Route::patch('/event/{event}/status', [EventController::class, 'updateStatus'])->name('event.status');
+    Route::post('/event/{event}/daftar', [EventController::class, 'daftar'])
+        ->middleware('auth:peserta');
 
     // ── Bundle ────────────────────────────────────────────────
     Route::get('/bundle', [BundleController::class, 'index'])->name('bundle.index');
 
     // ── Link Pembayaran ───────────────────────────────────────
-    Route::get('/link-pembayaran', [LinkPembayaranController::class, 'index'])->name('link-pembayaran.index');
+    Route::get('/payment-link',              [PaymentLinkController::class, 'index'])
+        ->name('payment-link.index');
+    Route::post('/payment-link',             [PaymentLinkController::class, 'store'])
+        ->name('payment-link.store');
+    Route::get('/payment-link/{paymentLink}', [PaymentLinkController::class, 'show'])
+        ->name('payment-link.show');
+    Route::put('/payment-link/{paymentLink}', [PaymentLinkController::class, 'update'])
+        ->name('payment-link.update');
 
+    Route::delete('/payment-link/{paymentLink}', [PaymentLinkController::class, 'destroy'])
+        ->name('payment-link.destroy');
     // ── Pelanggan ─────────────────────────────────────────────
     Route::get('/pelanggan', [PelangganController::class, 'index'])->name('pelanggan.index');
 
@@ -239,24 +271,28 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Coaching & Mentoring ──────────────────────────────────
     // ─────────────────────────────────────────────────────────
-    Route::get('coaching-mentoring',           [CoachingMentoringController::class, 'index'])->name('coaching-mentoring.index');
-    Route::get('coaching-mentoring/create',    [CoachingMentoringController::class, 'create'])->name('coaching-mentoring.create');
-    Route::post('coaching-mentoring',          [CoachingMentoringController::class, 'store'])->name('coaching-mentoring.store');
-    Route::get('coaching-mentoring/{id}',      [CoachingMentoringController::class, 'show'])->name('coaching-mentoring.show');
-    Route::get('coaching-mentoring/{id}/edit', [CoachingMentoringController::class, 'edit'])->name('coaching-mentoring.edit');
-    Route::put('coaching-mentoring/{id}',      [CoachingMentoringController::class, 'update'])->name('coaching-mentoring.update');
-    Route::delete('coaching-mentoring/{id}',   [CoachingMentoringController::class, 'destroy'])->name('coaching-mentoring.destroy');
+    Route::get('coaching-mentoring',                                    [CoachingMentoringController::class, 'index'])->name('coaching-mentoring.index');
+    Route::get('coaching-mentoring/create',                                 [CoachingMentoringController::class, 'create'])->name('coaching-mentoring.create');     
+    Route::post('coaching-mentoring',                                   [CoachingMentoringController::class, 'store'])->name('coaching-mentoring.store');
+    Route::get('coaching-mentoring/{coachingMentoring}',                [CoachingMentoringController::class, 'show'])->name('coaching-mentoring.show');
+    Route::get('coaching-mentoring/{coachingMentoring}/edit',           [CoachingMentoringController::class, 'edit'])->name('coaching-mentoring.edit');
+    Route::put('coaching-mentoring/{coachingMentoring}',                [CoachingMentoringController::class, 'update'])->name('coaching-mentoring.update');
+    Route::patch('coaching-mentoring/{coachingMentoring}/status',       [CoachingMentoringController::class, 'updateStatus'])->name('coaching-mentoring.status');
+    Route::post('coaching-mentoring/{coachingMentoring}/duplicate',     [CoachingMentoringController::class, 'duplicate'])->name('coaching-mentoring.duplicate');
+    Route::delete('coaching-mentoring/{coachingMentoring}',             [CoachingMentoringController::class, 'destroy'])->name('coaching-mentoring.destroy');
 
     // ─────────────────────────────────────────────────────────
     // ── Penggalangan Dana ─────────────────────────────────────
     // ─────────────────────────────────────────────────────────
-    Route::get('penggalangan-dana',           [PenggalanganDanaController::class, 'index'])->name('penggalangan-dana.index');
-    Route::get('penggalangan-dana/create',    [PenggalanganDanaController::class, 'create'])->name('penggalangan-dana.create');
-    Route::post('penggalangan-dana',          [PenggalanganDanaController::class, 'store'])->name('penggalangan-dana.store');
-    Route::get('penggalangan-dana/{id}',      [PenggalanganDanaController::class, 'show'])->name('penggalangan-dana.show');
-    Route::get('penggalangan-dana/{id}/edit', [PenggalanganDanaController::class, 'edit'])->name('penggalangan-dana.edit');
-    Route::put('penggalangan-dana/{id}',      [PenggalanganDanaController::class, 'update'])->name('penggalangan-dana.update');
-    Route::delete('penggalangan-dana/{id}',   [PenggalanganDanaController::class, 'destroy'])->name('penggalangan-dana.destroy');
+    Route::get('penggalangan-dana',                              [PenggalanganDanaController::class, 'index'])->name('penggalangan-dana.index');
+    Route::get('penggalangan-dana/create',                       [PenggalanganDanaController::class, 'create'])->name('penggalangan-dana.create');
+    Route::post('penggalangan-dana',                             [PenggalanganDanaController::class, 'store'])->name('penggalangan-dana.store');
+    Route::get('penggalangan-dana/{penggalanganDana}',          [PenggalanganDanaController::class, 'show'])->name('penggalangan-dana.show');
+    Route::get('penggalangan-dana/{penggalanganDana}/edit',     [PenggalanganDanaController::class, 'edit'])->name('penggalangan-dana.edit');
+    Route::put('penggalangan-dana/{penggalanganDana}',          [PenggalanganDanaController::class, 'update'])->name('penggalangan-dana.update');
+    Route::patch('penggalangan-dana/{penggalanganDana}/status', [PenggalanganDanaController::class, 'updateStatus'])->name('penggalangan-dana.status');
+    Route::post('penggalangan-dana/{penggalanganDana}/duplicate', [PenggalanganDanaController::class, 'duplicate'])->name('penggalangan-dana.duplicate');
+    Route::delete('penggalangan-dana/{penggalanganDana}',       [PenggalanganDanaController::class, 'destroy'])->name('penggalangan-dana.destroy');
 
     // ─────────────────────────────────────────────────────────
     // ── Paket Berlangganan ────────────────────────────────────
@@ -275,10 +311,12 @@ Route::middleware('auth')->group(function () {
     Route::get('ebook',           [EbookController::class, 'index'])->name('ebook.index');
     Route::get('ebook/create',    [EbookController::class, 'create'])->name('ebook.create');
     Route::post('ebook',          [EbookController::class, 'store'])->name('ebook.store');
-    Route::get('ebook/{id}',      [EbookController::class, 'show'])->name('ebook.show');
-    Route::get('ebook/{id}/edit', [EbookController::class, 'edit'])->name('ebook.edit');
-    Route::put('ebook/{id}',      [EbookController::class, 'update'])->name('ebook.update');
-    Route::delete('ebook/{id}',   [EbookController::class, 'destroy'])->name('ebook.destroy');
+    Route::get('ebook/{ebook}',      [EbookController::class, 'show'])->name('ebook.show');
+    Route::get('ebook/{ebook}/edit', [EbookController::class, 'edit'])->name('ebook.edit');
+    Route::put('ebook/{ebook}',      [EbookController::class, 'update'])->name('ebook.update');
+    Route::delete('ebook/{ebook}',   [EbookController::class, 'destroy'])->name('ebook.destroy');
+    Route::patch('ebook/{ebook}/status', [EbookController::class, 'toggleStatus'])->name('ebook.status');
+    Route::post('ebook/{ebook}/duplicate', [EbookController::class, 'duplicate'])->name('ebook.duplicate');
 
     // ─────────────────────────────────────────────────────────
     // ── Podcast ───────────────────────────────────────────────
@@ -302,16 +340,20 @@ Route::middleware('auth')->group(function () {
     Route::put('audio-book/{id}',      [AudioBookController::class, 'update'])->name('audio-book.update');
     Route::delete('audio-book/{id}',   [AudioBookController::class, 'destroy'])->name('audio-book.destroy');
 
+
+
     // ─────────────────────────────────────────────────────────
     // ── Tulisan ───────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
     Route::get('tulisan',           [TulisanController::class, 'index'])->name('tulisan.index');
     Route::get('tulisan/create',    [TulisanController::class, 'create'])->name('tulisan.create');
     Route::post('tulisan',          [TulisanController::class, 'store'])->name('tulisan.store');
-    Route::get('tulisan/{id}',      [TulisanController::class, 'show'])->name('tulisan.show');
-    Route::get('tulisan/{id}/edit', [TulisanController::class, 'edit'])->name('tulisan.edit');
-    Route::put('tulisan/{id}',      [TulisanController::class, 'update'])->name('tulisan.update');
-    Route::delete('tulisan/{id}',   [TulisanController::class, 'destroy'])->name('tulisan.destroy');
+    Route::get('tulisan/{tulisan}',      [TulisanController::class, 'show'])->name('tulisan.show');
+    Route::get('tulisan/{tulisan}/edit', [TulisanController::class, 'edit'])->name('tulisan.edit');
+    Route::put('tulisan/{tulisan}',      [TulisanController::class, 'update'])->name('tulisan.update');
+    Route::delete('tulisan/{tulisan}',   [TulisanController::class, 'destroy'])->name('tulisan.destroy');
+    Route::patch('tulisan/{tulisan}/status', [TulisanController::class, 'toggleStatus'])->name('tulisan.status');
+    Route::post('tulisan/{tulisan}/duplicate', [TulisanController::class, 'duplicate'])->name('tulisan.duplicate');
 
     // ─────────────────────────────────────────────────────────
     // ── Web Komik ─────────────────────────────────────────────
@@ -375,7 +417,7 @@ Route::middleware('auth')->group(function () {
     // ── Assignment ────────────────────────────────────────────
     Route::post('/bootcamps/{bootcamp}/assignment',               [AssignmentController::class, 'store'])->name('assignment.store');
     Route::post('/bootcamps/{bootcamp}/assignment/{assignment}',  [AssignmentController::class, 'update'])->name('assignment.update');
-    Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}',[AssignmentController::class, 'destroy'])->name('assignment.destroy');
+    Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}', [AssignmentController::class, 'destroy'])->name('assignment.destroy');
 
     // ── Landing Page ──────────────────────────────────────────
     Route::post('/bootcamps/{bootcamp}/landing/instruktur',  [LandingController::class, 'instruktur']);

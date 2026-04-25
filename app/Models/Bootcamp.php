@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Storage;
 class Bootcamp extends Model
 {
     protected $fillable = [
+        'user_id',
         'name',
+        'nama',
         'batch',
         'status',
         'date',
@@ -57,41 +59,41 @@ class Bootcamp extends Model
 
     public function babs()
     {
-    return $this->hasMany(\App\Models\Bab::class)->orderBy('urutan');
+        return $this->hasMany(\App\Models\Bab::class)->orderBy('urutan');
     }
 
     public function assignments()
     {
-    return $this->hasMany(\App\Models\Assignment::class)->orderBy('tanggal_mulai');
+        return $this->hasMany(\App\Models\Assignment::class)->orderBy('tanggal_mulai');
     }
 
     public function instruktur()
     {
-    return $this->hasMany(\App\Models\Instruktur::class)->orderBy('urutan');
+        return $this->hasMany(\App\Models\Instruktur::class)->orderBy('urutan');
     }
 
     public function landingContents()
     {
-    return $this->hasMany(\App\Models\LandingContent::class);
+        return $this->hasMany(\App\Models\LandingContent::class);
     }
 
     public function testimoni()
     {
-    return $this->hasMany(\App\Models\Testimoni::class)->orderBy('urutan');
+        return $this->hasMany(\App\Models\Testimoni::class)->orderBy('urutan');
     }
 
     public function kustomForm()
     {
-    return $this->hasOne(\App\Models\KustomForm::class);
+        return $this->hasOne(\App\Models\KustomForm::class);
     }
 
     public function pendaftaran()
     {
-    return $this->hasMany(\App\Models\Pendaftaran::class);
+        return $this->morphMany(Pendaftaran::class, 'registrable');
     }
 
     public function ratings()
     {
-    return $this->hasMany(\App\Models\Rating::class);
+        return $this->hasMany(\App\Models\Rating::class);
     }
 }

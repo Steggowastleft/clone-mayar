@@ -1,66 +1,275 @@
-import { Head, router } from "@inertiajs/react";
-import { useState } from "react";
+import DashboardLayout from "@/components/dashboard/dashboardlayout";
+import { router } from "@inertiajs/react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Download, Printer, ShoppingBag, ExternalLink } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import {
+  CalendarIcon,
+  Printer,
+  Download,
+  ExternalLink,
+  Upload,
+  BookOpen,
+  Clock,
+  Globe,
+  ShoppingBag,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import DashboardLayout from "@/components/dashboard/dashboardlayout";
 
-type Produk = {
+// ─── Types ───
+type Tulisan = {
   id: number;
   nama: string;
-  kategori: string;
-  harga: number;
   status: "published" | "unpublished" | "unlisted";
+  tipe_tulisan: string;
+  tipe_pembayaran: string | null;
+  mekanisme_bayar: string | null;
+  harga: number;
   terjual: number;
-  tanggal: string;
+  created_at: string;
 };
 
-type Props = { produk?: Produk[] };
+type IndexProps = {
+  produk: Tulisan[];
+};
 
-export default function Tulisan({ produk = [] }: Props) {
-  const [search, setSearch] = useState("");
+// ─── DateTimePickerField ───
+function DateTimePickerField({
+  label,
+  value,
+  onChange,
+  optional = false,
+}: {
+  label: string;
+  value: Date | undefined;
+  onChange: (d: Date | undefined) => void;
+  optional?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [time, setTime] = useState("09:00");
+
+  const handleSelect = (d: Date | undefined) => {
+    if (!d) { onChange(undefined); setOpen(false); return; }
+    const [h, m] = time.split(":").map(Number);
+    const combined = new Date(d);
+    combined.setHours(h, m, 0, 0);
+    onChange(combined);
+    setOpen(false);
+  };
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">
+        {label}{" "}
+        {optional && <span className="text-gray-400 font-normal">(Opsional)</span>}
+      </Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left hover:border-gray-300 transition",
+              value ? "text-gray-800" : "text-gray-400"
+            )}
+          >
+            <CalendarIcon className="h-4 w-4 shrink-0 text-gray-400" />
+            {value
+              ? format(value, "dd MMMM yyyy HH:mm", { locale: idLocale })
+              : "Pilih tanggal & waktu..."}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-[200]" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={handleSelect}
+            initialFocus
+          />
+          <div className="p-3 border-t flex items-center gap-2">
+            <Clock className="h-4 w-4 text-gray-400" />
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="text-sm border border-gray-200 rounded px-2 py-1 flex-1"
+            />
+          </div>
+          {value && optional && (
+            <div className="p-2 border-t">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-gray-500"
+                onClick={() => { onChange(undefined); setOpen(false); }}
+              >
+                Hapus tanggal
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// ─── Default form values ───
+const defaultForm = {
+  nama: "",
+  url: "",
+  tipe_tulisan: "one_shot",
+  tipe_pembayaran: "berbayar",
+  mekanisme_bayar: "per_chapter",
+  harga: "",
+  deskripsi: "",
+  catatan: "",
+  max_pembayaran: "",
+  genre: "",
+  author: "",
+  bahasa: "",
+  affiliate_enabled: false,
+};
+
+// ─── Main ───
+export default function Index({ produk = [] }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filtered = produk.filter((p) => {
-    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchSearch && matchStatus;
+  const [formData, setFormData] = useState({ ...defaultForm });
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [tanggalMulaiJual, setTanggalMulaiJual] = useState<Date | undefined>();
+  const [tanggalKadaluarsa, setTanggalKadaluarsa] = useState<Date | undefined>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openCreate = () => {
+    setFormData({ ...defaultForm });
+    setCoverFile(null);
+    setCoverPreview(null);
+    setTanggalMulaiJual(undefined);
+    setTanggalKadaluarsa(undefined);
+    setCreateOpen(true);
+  };
+
+  const filtered = (produk ?? []).filter((w) => {
+    const matchStatus = statusFilter === "all" || w.status === statusFilter;
+    const matchSearch = w.nama.toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
   });
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "published":   return <Badge className="bg-green-500 text-white">Published</Badge>;
+      case "published": return <Badge className="bg-green-500 text-white">Published</Badge>;
       case "unpublished": return <Badge className="bg-yellow-500 text-white">Unpublished</Badge>;
-      case "unlisted":    return <Badge className="bg-gray-500 text-white">Unlisted</Badge>;
-      default:            return <Badge>-</Badge>;
+      case "unlisted": return <Badge className="bg-gray-500 text-white">Unlisted</Badge>;
+      default: return <Badge>Unknown</Badge>;
     }
   };
 
-  const filterBtns = [
+  const filterButtons = [
     { label: "SEMUA", value: "all" },
     { label: "PUBLISHED", value: "published" },
     { label: "UNPUBLISHED", value: "unpublished" },
     { label: "UNLISTED", value: "unlisted" },
   ];
 
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setCoverPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!formData.nama.trim()) return alert("Judul Tulisan tidak boleh kosong");
+    setIsSubmitting(true);
+
+    const payload = new FormData();
+    payload.append("nama", formData.nama);
+    payload.append("url", formData.url);
+    payload.append("tipe_tulisan", formData.tipe_tulisan);
+    
+    if (formData.tipe_tulisan === "one_shot") {
+        payload.append("tipe_pembayaran", formData.tipe_pembayaran);
+        if (formData.tipe_pembayaran !== "gratis") {
+            payload.append("harga", formData.harga || "0");
+        }
+        payload.append("max_pembayaran", formData.max_pembayaran);
+    } else {
+        payload.append("mekanisme_bayar", formData.mekanisme_bayar);
+        // harga might be needed depending on mechanism but omitted for simplicity if not requested
+    }
+
+    payload.append("deskripsi", formData.deskripsi);
+    payload.append("catatan", formData.catatan);
+    payload.append("genre", formData.genre);
+    payload.append("author", formData.author);
+    payload.append("bahasa", formData.bahasa);
+    payload.append("affiliate_enabled", formData.affiliate_enabled ? "1" : "0");
+
+    if (tanggalMulaiJual) payload.append("tanggal_mulai_jual", format(tanggalMulaiJual, "yyyy-MM-dd HH:mm:ss"));
+    if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd HH:mm:ss"));
+    if (coverFile) payload.append("cover", coverFile);
+
+    router.post("/tulisan", payload, {
+      forceFormData: true,
+      onSuccess: () => { setCreateOpen(false); setIsSubmitting(false); },
+      onError: () => { setIsSubmitting(false); },
+    });
+  };
+
   return (
-    <DashboardLayout>
-      <Head title="Tulisan" />
+    <DashboardLayout title="Tulisan">
       <div className="flex gap-0 min-h-screen">
+        {/* ── MAIN CONTENT ── */}
         <div className="flex-1 p-6">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">PROJEK</p>
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-800">Tulisan</h1>
             <div className="flex gap-2">
-              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50">
+              <Button
+                variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                onClick={() => window.open("/tulisan/catalog", "_blank")}
+              >
                 PRODUK
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">+ BUAT</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openCreate}>
+                + BUAT
+              </Button>
             </div>
           </div>
 
+          {/* Table Panel */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-700">Semua Tulisan</h2>
@@ -83,16 +292,25 @@ export default function Tulisan({ produk = [] }: Props) {
                 <p className="text-center text-gray-400 py-12 text-sm">There are no records to display</p>
               ) : (
                 <div className="space-y-3">
-                  {filtered.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
+                  {filtered.map((w) => (
+                    <div
+                      key={w.id}
+                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
+                    >
                       <div>
-                        <p className="font-semibold text-gray-800">{p.nama}</p>
-                        <p className="text-sm text-gray-500">{p.kategori} · {p.tanggal} · {p.terjual} terjual</p>
-                        <p className="text-sm font-medium text-blue-600">Rp {p.harga.toLocaleString("id-ID")}</p>
+                        <p className="font-semibold text-gray-800">{w.nama}</p>
+                        <p className="text-sm text-gray-500">
+                          {w.tipe_tulisan === 'one_shot' ? 'One-Shot' : 'Chapter'} · {w.terjual} terjual
+                        </p>
+                        <p className="text-sm font-medium text-blue-600">
+                          {w.harga === 0 ? "Gratis" : `Rp ${w.harga.toLocaleString("id-ID")}`}
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        {statusBadge(p.status)}
-                        <Button size="sm" onClick={() => router.visit(`/tulisan/${p.id}`)}>Detail</Button>
+                        {statusBadge(w.status)}
+                        <Button size="sm" onClick={() => router.visit(`/tulisan/${w.id}`)}>
+                          Detail
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -102,15 +320,48 @@ export default function Tulisan({ produk = [] }: Props) {
           </div>
         </div>
 
+        {/* ── RIGHT SIDEBAR ── */}
         <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger asChild>
+              <button className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left text-gray-500 hover:border-gray-300 transition",
+                dateFilter && "text-gray-800"
+              )}>
+                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
+                {dateFilter ? format(dateFilter, "dd MMM yyyy") : "Filter Berdasarkan Tanggal..."}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={dateFilter}
+                onSelect={(date) => { setDateFilter(date); setDateOpen(false); }}
+                initialFocus
+              />
+              {dateFilter && (
+                <div className="p-2 border-t">
+                  <Button
+                    variant="ghost" size="sm"
+                    className="w-full text-xs text-gray-500"
+                    onClick={() => { setDateFilter(undefined); setDateOpen(false); }}
+                  >
+                    Reset Tanggal
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <Input
             placeholder="Cari Tulisan"
             className="bg-white text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
           <div className="space-y-2">
-            {filterBtns.map((btn) => (
+            {filterButtons.map((btn) => (
               <button
                 key={btn.value}
                 onClick={() => setStatusFilter(btn.value)}
@@ -125,6 +376,7 @@ export default function Tulisan({ produk = [] }: Props) {
               </button>
             ))}
           </div>
+
           <button
             onClick={() => window.open("/tulisan/catalog", "_blank")}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2"
@@ -135,11 +387,310 @@ export default function Tulisan({ produk = [] }: Props) {
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             Katalog adalah halaman online dimana semua Tulisan Anda yang aktif ditampilkan.
           </p>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">
+
+          <button
+            onClick={openCreate}
+            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition"
+          >
             + Buat Tulisan Baru
-          </Button>
+          </button>
         </div>
       </div>
+
+      {/* ── CREATE DIALOG ── */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-t-lg sticky top-0 z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-white/20 rounded-lg p-2">
+                <BookOpen className="h-6 w-6 text-white" />
+              </div>
+              <DialogTitle className="text-white text-xl font-bold">
+                Buat Tulisan
+              </DialogTitle>
+            </div>
+            <p className="text-blue-100 text-sm leading-relaxed">
+              Menjual karya / tulisan anda semakin mudah dengan sistem otomatis Mayar
+            </p>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Judul */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Judul Tulisan <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="Masukkan judul tulisan"
+                value={formData.nama}
+                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+              />
+            </div>
+
+            {/* URL */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">
+                https://web.mayar.id/writings <span className="text-gray-400 font-normal">(Opsional)</span>
+              </Label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  className="pl-9"
+                  type="text"
+                  placeholder="custom-url-path"
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Tipe Tulisan */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Tipe Tulisan</Label>
+              <Select
+                value={formData.tipe_tulisan}
+                onValueChange={(v) => setFormData({ ...formData, tipe_tulisan: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tipe tulisan..." />
+                </SelectTrigger>
+                <SelectContent className="z-[200]">
+                  <SelectItem value="one_shot">One-Shot (Cerpen, Blog, Essay)</SelectItem>
+                  <SelectItem value="chapter">Chapter (Buku, Cerbung, Antologi)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ONE SHOT FIELDS */}
+            {formData.tipe_tulisan === "one_shot" && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-700">Tipe Pembayaran</Label>
+                  <Select
+                    value={formData.tipe_pembayaran}
+                    onValueChange={(v) => setFormData({ ...formData, tipe_pembayaran: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih tipe pembayaran..." />
+                    </SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      <SelectItem value="berbayar">Produk Berbayar</SelectItem>
+                      <SelectItem value="gratis">Gratis</SelectItem>
+                      <SelectItem value="bayar_semaunya">Bayar Semaunya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(formData.tipe_pembayaran === "berbayar" || formData.tipe_pembayaran === "bayar_semaunya") && (
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-700">Harga <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                      <Input
+                        className="pl-9"
+                        type="number"
+                        min={0}
+                        value={formData.harga}
+                        onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">Penagihan ini menggunakan mata uang IDR (Rupiah)</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* CHAPTER FIELDS */}
+            {formData.tipe_tulisan === "chapter" && (
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">Mekanisme Bayar</Label>
+                <Select
+                  value={formData.mekanisme_bayar}
+                  onValueChange={(v) => setFormData({ ...formData, mekanisme_bayar: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Mekanisme Bayar" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="per_chapter">Per Chapter</SelectItem>
+                    <SelectItem value="semua_chapter">Semua Chapter</SelectItem>
+                    <SelectItem value="sekali_bayar">Sekali Bayar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Deskripsi */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Deskripsi / Teaser <span className="text-red-500">*</span></Label>
+              <Textarea
+                placeholder="Tuliskan deskripsi atau teaser karya kamu..."
+                rows={4}
+                value={formData.deskripsi}
+                onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+              />
+            </div>
+
+            {/* Cover */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Cover (gambar/video untuk promo)</Label>
+              <div
+                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {coverPreview ? (
+                  <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                    <p className="text-sm text-gray-500">Drag & drop image atau Klik untuk unggah</p>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
+              {coverFile && <p className="text-xs text-green-600">✓ {coverFile.name}</p>}
+            </div>
+
+            {/* Sales Control */}
+            <div className="grid grid-cols-2 gap-4">
+              <DateTimePickerField
+                label="Waktu Mulai Penjualan"
+                value={tanggalMulaiJual}
+                onChange={setTanggalMulaiJual}
+                optional
+              />
+              <DateTimePickerField
+                label="Tanggal Kadaluarsa"
+                value={tanggalKadaluarsa}
+                onChange={setTanggalKadaluarsa}
+                optional
+              />
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Kami akan membuka/menutup link pembayaran pada tanggal dan waktu yang anda pilih. Opsional, kosongkan untuk langsung membuka penjualan atau tanpa kadaluarsa.
+            </p>
+
+            {/* Catatan */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Catatan</Label>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Catatan akan dilihat oleh pendaftar/pembeli setelah melakukan pendaftaran/membayar (opsional).
+              </p>
+              <Textarea
+                placeholder="Tambahkan catatan khusus..."
+                rows={2}
+                value={formData.catatan}
+                onChange={(e) => setFormData({ ...formData, catatan: e.target.value })}
+              />
+            </div>
+
+            {/* Max Pembayaran for One Shot */}
+            {formData.tipe_tulisan === "one_shot" && (
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">Maks. Jumlah Pembayaran (Kuota Untuk Pembayaran Satu Paket)</Label>
+                <Input
+                  type="number"
+                  placeholder="Kosongkan untuk tanpa limit jumlah (unlimited)"
+                  min={1}
+                  value={formData.max_pembayaran}
+                  onChange={(e) => setFormData({ ...formData, max_pembayaran: e.target.value })}
+                />
+                <p className="text-xs text-gray-400">
+                  Kami akan menutup link pembayaran setelah melewati batas jumlah maksimal.
+                </p>
+              </div>
+            )}
+
+            {/* Detail Tambahan */}
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="font-semibold text-gray-700 mb-3">Detail Tambahan (opsional)</h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-700">Genre</Label>
+                  <Select
+                    value={formData.genre}
+                    onValueChange={(v) => setFormData({ ...formData, genre: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Genre Tulisan" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      <SelectItem value="fiksi">Fiksi</SelectItem>
+                      <SelectItem value="non-fiksi">Non-Fiksi</SelectItem>
+                      <SelectItem value="romance">Romance</SelectItem>
+                      <SelectItem value="fantasy">Fantasy</SelectItem>
+                      <SelectItem value="horror">Horror</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-700">Author</Label>
+                  <Input
+                    placeholder="Nama Penulis"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                  <Select
+                    value={formData.bahasa}
+                    onValueChange={(v) => setFormData({ ...formData, bahasa: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Bahasa" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      <SelectItem value="id">Indonesia</SelectItem>
+                      <SelectItem value="en">Inggris</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Produk bisa diaffiliate</Label>
+                    <p className="text-xs text-gray-400">Izinkan affiliate untuk mempromosikan tulisan ini</p>
+                  </div>
+                  <Switch
+                    checked={formData.affiliate_enabled}
+                    onCheckedChange={(v) => setFormData({ ...formData, affiliate_enabled: v })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 pt-2 border-t border-gray-100">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setCreateOpen(false)}
+                disabled={isSubmitting}
+              >
+                Batal
+              </Button>
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Menyimpan..." : "Buat Tulisan"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

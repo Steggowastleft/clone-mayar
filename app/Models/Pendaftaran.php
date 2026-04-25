@@ -2,7 +2,6 @@
 // ══════════════════════════════════════════════════
 // app/Models/Pendaftaran.php
 // ══════════════════════════════════════════════════
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -12,22 +11,28 @@ class Pendaftaran extends Model
     protected $table = 'pendaftaran';
 
     protected $fillable = [
-        'bootcamp_id', 'peserta_id', 'status',
-        'form_data', 'harga_bayar',
-        'tanggal_aktif', 'tanggal_expired',
+        'peserta_id',
+        'registrable_id',
+        'registrable_type',
+        'status',
+        'form_data',
+        'harga_bayar',
+        'tanggal_daftar',
+        'tanggal_aktif',
+        'tanggal_expired',
     ];
 
     protected $casts = [
-        'form_data'        => 'array',
-        'harga_bayar'      => 'decimal:2',
-        'tanggal_aktif'    => 'datetime',
-        'tanggal_expired'  => 'datetime',
-        'tanggal_daftar'   => 'datetime',
+        'form_data' => 'array',
+        'tanggal_daftar' => 'datetime',
+        'tanggal_aktif' => 'datetime',
+        'tanggal_expired' => 'datetime',
     ];
 
-    public function bootcamp()
+    // 🔥 polymorphic target
+    public function registrable()
     {
-        return $this->belongsTo(Bootcamp::class);
+        return $this->morphTo();
     }
 
     public function peserta()
@@ -35,7 +40,6 @@ class Pendaftaran extends Model
         return $this->belongsTo(Peserta::class);
     }
 }
-
 
 // ══════════════════════════════════════════════════
 // TAMBAHKAN ke config/auth.php

@@ -56,7 +56,7 @@ export default function TabDetail({ bootcamp }: { bootcamp: Bootcamp }) {
     { label: "Kategori",  value: bootcamp.kategori || "-" },
     {
       label: "Harga",
-      value: bootcamp.harga
+      value: bootcamp.harga && Number(bootcamp.harga) > 0
         ? `Rp ${Number(bootcamp.harga).toLocaleString("id-ID")}`
         : "Rp 0",
     },
