@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 use App\Models\User;
-<<<<<<< HEAD
+
 
 // Controllers — Admin Dashboard
 use App\Http\Controllers\DashboardController;
@@ -37,8 +37,6 @@ use App\Http\Controllers\CreatorSupportPageController;
 use App\Http\Controllers\MembershipSaasController;
 
 // Controllers — Bootcamp
-=======
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
 use App\Http\Controllers\BootcampController;
 use App\Http\Controllers\SesiController;
 use App\Http\Controllers\ProfileController;
@@ -173,7 +171,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/bootcamps/katalog', [BootcampCatalogController::class, 'index'])
     ->name('bootcamps.katalog');
 
-<<<<<<< HEAD
     // ── Produk Digital ────────────────────────────────────────
     Route::prefix('produk-digital')->name('produk-digital.')->group(function () {
         // CRUD utama
@@ -205,7 +202,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/event/{event}/status', [EventController::class, 'updateStatus'])->name('event.status');
     Route::post('/event/{event}/daftar', [EventController::class, 'daftar'])
         ->middleware('auth:peserta');
-=======
     // Bootcamp CRUD
     Route::get('/bootcamps',                       [BootcampController::class, 'index'])->name('bootcamps.index');
     Route::post('/bootcamps',                      [BootcampController::class, 'store'])->name('bootcamps.store');
@@ -224,14 +220,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/bootcamps/{bootcamp}/bab',         [BabController::class, 'store'])->name('bab.store');
     Route::put('/bootcamps/{bootcamp}/bab/{bab}',    [BabController::class, 'update'])->name('bab.update');
     Route::delete('/bootcamps/{bootcamp}/bab/{bab}', [BabController::class, 'destroy'])->name('bab.destroy');
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
 
     // Materi
     Route::post('/bootcamps/{bootcamp}/bab/{bab}/materi',                [MateriController::class, 'store'])->name('materi.store');
     Route::put('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',        [MateriController::class, 'update'])->name('materi.update');
     Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',     [MateriController::class, 'destroy'])->name('materi.destroy');
 
-<<<<<<< HEAD
+
     // ── Link Pembayaran ───────────────────────────────────────
     Route::get('/payment-link',              [PaymentLinkController::class, 'index'])
         ->name('payment-link.index');
@@ -468,9 +463,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}', [MateriController::class, 'destroy'])->name('materi.destroy');
 
     // ── Assignment ────────────────────────────────────────────
-=======
-    // Assignment
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
+
     Route::post('/bootcamps/{bootcamp}/assignment',               [AssignmentController::class, 'store'])->name('assignment.store');
     Route::post('/bootcamps/{bootcamp}/assignment/{assignment}',  [AssignmentController::class, 'update'])->name('assignment.update');
     Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}', [AssignmentController::class, 'destroy'])->name('assignment.destroy');

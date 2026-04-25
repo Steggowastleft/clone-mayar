@@ -1,6 +1,5 @@
 import { Head, router } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
@@ -18,10 +17,6 @@ import TabTransaksi from "./detail/transaksi";
 import TabDetail from "./detail/detail";
 import TabPeserta from "./detail/peserta";
 import TabRating from "./detail/rating";
-=======
-
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
-
 // TAB ENGINE (controller utama)
 import TabBootcampDetail from "./detail/tab-detail";
 
@@ -32,14 +27,12 @@ import type { PesertaItem } from "./detail/peserta";
 import type { RatingItem } from "./detail/rating";
 import type { PembayaranItem } from "./detail/pembayaran";
 
-<<<<<<< HEAD
 // ─────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────
 type Webinar = {
-=======
+
 type Bootcamp = {
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
   id: number;
   nama: string;
   status: "published" | "unpublished" | "unlisted";
@@ -49,7 +42,7 @@ type Bootcamp = {
   tanggal_mulai?: string;
   tanggal_selesai?: string;
   cover_url?: string;
-<<<<<<< HEAD
+
   peserta?: number;
   max_peserta?: number;
 };
@@ -149,19 +142,19 @@ export default function BootcampDetail(props: Props) {
                 Webinar
               </button>
             </p>
-<<<<<<< HEAD
+
             <h1 className="text-xl font-bold text-gray-800">
               {webinar.nama}
 =======
 
             <h1 className="text-xl font-bold text-gray-800">
               {bootcamp?.name}
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
+    
             </h1>
           </div>
 
           <div className="flex gap-2">
-<<<<<<< HEAD
+
             <Button variant="outline">PRODUK</Button>
             <Button className="bg-blue-600 text-white">+ BUAT</Button>
           </div>
@@ -216,7 +209,6 @@ export default function BootcampDetail(props: Props) {
 
         {/* TAB SYSTEM - hanya render sekali */}
         <TabBootcampDetail {...props} />
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
       </div>
     </DashboardLayout>
   );

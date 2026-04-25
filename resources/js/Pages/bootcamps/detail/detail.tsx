@@ -15,7 +15,6 @@ function formatDate(date?: string) {
   });
 }
 
-<<<<<<< HEAD
   const rows = [
     {
       label: "Status",
@@ -72,7 +71,6 @@ function formatDate(date?: string) {
       ),
     },
   ];
-=======
 function formatDateTime(date?: string) {
   if (!date) return "-";
   return new Date(date).toLocaleString("id-ID", {
@@ -94,7 +92,6 @@ export default function DetailTab({ bootcamp }: Props) {
     bootcamp?.slug
       ? `${window.location.origin}/bootcamp/${bootcamp.slug}`
       : `${window.location.origin}/bootcamp/${bootcamp?.id}`;
->>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
 
   return (
     <div className="space-y-6">
