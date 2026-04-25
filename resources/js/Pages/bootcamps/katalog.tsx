@@ -1,74 +1,115 @@
-// resources/js/Pages/Bootcamp/Katalog.tsx
-import { Head } from '@inertiajs/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Head, router } from "@inertiajs/react";
+import { Users, BookOpen, DollarSign, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-interface Bootcamp {
-  id: number
-  name: string
-  description: string
-  category: string
-  duration_months: number
-  price: number
-  quota: number
-  start_date: string
-  end_date: string
-  payment_link: string
+
+type Bootcamp = {
+  id: number;
+  title: string;
+  description?: string;
+  price: number;
+  thumbnail?: string;
+  peserta_count?: number;
+  omset?: number;
+};
+
+type Props = {
+  bootcamps: Bootcamp[];
+};
+
+function formatHarga(n?: number) {
+  if (!n || n === 0) return "Gratis";
+  return `Rp ${Number(n).toLocaleString("id-ID")}`;
 }
 
-export default function Katalog({ bootcamps }: { bootcamps: Bootcamp[] }) {
+export default function Katalog({ bootcamps }: Props) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Head title="Katalog Bootcamp" />
-      
-      {/* Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold">Katalog Kelas Bootcamp</h1>
-          <p className="mt-2 text-blue-100">
-            Program pelatihan intensif untuk meningkatkan skill digital kamu
-          </p>
-        </div>
-      </div>
 
-      {/* Grid */}
-      <div className="max-w-5xl mx-auto py-10 px-6">
-        {bootcamps.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Belum ada kelas yang dipublikasikan.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {bootcamps.map(b => (
-              <Card key={b.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <Badge variant="secondary" className="w-fit">{b.category}</Badge>
-                  <CardTitle className="text-lg mt-1">{b.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-gray-500 line-clamp-3">{b.description}</p>
-                  <div className="flex justify-between text-sm">
-                    <span>⏱ {b.duration_months} bulan</span>
-                    <span>👥 {b.quota} peserta</span>
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    📅 {b.start_date} → {b.end_date}
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="font-bold text-blue-600">
-                      Rp {Number(b.price).toLocaleString('id-ID')}
-                    </span>
-                    {b.payment_link && (
-                      <Button size="sm" onClick={() => window.open(b.payment_link, '_blank')}>
-                        Daftar Sekarang
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      <div className="min-h-screen bg-gray-50">
+        
+        {/* HEADER */}
+        <div className="bg-gradient-to-r from-slate-900 to-blue-900 text-white py-12">
+          <div className="max-w-6xl mx-auto px-4">
+            <h1 className="text-3xl font-extrabold">Katalog Bootcamp</h1>
+            <p className="text-slate-300 mt-2 text-sm">
+              Temukan bootcamp terbaik dan mulai belajar 🚀
+            </p>
           </div>
-        )}
+        </div>
+
+        {/* LIST */}
+        <div className="max-w-6xl mx-auto px-4 py-8 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {bootcamps.map((b) => (
+            <div
+              key={b.id}
+              className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden border"
+            >
+              {/* Thumbnail */}
+              {b.thumbnail ? (
+                <img
+                  src={b.thumbnail}
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-indigo-600" />
+              )}
+
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                
+                <h2 className="font-bold text-gray-800 line-clamp-2">
+                  {b.title}
+                </h2>
+
+                {b.description && (
+                  <p className="text-xs text-gray-500 line-clamp-2">
+                    {b.description}
+                  </p>
+                )}
+
+                {/* STATS */}
+                <div className="flex flex-wrap gap-3 text-xs text-gray-500 pt-2">
+
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3 text-blue-500" />
+                    {b.peserta_count || 0} peserta
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3 text-green-500" />
+                    {formatHarga(b.omset)}
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3 text-purple-500" />
+                    Bootcamp
+                  </span>
+
+                </div>
+
+                {/* PRICE + CTA */}
+                <div className="flex items-center justify-between pt-3">
+                  <span className="text-lg font-extrabold text-gray-900">
+                    {formatHarga(b.price)}
+                  </span>
+
+                  <button
+                    onClick={() => router.visit(`/bootcamp/${b.id}`)}
+                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md flex items-center gap-1"
+                  >
+                    Detail <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+                
+
+              </div>
+            </div>
+          ))}
+        </div>
+
       </div>
-    </div>
-  )
+    </>
+  );
 }

@@ -37,7 +37,7 @@ class Pendaftaran extends Model
 
     public function peserta()
     {
-        return $this->belongsTo(Peserta::class);
+    return $this->belongsTo(\App\Models\Peserta::class, 'peserta_id', 'id');
     }
 }
 

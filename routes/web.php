@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 use App\Models\User;
+<<<<<<< HEAD
 
 // Controllers — Admin Dashboard
 use App\Http\Controllers\DashboardController;
@@ -36,24 +37,34 @@ use App\Http\Controllers\CreatorSupportPageController;
 use App\Http\Controllers\MembershipSaasController;
 
 // Controllers — Bootcamp
+=======
+>>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
 use App\Http\Controllers\BootcampController;
 use App\Http\Controllers\SesiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BabController;
 use App\Http\Controllers\MateriController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\GradeController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\BootcampPublicController;
 use App\Http\Controllers\KustomFormController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\BootcampCatalogController;
 
-// Controllers — Peserta
 use App\Http\Controllers\Peserta\PesertaAuthController;
 use App\Http\Controllers\Peserta\PesertaDashboardController;
 use App\Http\Controllers\Peserta\PendaftaranController;
+use App\Http\Controllers\Peserta\PesertaSubmissionController;
+use App\Http\Controllers\Peserta\PesertaProgressController;
+use App\Http\Controllers\Peserta\RatingController;
+use App\Http\Controllers\Peserta\SertifikatController;
+use App\Http\Controllers\Peserta\QuizController;
+use App\Http\Controllers\SoalController;
+use App\Http\Controllers\PembayaranController;
 
 // ══════════════════════════════════════════════════════════════
-// PUBLIK — tidak perlu login
+// PUBLIK — tidak perlu login apapun
 // ══════════════════════════════════════════════════════════════
 
 Route::get('/', function () {
@@ -63,16 +74,23 @@ Route::get('/', function () {
     ]);
 });
 
-// Halaman publik bootcamp
+// Halaman publik bootcamp (link "Copy Halaman Kelas")
 Route::get('/bootcamp/{bootcamp}', [BootcampPublicController::class, 'show'])
     ->name('bootcamp.public');
 
+// Link pendaftaran (link "Copy Link Pendaftaran")
 Route::get('/p/{bootcamp}/bootcamp', [BootcampPublicController::class, 'show'])
     ->name('bootcamp.daftar.link');
 
-// Kustom form checkout (fetch dari frontend)
+// Ambil kustom form untuk checkout popup (fetch dari frontend)
 Route::get('/bootcamps/{bootcamp}/kustom-form', [PendaftaranController::class, 'getForm'])
     ->name('peserta.kustom-form');
+
+// Upload bukti transfer (publik — peserta belum punya akun)
+Route::post('/pembayaran/upload-bukti', [PembayaranController::class, 'uploadBukti']);
+
+// Verifikasi sertifikat (publik)
+Route::get('/sertifikat/verify/{token}', [SertifikatController::class, 'verify'])->name('sertifikat.verify');
 
 // ══════════════════════════════════════════════════════════════
 // AUTH ADMIN
@@ -104,23 +122,34 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name
 // AUTH PESERTA
 // ══════════════════════════════════════════════════════════════
 
-Route::middleware('guest:peserta')->prefix('peserta')->name('peserta.')->group(function () {
-    Route::get('/login',     [PesertaAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login',    [PesertaAuthController::class, 'login']);
-    Route::get('/register',  [PesertaAuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [PesertaAuthController::class, 'register']);
+// Endpoint checkout (dipanggil via fetch dari CheckoutDialog — tidak perlu guard)
+Route::post('/peserta/check-email',       [PesertaAuthController::class, 'checkEmail']);
+Route::post('/peserta/login-checkout',    [PesertaAuthController::class, 'loginCheckout']);
+Route::post('/peserta/register-checkout', [PesertaAuthController::class, 'registerCheckout']);
+
+// Halaman login terpisah (untuk akses dashboard langsung)
+Route::middleware('guest.peserta')->group(function () {
+    Route::get('/peserta/login',  [PesertaAuthController::class, 'showLogin'])->name('peserta.login');
+    Route::post('/peserta/login', [PesertaAuthController::class, 'login']);
 });
 
+// Logout peserta
 Route::post('/peserta/logout', [PesertaAuthController::class, 'logout'])
     ->name('peserta.logout');
 
 // ══════════════════════════════════════════════════════════════
-// DASHBOARD PESERTA
+// DASHBOARD PESERTA — harus login sebagai peserta
 // ══════════════════════════════════════════════════════════════
 
 Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(function () {
     Route::get('/dashboard',        [PesertaDashboardController::class, 'index'])->name('dashboard');
     Route::get('/kelas/{bootcamp}', [PesertaDashboardController::class, 'kelas'])->name('kelas');
+    Route::post('/assignments/{assignment}/submit', [PesertaSubmissionController::class, 'store'])->name('assignment.submit');
+    Route::post('/assignments/{assignment}/quiz',   [QuizController::class, 'submit'])->name('quiz.submit');
+    Route::post('/bootcamp/{bootcamp}/materi/{materi}/selesai', [PesertaProgressController::class, 'tandaiMateri'])->name('materi.selesai');
+    Route::post('/bootcamp/{bootcamp}/rating',  [RatingController::class, 'store'])->name('rating.store');
+    Route::delete('/bootcamp/{bootcamp}/rating', [RatingController::class, 'destroy'])->name('rating.destroy');
+    Route::get('/bootcamp/{bootcamp}/sertifikat', [SertifikatController::class, 'show'])->name('sertifikat.show');
 });
 
 Route::middleware('auth.peserta')
@@ -128,22 +157,23 @@ Route::middleware('auth.peserta')
     ->name('peserta.daftar');
 
 // ══════════════════════════════════════════════════════════════
-// ADMIN — semua harus login
+// ADMIN — semua harus login sebagai admin
 // ══════════════════════════════════════════════════════════════
 
 Route::middleware('auth')->group(function () {
 
-    // ── Profile ──────────────────────────────────────────────
     Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // ── Dashboard ─────────────────────────────────────────────
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', function () {
+        return redirect()->route('bootcamps.index');
+    })->name('dashboard');
 
-    // ── Transaksi ─────────────────────────────────────────────
-    Route::get('/transaksi', [TransaksiController::class, 'index'])->name('transaksi.index');
+    Route::get('/bootcamps/katalog', [BootcampCatalogController::class, 'index'])
+    ->name('bootcamps.katalog');
 
+<<<<<<< HEAD
     // ── Produk Digital ────────────────────────────────────────
     Route::prefix('produk-digital')->name('produk-digital.')->group(function () {
         // CRUD utama
@@ -175,10 +205,33 @@ Route::middleware('auth')->group(function () {
     Route::patch('/event/{event}/status', [EventController::class, 'updateStatus'])->name('event.status');
     Route::post('/event/{event}/daftar', [EventController::class, 'daftar'])
         ->middleware('auth:peserta');
+=======
+    // Bootcamp CRUD
+    Route::get('/bootcamps',                       [BootcampController::class, 'index'])->name('bootcamps.index');
+    Route::post('/bootcamps',                      [BootcampController::class, 'store'])->name('bootcamps.store');
+    Route::get('/bootcamps/{bootcamp}',            [BootcampController::class, 'show'])->name('bootcamps.show');
+    Route::put('/bootcamps/{bootcamp}',            [BootcampController::class, 'update'])->name('bootcamps.update');
+    Route::patch('/bootcamps/{bootcamp}/status',   [BootcampController::class, 'updateStatus'])->name('bootcamps.status');
+    Route::post('/bootcamps/{bootcamp}/duplicate', [BootcampController::class, 'duplicate'])->name('bootcamps.duplicate');
+    Route::delete('/bootcamps/{bootcamp}',         [BootcampController::class, 'destroy'])->name('bootcamps.destroy');
 
-    // ── Bundle ────────────────────────────────────────────────
-    Route::get('/bundle', [BundleController::class, 'index'])->name('bundle.index');
+    // Sesi Meeting
+    Route::post('/bootcamps/{bootcamp}/sesi',          [SesiController::class, 'store'])->name('sesi.store');
+    Route::put('/bootcamps/{bootcamp}/sesi/{sesi}',    [SesiController::class, 'update'])->name('sesi.update');
+    Route::delete('/bootcamps/{bootcamp}/sesi/{sesi}', [SesiController::class, 'destroy'])->name('sesi.destroy');
 
+    // Bab
+    Route::post('/bootcamps/{bootcamp}/bab',         [BabController::class, 'store'])->name('bab.store');
+    Route::put('/bootcamps/{bootcamp}/bab/{bab}',    [BabController::class, 'update'])->name('bab.update');
+    Route::delete('/bootcamps/{bootcamp}/bab/{bab}', [BabController::class, 'destroy'])->name('bab.destroy');
+>>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
+
+    // Materi
+    Route::post('/bootcamps/{bootcamp}/bab/{bab}/materi',                [MateriController::class, 'store'])->name('materi.store');
+    Route::put('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',        [MateriController::class, 'update'])->name('materi.update');
+    Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',     [MateriController::class, 'destroy'])->name('materi.destroy');
+
+<<<<<<< HEAD
     // ── Link Pembayaran ───────────────────────────────────────
     Route::get('/payment-link',              [PaymentLinkController::class, 'index'])
         ->name('payment-link.index');
@@ -415,11 +468,22 @@ Route::middleware('auth')->group(function () {
     Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}', [MateriController::class, 'destroy'])->name('materi.destroy');
 
     // ── Assignment ────────────────────────────────────────────
+=======
+    // Assignment
+>>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
     Route::post('/bootcamps/{bootcamp}/assignment',               [AssignmentController::class, 'store'])->name('assignment.store');
     Route::post('/bootcamps/{bootcamp}/assignment/{assignment}',  [AssignmentController::class, 'update'])->name('assignment.update');
     Route::delete('/bootcamps/{bootcamp}/assignment/{assignment}', [AssignmentController::class, 'destroy'])->name('assignment.destroy');
 
-    // ── Landing Page ──────────────────────────────────────────
+    // Grade submission
+    Route::post('/submissions/{submission}/grade', [GradeController::class, 'store'])->name('submission.grade');
+
+    // Soal (quiz builder)
+    Route::post('/assignments/{assignment}/soal',              [SoalController::class, 'store'])->name('soal.store');
+    Route::put('/assignments/{assignment}/soal/{soal}',        [SoalController::class, 'update'])->name('soal.update');
+    Route::delete('/assignments/{assignment}/soal/{soal}',     [SoalController::class, 'destroy'])->name('soal.destroy');
+
+    // Landing Page
     Route::post('/bootcamps/{bootcamp}/landing/instruktur',  [LandingController::class, 'instruktur']);
     Route::post('/bootcamps/{bootcamp}/landing/silabus',     [LandingController::class, 'silabus']);
     Route::post('/bootcamps/{bootcamp}/landing/cocok-untuk', [LandingController::class, 'cocokUntuk']);
@@ -427,6 +491,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/bootcamps/{bootcamp}/landing/faq',         [LandingController::class, 'faq']);
     Route::post('/bootcamps/{bootcamp}/landing/testimoni',   [LandingController::class, 'testimoni']);
 
-    // ── Kustom Form ───────────────────────────────────────────
+    // Pembayaran manual
+    Route::post('/pembayaran/{pembayaran}/confirm', [PembayaranController::class, 'confirm'])->name('pembayaran.confirm');
+    Route::post('/pembayaran/{pembayaran}/reject',  [PembayaranController::class, 'reject'])->name('pembayaran.reject');
+
+    // Kustom Form (admin simpan config)
     Route::post('/bootcamps/{bootcamp}/kustom-form', [KustomFormController::class, 'store'])->name('kustom-form.store');
 });

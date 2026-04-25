@@ -15,8 +15,10 @@ class AssignmentController extends Controller
             'judul'         => 'required|string|max:255',
             'tugas'         => 'required|string',
             'is_wajib'      => 'nullable|boolean',
+            'is_tugas_akhir' => 'nullable|boolean',
             'tanggal_mulai' => 'required|date',
             'tanggal_akhir' => 'nullable|date|after_or_equal:tanggal_mulai',
+            'tipe'          => 'nullable|in:upload,quiz',
             'files.*'       => 'nullable|file|max:1048576', // 1GB
         ]);
 
@@ -24,8 +26,10 @@ class AssignmentController extends Controller
             'judul'         => $validated['judul'],
             'tugas'         => $validated['tugas'],
             'is_wajib'      => $request->boolean('is_wajib'),
-            'tanggal_mulai' => $validated['tanggal_mulai'],
-            'tanggal_akhir' => $validated['tanggal_akhir'] ?? null,
+            'is_tugas_akhir' => $request->boolean('is_tugas_akhir'),
+            'tipe'           => $request->input('tipe', 'upload'),
+            'tanggal_mulai'  => $validated['tanggal_mulai'],
+            'tanggal_akhir'  => $validated['tanggal_akhir'] ?? null,
         ]);
 
         // Simpan files pendukung
@@ -55,14 +59,17 @@ class AssignmentController extends Controller
             'tanggal_akhir'    => 'nullable|date|after_or_equal:tanggal_mulai',
             'files.*'          => 'nullable|file|max:1048576',
             'existing_files.*' => 'nullable|integer',
+            'tipe'             => 'nullable|in:upload,quiz',
         ]);
 
         $assignment->update([
             'judul'         => $validated['judul'],
             'tugas'         => $validated['tugas'],
             'is_wajib'      => $request->boolean('is_wajib'),
-            'tanggal_mulai' => $validated['tanggal_mulai'],
-            'tanggal_akhir' => $validated['tanggal_akhir'] ?? null,
+            'is_tugas_akhir' => $request->boolean('is_tugas_akhir'),
+            'tipe'           => $request->input('tipe', 'upload'),
+            'tanggal_mulai'  => $validated['tanggal_mulai'],
+            'tanggal_akhir'  => $validated['tanggal_akhir'] ?? null,
         ]);
 
         // Hapus file yang tidak dipertahankan

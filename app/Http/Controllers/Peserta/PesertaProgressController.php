@@ -9,6 +9,8 @@ use App\Models\ProgressMateri;
 use App\Models\Materi;
 use App\Models\Bootcamp;
 use App\Models\Submission;
+use App\Models\Pendaftaran;
+use App\Models\Sertifikat;
 
 class PesertaProgressController extends Controller
 {
@@ -29,7 +31,10 @@ class PesertaProgressController extends Controller
         ]);
 
         // Hitung ulang progress
-        $progress = $this->hitungProgress($bootcamp, $peserta->id);
+        $progress = self::hitungProgress($bootcamp, $peserta->id);
+
+        // Update status pendaftaran jika selesai
+        self::cekDanUpdateStatus($bootcamp, $peserta->id, $progress);
 
         return response()->json(['progress' => $progress]);
     }
@@ -59,5 +64,39 @@ class PesertaProgressController extends Controller
         $selesai = $materiDibaca + $assignmentSubmit;
 
         return (int) round(($selesai / $totalItem) * 100);
+    }
+
+    /**
+     * Jika progress 100%, update status pendaftaran jadi 'completed'
+     */
+    public static function cekDanUpdateStatus(Bootcamp $bootcamp, int $pesertaId, int $progress): void
+    {
+        if ($progress < 100) return;
+
+        $updated = Pendaftaran::where('bootcamp_id', $bootcamp->id)
+            ->where('peserta_id', $pesertaId)
+            ->where('status', 'active')
+            ->update([
+                'status'          => 'completed',
+                'tanggal_expired' => now(),
+            ]);
+
+        // Generate sertifikat otomatis
+        if ($updated > 0) {
+            $peserta  = \App\Models\Peserta::find($pesertaId);
+            $bootcamp->loadMissing('instruktur');
+
+            Sertifikat::firstOrCreate(
+                ['peserta_id' => $pesertaId, 'bootcamp_id' => $bootcamp->id],
+                [
+                    'nomor_sertifikat' => Sertifikat::generateNomor(),
+                    'nama_peserta'     => $peserta->nama,
+                    'nama_bootcamp'    => $bootcamp->name,
+                    'nama_instruktur'  => $bootcamp->instruktur()->first()?->nama ?? null,
+                    'tanggal_selesai'  => now()->toDateString(),
+                    'qr_token'         => Sertifikat::generateQrToken(),
+                ]
+            );
+        }
     }
 }

@@ -89,11 +89,29 @@ class Bootcamp extends Model
 
     public function pendaftaran()
     {
+<<<<<<< HEAD
         return $this->morphMany(Pendaftaran::class, 'registrable');
+=======
+    return $this->hasMany(\App\Models\Pendaftaran::class, 'bootcamp_id', 'id');
+>>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378
     }
 
     public function ratings()
     {
         return $this->hasMany(\App\Models\Rating::class);
     }
+<<<<<<< HEAD
 }
+=======
+
+    public function pembayaran()
+    {
+        return $this->hasMany(\App\Models\Pembayaran::class);
+    }
+
+    public function sertifikat()
+    {
+        return $this->hasMany(\App\Models\Sertifikat::class);
+    }
+}
+>>>>>>> 6154584d0dddd0c40e81c62fb0a0fb6b066cc378

@@ -89,7 +89,7 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
             {[
               { icon: <BookOpen className="h-5 w-5 text-blue-600" />, label: "Bootcamp Diikuti", value: bootcamps.length, bg: "bg-blue-50" },
               { icon: <Play className="h-5 w-5 text-emerald-600" />,  label: "Sedang Aktif",    value: bootcamps.filter(b => b.status === "active").length, bg: "bg-emerald-50" },
-              { icon: <Award className="h-5 w-5 text-yellow-600" />,  label: "Selesai",         value: bootcamps.filter(b => b.status === "completed").length, bg: "bg-yellow-50" },
+              { icon: <Award className="h-5 w-5 text-blue-600" />,    label: "Selesai",         value: bootcamps.filter(b => b.status === "completed").length, bg: "bg-blue-50" },
             ].map((stat, i) => (
               <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center shrink-0`}>
@@ -118,12 +118,12 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {bootcamps.map((b) => (
-                  <button
+                  <div
                     key={b.id}
-                    onClick={() => router.visit(`/peserta/kelas/${b.id}`)}
-                    className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-blue-200 transition text-left group"
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-blue-200 transition text-left group cursor-pointer"
                   >
-                    {/* Cover */}
+                    {/* Cover — clickable area */}
+                    <div onClick={() => router.visit(`/peserta/kelas/${b.id}`)}>
                     {b.cover_url ? (
                       <img src={b.cover_url} alt={b.name} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
@@ -131,9 +131,10 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
                         <Play className="h-10 w-10 text-white opacity-70" />
                       </div>
                     )}
+                    </div>
 
                     {/* Info */}
-                    <div className="p-4">
+                    <div className="p-4" onClick={() => router.visit(`/peserta/kelas/${b.id}`)}>
                       {b.kategori && (
                         <p className="text-xs text-blue-600 font-medium mb-1">{b.kategori}</p>
                       )}
@@ -141,13 +142,14 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
                       <p className="text-xs text-gray-400 mt-1">{b.batch}</p>
 
                       <div className="flex items-center justify-between mt-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 w-fit ${
                           b.status === "active"
                             ? "bg-emerald-50 text-emerald-600"
                             : b.status === "completed"
-                            ? "bg-gray-100 text-gray-500"
+                            ? "bg-blue-50 text-blue-600"
                             : "bg-yellow-50 text-yellow-600"
                         }`}>
+                          {b.status === "completed" && "🎉 "}
                           {b.status === "active" ? "Aktif" : b.status === "completed" ? "Selesai" : b.status}
                         </span>
                         <span className="text-xs text-blue-600 flex items-center gap-1 font-medium">
@@ -155,8 +157,20 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
                         </span>
                       </div>
 
+                      {/* Sertifikat untuk yang sudah selesai */}
+                      {b.status === "completed" && (
+                        <div className="mt-3 pt-3 border-t border-gray-50" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => router.visit(`/peserta/bootcamp/${b.id}/sertifikat`)}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl hover:opacity-90 transition"
+                          >
+                            🏆 Ambil Sertifikat
+                          </button>
+                        </div>
+                      )}
+
                       {/* Rating */}
-                      <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
+                      <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           {b.rating ? (
                             <>
@@ -177,7 +191,7 @@ export default function PesertaDashboard({ peserta, bootcamps: initialBootcamps 
                         </button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
