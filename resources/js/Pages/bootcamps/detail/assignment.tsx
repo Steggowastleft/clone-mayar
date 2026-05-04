@@ -441,8 +441,8 @@ function AssignmentCard({
         </div>
       </div>
 
-      {/* SoalEditor untuk quiz */}
-      {assignment.tipe === "quiz" && (
+      {/* SoalEditor untuk quiz & upload (uraian) */}
+      {(assignment.tipe === "quiz" || assignment.tipe === "upload") && (
         <div className="border border-blue-100 rounded-lg p-4 bg-blue-50/50 mt-2">
           <SoalEditor
             assignmentId={assignment.id}

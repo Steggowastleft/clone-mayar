@@ -13,6 +13,7 @@ class Bab extends Model
 
     protected $fillable = [
         'bootcamp_id',
+        'kelas_online_id',
         'judul',
         'deskripsi',
         'urutan',
@@ -25,6 +26,11 @@ class Bab extends Model
     public function bootcamp()
     {
         return $this->belongsTo(Bootcamp::class);
+    }
+
+    public function kelasOnline()
+    {
+        return $this->belongsTo(KelasOnline::class, 'kelas_online_id');
     }
 
     public function materis()

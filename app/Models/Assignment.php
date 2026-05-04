@@ -9,7 +9,7 @@ class Assignment extends Model
     protected $table = 'assignments';
  
     protected $fillable = [
-        'bootcamp_id', 'judul', 'tugas', 'tipe', 'is_tugas_akhir',
+        'bootcamp_id', 'kelas_online_id', 'judul', 'tugas', 'tipe', 'is_tugas_akhir',
         'is_wajib', 'tanggal_mulai', 'tanggal_akhir',
     ];
  
@@ -23,6 +23,11 @@ class Assignment extends Model
     public function bootcamp()
     {
         return $this->belongsTo(Bootcamp::class);
+    }
+
+    public function kelasOnline()
+    {
+        return $this->belongsTo(KelasOnline::class);
     }
  
     public function files()

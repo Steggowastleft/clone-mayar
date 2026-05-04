@@ -99,9 +99,12 @@ class BootcampController extends Controller
                 'peserta_email'    => $s->peserta?->email ?? '-',
                 'peserta_no_hp'    => $s->peserta?->no_hp ?? null,
                 'waktu_kirim'      => $s->waktu_kirim?->toISOString(),
-                'submission_url'   => $s->submission_url,
-                'submission_teks'  => $s->submission_teks,
-                'grade'            => $s->grade,
+                'submission_url'       => $s->submission_url,
+                'submission_teks'      => $s->submission_teks,
+                'submission_file'      => $s->submission_file,
+                'submission_file_name' => $s->submission_file_name,
+                'file_url'             => $s->file_url,
+                'grade'                => $s->grade,
             ]);
         })->values()->toArray();
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { router } from "@inertiajs/react";
-import { Plus, Trash2, Pencil, CheckCircle2, Loader2, X, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle2, Loader2, X, Save, ChevronDown, ChevronUp, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,9 @@ import { toast } from "sonner";
 export type Soal = {
   id: number;
   pertanyaan: string;
+  image?: string;
+  image_url?: string;
+  show_image: boolean;
   tipe_soal: "pilihan_ganda" | "essay";
   pilihan?: string[];
   jawaban_benar?: string;
@@ -41,6 +44,10 @@ function SoalForm({ assignmentId, editingSoal, onSuccess, onCancel }: {
     editingSoal?.tipe_soal ?? "pilihan_ganda"
   );
   const [pertanyaan,   setPertanyaan]  = useState(editingSoal?.pertanyaan ?? "");
+  const [image,        setImage]       = useState<File | null>(null);
+  const [showImage,    setShowImage]   = useState(editingSoal?.show_image ?? false);
+  const [imagePreview, setImagePreview] = useState(editingSoal?.image_url ?? "");
+  
   const [pilihan,      setPilihan]     = useState<string[]>(
     editingSoal?.pilihan?.length ? [...editingSoal.pilihan] : ["", "", "", ""]
   );
@@ -66,21 +73,27 @@ function SoalForm({ assignmentId, editingSoal, onSuccess, onCancel }: {
     setErrors({});
     setSubmitting(true);
 
-    const body: Record<string, any> = {
-      pertanyaan: pertanyaan.trim(),
-      tipe_soal:  currentTipe,
-    };
+    const fd = new FormData();
+    fd.append("pertanyaan", pertanyaan.trim());
+    fd.append("tipe_soal",  currentTipe);
+    fd.append("show_image", showImage ? "1" : "0");
+    if (image) fd.append("image", image);
+    
     if (currentTipe === "pilihan_ganda") {
-      body.pilihan       = pilihan.filter(p => p.trim());
-      body.jawaban_benar = jawabanBenar;
+      const filteredPilihan = pilihan.filter(p => p.trim());
+      filteredPilihan.forEach((p, i) => fd.append(`pilihan[${i}]`, p));
+      fd.append("jawaban_benar", jawabanBenar);
+    }
+
+    if (isEdit) {
+        fd.append("_method", "PUT");
     }
 
     const url = isEdit
       ? `/assignments/${assignmentId}/soal/${editingSoal!.id}`
       : `/assignments/${assignmentId}/soal`;
 
-    const method = isEdit ? "put" : "post";
-    router[method](url, body, {
+    router.post(url, fd, {
       preserveScroll: true,
       onSuccess: () => {
         toast.success(isEdit ? "Soal diperbarui!" : "Soal ditambahkan!");
@@ -144,6 +157,55 @@ function SoalForm({ assignmentId, editingSoal, onSuccess, onCancel }: {
         <Textarea rows={3} placeholder="Tulis pertanyaan..." value={pertanyaan}
           onChange={e => setPertanyaan(e.target.value)} className="resize-none" />
         {errors.pertanyaan && <p className="text-xs text-red-500 mt-1">{errors.pertanyaan}</p>}
+      </div>
+
+      {/* Image Upload */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+            <Label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Gambar Pendukung (Opsional)</Label>
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Tampilkan Gambar</span>
+                <input 
+                    type="checkbox" 
+                    checked={showImage}
+                    onChange={(e) => setShowImage(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+            </div>
+        </div>
+        
+        {imagePreview && (
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200 mb-2 group">
+                <img src={imagePreview} className="w-full h-full object-contain" />
+                <button 
+                    onClick={() => { setImage(null); setImagePreview(""); }}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </button>
+            </div>
+        )}
+
+        <div 
+            onClick={() => document.getElementById('soal-image-input')?.click()}
+            className="border-2 border-dashed border-gray-200 rounded-xl py-4 flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition group"
+        >
+            <Upload className="h-5 w-5 text-gray-400 group-hover:text-blue-500 mb-1" />
+            <p className="text-[10px] font-bold text-gray-400 group-hover:text-blue-600">UPLOAD GAMBAR</p>
+            <input 
+                id="soal-image-input"
+                type="file" 
+                className="hidden" 
+                accept="image/*"
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        setImage(file);
+                        setImagePreview(URL.createObjectURL(file));
+                    }
+                }}
+            />
+        </div>
       </div>
 
       {/* Pilihan */}
@@ -222,6 +284,13 @@ function SoalCard({ soal, onEdit, onDelete }: {
             </span>
             <span className="text-xs text-gray-400">No. {soal.urutan + 1}</span>
           </div>
+          
+          {soal.show_image && soal.image_url && (
+            <div className="mb-3 rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
+                <img src={soal.image_url} className="max-h-64 mx-auto object-contain" />
+            </div>
+          )}
+
           <p className="text-sm font-medium text-gray-800">{soal.pertanyaan}</p>
           {soal.tipe_soal === "pilihan_ganda" && soal.pilihan && (
             <div className="mt-2 space-y-1">

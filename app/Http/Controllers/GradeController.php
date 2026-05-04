@@ -21,6 +21,15 @@ class GradeController extends Controller
             'grade' => $request->grade,
         ]);
 
+        // Trigger sertifikat jika ini Kelas Online
+        $assignment = $submission->assignment;
+        if ($assignment && $assignment->kelas_online_id) {
+            $kelas = \App\Models\KelasOnline::find($assignment->kelas_online_id);
+            if ($kelas) {
+                app(\App\Services\CertificateService::class)->createCertificateIfEligible($kelas, $submission->peserta);
+            }
+        }
+
         return back();
     }
 }
