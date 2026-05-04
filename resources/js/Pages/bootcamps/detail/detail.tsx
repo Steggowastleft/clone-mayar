@@ -15,62 +15,7 @@ function formatDate(date?: string) {
   });
 }
 
-  const rows = [
-    {
-      label: "Status",
-      value: (
-        <Badge
-          className={cn(
-            "text-white text-xs",
-            bootcamp.status === "published"
-              ? "bg-green-500"
-              : bootcamp.status === "unlisted"
-              ? "bg-gray-500"
-              : "bg-yellow-500"
-          )}
-        >
-          {bootcamp.status}
-        </Badge>
-      ),
-    },
-    { label: "Nama",      value: bootcamp.name },
-    { label: "Kategori",  value: bootcamp.kategori || "-" },
-    {
-      label: "Harga",
-      value: bootcamp.harga && Number(bootcamp.harga) > 0
-        ? `Rp ${Number(bootcamp.harga).toLocaleString("id-ID")}`
-        : "Rp 0",
-    },
-    {
-      label: "Deskripsi",
-      value: (
-        <button
-          onClick={() => setDeskOpen(true)}
-          className="text-blue-600 text-sm underline hover:text-blue-800 flex items-center gap-1"
-        >
-          <ChevronDown className="h-3 w-3" /> Lihat Deskripsi
-        </button>
-      ),
-    },
-    { label: "Waktu Mulai Penjualan",     value: bootcamp.tanggal_mulai_jual         || bootcamp.date || "-" },
-    { label: "Tanggal Kadaluarsa",         value: bootcamp.tanggal_tutup_daftar       || "-" },
-    { label: "Tanggal Mulai Pembelajaran", value: bootcamp.tanggal_mulai_pembelajaran || "-" },
-    { label: "Tanggal Akhir Pembelajaran", value: bootcamp.tanggal_batas_pembelajaran || "-" },
-    { label: "Instruksi",                  value: bootcamp.instruksi                  || "-" },
-    { label: "Syarat Ketentuan",           value: bootcamp.syarat_ketentuan           || "-" },
-    {
-      label: "Gambar/Cover",
-      value: bootcamp.cover_url ? (
-        <img
-          src={bootcamp.cover_url}
-          alt="cover"
-          className="h-16 w-16 object-cover rounded-md"
-        />
-      ) : (
-        <span className="text-gray-400 text-sm">Tidak ada gambar</span>
-      ),
-    },
-  ];
+
 function formatDateTime(date?: string) {
   if (!date) return "-";
   return new Date(date).toLocaleString("id-ID", {
