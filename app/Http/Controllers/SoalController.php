@@ -17,7 +17,14 @@ class SoalController extends Controller
             'pilihan.*'     => 'nullable|string|max:500',
             'jawaban_benar' => 'nullable|string',
             'urutan'        => 'nullable|integer',
+            'image'         => 'nullable|image|max:2048',
+            'show_image'    => 'nullable',
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('soal-images', 'public');
+        }
 
         // Filter pilihan kosong
         $pilihan = null;
@@ -31,6 +38,8 @@ class SoalController extends Controller
         Soal::create([
             'assignment_id' => $assignment->id,
             'pertanyaan'    => $request->pertanyaan,
+            'image'         => $imagePath,
+            'show_image'    => filter_var($request->show_image, FILTER_VALIDATE_BOOLEAN),
             'tipe_soal'     => $request->tipe_soal,
             'pilihan'       => $pilihan,
             'jawaban_benar' => $request->tipe_soal === 'pilihan_ganda' ? $request->jawaban_benar : null,
@@ -48,7 +57,23 @@ class SoalController extends Controller
             'pilihan'       => 'nullable|array',
             'pilihan.*'     => 'nullable|string|max:500',
             'jawaban_benar' => 'nullable|string',
+            'image'         => 'nullable|image|max:2048',
+            'show_image'    => 'nullable',
         ]);
+
+        $data = [
+            'pertanyaan'    => $request->pertanyaan,
+            'tipe_soal'     => $request->tipe_soal,
+            'show_image'    => filter_var($request->show_image, FILTER_VALIDATE_BOOLEAN),
+        ];
+
+        if ($request->hasFile('image')) {
+            // Hapus yang lama jika ada
+            if ($soal->image) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($soal->image);
+            }
+            $data['image'] = $request->file('image')->store('soal-images', 'public');
+        }
 
         // Filter pilihan kosong
         $pilihan = null;
@@ -59,12 +84,10 @@ class SoalController extends Controller
             }
         }
 
-        $soal->update([
-            'pertanyaan'    => $request->pertanyaan,
-            'tipe_soal'     => $request->tipe_soal,
-            'pilihan'       => $pilihan,
-            'jawaban_benar' => $request->tipe_soal === 'pilihan_ganda' ? $request->jawaban_benar : null,
-        ]);
+        $data['pilihan']       = $pilihan;
+        $data['jawaban_benar'] = $request->tipe_soal === 'pilihan_ganda' ? $request->jawaban_benar : null;
+
+        $soal->update($data);
 
         return back()->with('success', 'Soal berhasil diperbarui.');
     }

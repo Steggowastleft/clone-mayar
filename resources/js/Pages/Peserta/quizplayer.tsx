@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 export type SoalItem = {
   id: number;
   pertanyaan: string;
+  image_url?: string;
+  show_image: boolean;
   tipe_soal: "pilihan_ganda" | "essay";
   pilihan?: string[];
   urutan: number;
@@ -87,7 +89,14 @@ function HasilQuiz({ result, soals, jawaban, onRetake }: {
                     ? <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
                     : <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                   }
-                  <p className="text-sm font-semibold text-gray-800">{idx + 1}. {soal.pertanyaan}</p>
+                  <div className="flex-1">
+                    {soal.show_image && soal.image_url && (
+                        <div className="mb-2 rounded-lg overflow-hidden border border-gray-100 bg-white max-w-sm">
+                            <img src={soal.image_url} className="max-h-40 object-contain" />
+                        </div>
+                    )}
+                    <p className="text-sm font-semibold text-gray-800">{idx + 1}. {soal.pertanyaan}</p>
+                  </div>
                 </div>
                 <div className="ml-7 space-y-1.5">
                   {soal.pilihan?.map((p, i) => {
@@ -231,6 +240,11 @@ export default function QuizPlayer({ assignmentId, soals, nilaiTertinggi, attemp
               {idx + 1}
             </span>
             <div className="flex-1">
+              {soal.show_image && soal.image_url && (
+                <div className="mb-3 rounded-xl overflow-hidden border border-gray-100 bg-white">
+                  <img src={soal.image_url} className="max-h-64 mx-auto object-contain" />
+                </div>
+              )}
               <p className="text-sm font-medium text-gray-800 leading-relaxed">{soal.pertanyaan}</p>
               {soal.tipe_soal === "essay" && (
                 <span className="text-xs text-purple-600 font-semibold mt-1 inline-block">Essay</span>

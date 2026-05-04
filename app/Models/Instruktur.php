@@ -10,7 +10,7 @@ class Instruktur extends Model
     protected $table = 'instruktur';
 
     protected $fillable = [
-        'bootcamp_id', 'nama', 'jabatan', 'bio', 'foto', 'urutan',
+        'bootcamp_id', 'kelas_online_id', 'nama', 'jabatan', 'bio', 'foto', 'urutan',
     ];
 
     protected $appends = ['foto_url'];
@@ -28,5 +28,10 @@ class Instruktur extends Model
     public function bootcamp()
     {
         return $this->belongsTo(Bootcamp::class);
+    }
+
+    public function kelasOnline()
+    {
+        return $this->belongsTo(KelasOnline::class, 'kelas_online_id');
     }
 }

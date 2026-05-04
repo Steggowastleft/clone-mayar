@@ -16,10 +16,18 @@ class Sertifikat extends Model
         'nama_instruktur',
         'tanggal_selesai',
         'qr_token',
+        'is_approved',
+        'is_manual_approved',
+        'approved_by',
+        'approved_at',
+        'approval_reason',
     ];
 
     protected $casts = [
         'tanggal_selesai' => 'date',
+        'approved_at' => 'datetime',
+        'is_approved' => 'boolean',
+        'is_manual_approved' => 'boolean',
     ];
 
     public function peserta()
@@ -27,7 +35,12 @@ class Sertifikat extends Model
         return $this->belongsTo(Peserta::class);
     }
 
-    public function bootcamp()
+
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }Public function bootcamp()
     {
         return $this->belongsTo(Bootcamp::class);
     }

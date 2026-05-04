@@ -32,6 +32,9 @@ export type SubmissionItem = {
   waktu_kirim: string;        // ISO string
   submission_url?: string;    // link file/text submission
   submission_teks?: string;   // teks submission
+  submission_file?: string;
+  submission_file_name?: string;
+  file_url?: string;
   grade?: number | null;      // null = belum dinilai
 };
 
@@ -101,15 +104,22 @@ function BeriNilaiDialog({
           </div>
 
           {/* Lihat submission */}
-          {(submission.submission_url || submission.submission_teks) && (
+          {(submission.submission_url || submission.submission_teks || submission.submission_file) && (
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Submission</Label>
-              {submission.submission_url ? (
+              {submission.submission_url && (
                 <a href={submission.submission_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium underline">
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium underline mb-1">
                   <FileText className="h-4 w-4" /> Lihat File / Link Submission
                 </a>
-              ) : (
+              )}
+              {submission.submission_file && (
+                <a href={submission.file_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium underline mb-1">
+                  <Upload className="h-4 w-4" /> Download/Lihat File: {submission.submission_file_name}
+                </a>
+              )}
+              {submission.submission_teks && (
                 <div className="bg-white border border-gray-200 rounded-md p-3 text-sm text-gray-700 max-h-32 overflow-y-auto">
                   {submission.submission_teks}
                 </div>
@@ -188,6 +198,13 @@ function LihatSubmissionDialog({
             <a href={submission.submission_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium underline">
               <FileText className="h-4 w-4" /> Buka File / Link Submission
+            </a>
+          )}
+
+          {submission.submission_file && (
+            <a href={submission.file_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium underline">
+              <Upload className="h-4 w-4" /> Download File: {submission.submission_file_name}
             </a>
           )}
 

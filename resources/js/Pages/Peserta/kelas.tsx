@@ -581,6 +581,24 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                     className="prose prose-sm max-w-none text-gray-700"
                     dangerouslySetInnerHTML={{ __html: activeAssignment.tugas }}
                   />
+
+                  {/* Daftar Soal Uraian jika ada */}
+                  {activeAssignment.tipe === "upload" && activeAssignment.soals && activeAssignment.soals.length > 0 && (
+                    <div className="mt-8 space-y-4 border-t pt-6">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Daftar Pertanyaan</p>
+                        {activeAssignment.soals.map((s, i) => (
+                            <div key={s.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <p className="text-[10px] font-black text-blue-600 mb-2 uppercase tracking-wide">PERTANYAAN #{i + 1}</p>
+                                {s.show_image && s.image_url && (
+                                    <div className="mb-3 rounded-lg overflow-hidden border border-gray-200 bg-white">
+                                        <img src={s.image_url} className="max-h-64 mx-auto object-contain" />
+                                    </div>
+                                )}
+                                <p className="text-sm text-gray-800 font-medium whitespace-pre-wrap">{s.pertanyaan}</p>
+                            </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Area Submit ── */}
@@ -633,9 +651,23 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                           </div>
                         )}
                         {sub.submission_teks && (
-                          <div>
+                          <div className="mb-3">
                             <p className="text-xs text-gray-400 mb-1">Jawaban yang dikumpulkan:</p>
                             <p className="text-sm text-gray-700 whitespace-pre-wrap">{sub.submission_teks}</p>
+                          </div>
+                        )}
+                        {(sub as any).submission_file && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">File yang dikumpulkan:</p>
+                            <a 
+                                href={(sub as any).file_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-600 hover:bg-blue-100 transition"
+                            >
+                                <FileText className="h-4 w-4" />
+                                <span className="flex-1 truncate">{(sub as any).submission_file_name}</span>
+                            </a>
                           </div>
                         )}
                       </div>
@@ -662,9 +694,23 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                           </div>
                         )}
                         {sub.submission_teks && (
-                          <div>
+                          <div className="mb-3">
                             <p className="text-xs text-gray-400 mb-1">Jawaban yang dikumpulkan:</p>
                             <p className="text-sm text-gray-700 whitespace-pre-wrap">{sub.submission_teks}</p>
+                          </div>
+                        )}
+                        {(sub as any).submission_file && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">File yang dikumpulkan:</p>
+                            <a 
+                                href={(sub as any).file_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-600 hover:bg-blue-100 transition"
+                            >
+                                <FileText className="h-4 w-4" />
+                                <span className="flex-1 truncate">{(sub as any).submission_file_name}</span>
+                            </a>
                           </div>
                         )}
                       </div>
@@ -678,7 +724,7 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
 
                       {/* Toggle tipe */}
                       <div className="flex gap-2 mb-4">
-                        {(["url", "teks"] as const).map((t) => (
+                        {(["url", "teks", "file"] as const).map((t) => (
                           <button key={t}
                             onClick={() => { setSubmitForm({ ...submitForm, tipe: t }); setSubmitErrors({}); }}
                             className={`px-4 py-1.5 rounded-lg text-xs font-semibold border transition ${
@@ -687,7 +733,7 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                                 : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
                             }`}
                           >
-                            {t === "url" ? "🔗 Link / URL" : "📝 Teks"}
+                            {t === "url" ? "🔗 Link / URL" : t === "teks" ? "📝 Teks" : "📁 File / Gambar"}
                           </button>
                         ))}
                       </div>
@@ -704,7 +750,7 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                           />
                           {submitErrors.url && <p className="text-xs text-red-500">{submitErrors.url}</p>}
                         </div>
-                      ) : (
+                      ) : submitForm.tipe === "teks" ? (
                         <div className="space-y-1.5 mb-4">
                           <label className="text-xs font-medium text-gray-600">Jawaban Kamu</label>
                           <textarea
@@ -715,6 +761,30 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                           />
                           {submitErrors.teks && <p className="text-xs text-red-500">{submitErrors.teks}</p>}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 mb-4">
+                          <label className="text-xs font-medium text-gray-600">Upload File / Gambar</label>
+                          <div 
+                            onClick={() => document.getElementById('submit-file-input')?.click()}
+                            className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition group"
+                          >
+                            <FileText className="h-8 w-8 text-gray-400 group-hover:text-blue-500 mb-2" />
+                            <p className="text-sm font-medium text-gray-500 group-hover:text-blue-600">
+                                {(submitForm as any).file ? (submitForm as any).file.name : "Klik untuk pilih file"}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">PDF, ZIP, atau Gambar (Max 10MB)</p>
+                            <input 
+                                id="submit-file-input"
+                                type="file" 
+                                className="hidden" 
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) setSubmitForm({ ...submitForm, file } as any);
+                                }}
+                            />
+                          </div>
+                          {submitErrors.submission_file && <p className="text-xs text-red-500 mt-1">{submitErrors.submission_file}</p>}
                         </div>
                       )}
 
@@ -735,11 +805,12 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                           setSubmitErrors({});
                           setIsSubmitting(true);
 
-                          const payload: Record<string, string> = {};
-                          if (submitForm.tipe === "url") payload.submission_url = submitForm.url.trim();
-                          else payload.submission_teks = submitForm.teks.trim();
+                          const fd = new FormData();
+                          if (submitForm.tipe === "url") fd.append("submission_url", submitForm.url.trim());
+                          else if (submitForm.tipe === "teks") fd.append("submission_teks", submitForm.teks.trim());
+                          else if ((submitForm as any).file) fd.append("submission_file", (submitForm as any).file);
 
-                          router.post(`/peserta/assignments/${activeAssignment.id}/submit`, payload, {
+                          router.post(`/peserta/assignments/${activeAssignment.id}/submit`, fd, {
                             preserveScroll: true,
                             onSuccess: (page) => {
                               setIsSubmitting(false);
