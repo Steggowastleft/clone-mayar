@@ -26,7 +26,9 @@ class TulisanController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('tulisan/indexcreate');
+        return Inertia::render('tulisan/index', [
+            'createOpen' => true
+        ]);
     }
 
     public function store(Request $request)
@@ -91,10 +93,11 @@ class TulisanController extends Controller
         ]);
     }
 
-    public function edit(string $id): Response
+    public function edit(Tulisan $tulisan): Response
     {
-        return Inertia::render('tulisan/indexedit', [
-            'id' => $id,
+        return Inertia::render('tulisan/detail', [
+            'tulisan' => $tulisan,
+            'isEdit' => true
         ]);
     }
 
@@ -184,5 +187,40 @@ class TulisanController extends Controller
         $copy->save();
 
         return redirect()->route('tulisan.show', $copy->id);
+    }
+
+    public function catalog()
+    {
+        $userId = Auth::id();
+        $tulisans = Tulisan::where('user_id', $userId)
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($t) => [
+                'id' => "tulisan:{$t->id}",
+                'product_id' => $t->id,
+                'type' => 'tulisan',
+                'nama' => $t->nama,
+                'harga' => $t->harga ?? 0,
+                'status' => $t->status,
+                'tanggal' => $t->created_at->format('d M Y H:i'),
+                'terjual' => $t->terjual ?? 0,
+                'kategori' => 'Tulisan',
+            ]);
+
+        return Inertia::render('tulisan/catalog', [
+            'produk' => $tulisans,
+        ]);
+    }
+
+    public function publicShow(Tulisan $tulisan): Response
+    {
+        if ($tulisan->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('tulisan/public', [
+            'tulisan' => $tulisan,
+        ]);
     }
 }

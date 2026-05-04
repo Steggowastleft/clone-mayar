@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { router } from "@inertiajs/react";
+import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
@@ -30,8 +31,21 @@ export function EditEventDialog({
   });
 
   const handleSave = () => {
-    router.put(`/events/${event.id}`, form, {
-      onSuccess: () => onOpenChange(false),
+    if (!form.nama.trim()) {
+      toast.error("Nama event wajib diisi");
+      return;
+    }
+    
+    router.put(`/event/${event.id}`, form, {
+      preserveScroll: true,
+      onSuccess: () => {
+        onOpenChange(false);
+        toast.success("Event berhasil diperbarui!");
+      },
+      onError: (errors) => {
+        const errorMsg = Object.values(errors)[0] as string || "Gagal memperbarui event";
+        toast.error(errorMsg);
+      },
     });
   };
 

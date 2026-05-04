@@ -1,7 +1,5 @@
 <?php
-// ══════════════════════════════════════════════════
-// app/Models/Pendaftaran.php
-// ══════════════════════════════════════════════════
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -23,13 +21,13 @@ class Pendaftaran extends Model
     ];
 
     protected $casts = [
-        'form_data' => 'array',
-        'tanggal_daftar' => 'datetime',
-        'tanggal_aktif' => 'datetime',
-        'tanggal_expired' => 'datetime',
+        'form_data'        => 'array',
+        'tanggal_daftar'   => 'datetime',
+        'tanggal_aktif'    => 'datetime',
+        'tanggal_expired'  => 'datetime',
     ];
 
-    // 🔥 polymorphic target
+    // 🔥 Polymorphic target — bisa ke Bootcamp, Webinar, Event, dll.
     public function registrable()
     {
         return $this->morphTo();
@@ -37,39 +35,6 @@ class Pendaftaran extends Model
 
     public function peserta()
     {
-    return $this->belongsTo(\App\Models\Peserta::class, 'peserta_id', 'id');
+        return $this->belongsTo(\App\Models\Peserta::class, 'peserta_id', 'id');
     }
 }
-
-// ══════════════════════════════════════════════════
-// TAMBAHKAN ke config/auth.php
-// Di bagian 'guards' dan 'providers':
-// ══════════════════════════════════════════════════
-
-/*
-'guards' => [
-    'web' => [
-        'driver'   => 'session',
-        'provider' => 'users',
-    ],
-
-    // Guard untuk peserta (terpisah dari admin)
-    'peserta' => [
-        'driver'   => 'session',
-        'provider' => 'peserta',
-    ],
-],
-
-'providers' => [
-    'users' => [
-        'driver' => 'eloquent',
-        'model'  => App\Models\User::class,
-    ],
-
-    // Provider untuk peserta
-    'peserta' => [
-        'driver' => 'eloquent',
-        'model'  => App\Models\Peserta::class,
-    ],
-],
-*/

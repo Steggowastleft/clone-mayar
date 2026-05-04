@@ -50,6 +50,7 @@ class ProdukDigitalController extends Controller
         $request->validate([
             'nama'              => 'required|string|max:200',
             'deskripsi'         => 'required|string',
+            'kategori'          => 'nullable|in:e-book,novel,komik,template,tulisan,video',
             'tipe_pembayaran'   => 'required|in:berbayar,gratis',
             'harga'             => 'required_if:tipe_pembayaran,berbayar|numeric|min:0',
             'harga_coret'       => 'nullable|numeric|gt:harga',
@@ -71,6 +72,7 @@ class ProdukDigitalController extends Controller
             'nama'              => $request->nama,
             'slug'              => $slug,
             'deskripsi'         => $request->deskripsi,
+            'kategori'          => $request->kategori,
             'tipe_pembayaran'   => $request->tipe_pembayaran,
             'harga'             => $request->tipe_pembayaran === 'gratis' ? 0 : (int) $request->harga,
             'harga_coret'       => $request->harga_coret ? (int) $request->harga_coret : null,
@@ -122,12 +124,14 @@ class ProdukDigitalController extends Controller
             ->firstOrFail();
 
         $request->validate([
-            'nama' => 'required|string|max:200',
+            'nama'     => 'required|string|max:200',
+            'kategori' => 'nullable|in:e-book,novel,komik,template,tulisan,video',
         ]);
 
         $data = $request->only([
             'nama',
             'deskripsi',
+            'kategori',
             'harga',
             'harga_coret',
             'redirect_url',
@@ -245,6 +249,7 @@ class ProdukDigitalController extends Controller
             'harga'              => $p->harga,
             'harga_coret'        => $p->harga_coret,
             'deskripsi'          => $p->deskripsi,
+            'kategori'           => $p->kategori,
             'sumber_file'        => $p->sumber_file,
             'file_url'           => $p->file_url,
             'redirect_url'       => $p->redirect_url,
@@ -261,5 +266,59 @@ class ProdukDigitalController extends Controller
             'total_penjualan'    => $p->total_penjualan,
             'created_at'         => $p->created_at?->format('d M Y'),
         ];
+    }
+
+    public function catalog()
+    {
+        $userId = Auth::id();
+        $produk = ProdukDigital::where('user_id', $userId)
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($p) => [
+                'id' => "produk-digital:{$p->id}",
+                'product_id' => $p->id,
+                'type' => 'produk-digital',
+                'nama' => $p->nama,
+                'harga' => $p->harga ?? 0,
+                'status' => $p->status,
+                'tanggal' => $p->created_at->format('d M Y H:i'),
+                'terjual' => $p->total_penjualan ?? 0,
+                'kategori' => 'Produk Digital',
+            ]);
+
+        return Inertia::render('produk-digital/catalog', [
+            'produk' => $produk,
+        ]);
+    }
+
+    public function publicShow(ProdukDigital $produkDigital)
+    {
+        // Only show published products
+        if ($produkDigital->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('produk-digital/public', [
+            'produk' => [
+                'id' => $produkDigital->id,
+                'nama' => $produkDigital->nama,
+                'deskripsi' => $produkDigital->deskripsi,
+                'kategori' => $produkDigital->kategori,
+                'harga' => $produkDigital->harga ?? 0,
+                'harga_coret' => $produkDigital->harga_coret,
+                'cover_url' => $produkDigital->cover_url,
+                'file_url' => $produkDigital->file_url,
+                'redirect_url' => $produkDigital->redirect_url,
+                'tipe_pembayaran' => $produkDigital->tipe_pembayaran,
+                'sumber_file' => $produkDigital->sumber_file,
+                'waktu_mulai_jual' => $produkDigital->waktu_mulai_jual 
+                    ? Carbon::parse($produkDigital->waktu_mulai_jual)->format('d M Y H:i')
+                    : null,
+                'tanggal_kadaluarsa' => $produkDigital->tanggal_kadaluarsa
+                    ? Carbon::parse($produkDigital->tanggal_kadaluarsa)->format('d M Y')
+                    : null,
+            ],
+        ]);
     }
 }

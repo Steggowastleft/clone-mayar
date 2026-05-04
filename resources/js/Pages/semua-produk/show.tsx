@@ -67,7 +67,7 @@ const getDetailRoute = (type: string, id: number) => {
     case "event":
       return `/event/${id}`;
     case "bootcamp":
-      return `/bootcamps/${id}`;
+      return `/bootcamp/catalog`;
     case "produk-digital":
       return `/produk-digital/${id}`;
     case "payment-link":

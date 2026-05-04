@@ -327,7 +327,13 @@ export default function Index({ produk = [] }: IndexProps) {
               Penggalangan Dana
             </h1>
             <div className="flex gap-2">
-              <Button variant="outline">PRODUK</Button>
+              <Button 
+                variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}
+              >
+                PRODUK
+              </Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openCreate}>
                 + BUAT
               </Button>
@@ -465,10 +471,10 @@ export default function Index({ produk = [] }: IndexProps) {
           />
 
           <button
-            onClick={openCreate}
+            onClick={() => router.visit("/penggalangan-dana/catalog")}
             className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition mt-4"
           >
-            + Buat Penggalangan
+            Lihat Katalog
           </button>
         </div>
       </div>

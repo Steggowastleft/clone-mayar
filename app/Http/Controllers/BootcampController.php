@@ -50,7 +50,6 @@ class BootcampController extends Controller
         $bootcamp = Bootcamp::create([
             'user_id'                    => auth()->id(),
             'name'                       => $request->judul,
-            'nama'                       => $request->judul,
             'batch'                      => 'Batch 1',
             'status'                     => 'unpublished',
             'kategori'                   => $request->kategori,
@@ -199,9 +198,7 @@ class BootcampController extends Controller
                 'deskripsi'                  => $bootcamp->deskripsi,
                 'instruksi'                  => $bootcamp->instruksi,
                 'syarat_ketentuan'           => $bootcamp->syarat_ketentuan,
-                'cover_url'                  => $bootcamp->cover
-                    ? asset('storage/' . $bootcamp->cover)
-                    : null,
+                'cover_url'                  => $bootcamp->cover_url,
                 'tanggal_mulai_jual'         => $bootcamp->tanggal_mulai_jual,
                 'tanggal_tutup_daftar'       => $bootcamp->tanggal_tutup_daftar,
                 'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran,

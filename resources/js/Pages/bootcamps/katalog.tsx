@@ -5,12 +5,14 @@ import { ArrowLeft } from "lucide-react";
 
 type Bootcamp = {
   id: number;
-  title: string;
-  description?: string;
-  price: number;
-  thumbnail?: string;
+  name: string;
+  deskripsi?: string;
+  harga: number;
+  is_free: boolean;
+  cover_url?: string;
   peserta_count?: number;
   omset?: number;
+  status?: string;
 };
 
 type Props = {
@@ -47,9 +49,9 @@ export default function Katalog({ bootcamps }: Props) {
               className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden border"
             >
               {/* Thumbnail */}
-              {b.thumbnail ? (
+              {b.cover_url ? (
                 <img
-                  src={b.thumbnail}
+                  src={b.cover_url}
                   className="w-full h-40 object-cover"
                 />
               ) : (
@@ -60,12 +62,12 @@ export default function Katalog({ bootcamps }: Props) {
               <div className="p-4 space-y-3">
                 
                 <h2 className="font-bold text-gray-800 line-clamp-2">
-                  {b.title}
+                  {b.name}
                 </h2>
 
-                {b.description && (
+                {b.deskripsi && (
                   <p className="text-xs text-gray-500 line-clamp-2">
-                    {b.description}
+                    {b.deskripsi}
                   </p>
                 )}
 
@@ -92,7 +94,7 @@ export default function Katalog({ bootcamps }: Props) {
                 {/* PRICE + CTA */}
                 <div className="flex items-center justify-between pt-3">
                   <span className="text-lg font-extrabold text-gray-900">
-                    {formatHarga(b.price)}
+                    {formatHarga(b.harga)}
                   </span>
 
                   <button

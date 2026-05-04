@@ -17,7 +17,7 @@ class PaketBerlanggananController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('paket-berlangganan/indexcreate');
+        return Inertia::render('paket-berlangganan/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class PaketBerlanggananController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('paket-berlangganan/indexshow', [
+        return Inertia::render('paket-berlangganan/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('paket-berlangganan/indexedit', [
+        return Inertia::render('paket-berlangganan/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class PaketBerlanggananController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('paket-berlangganan.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('paket-berlangganan/catalog', [
+            'produk' => [],
+        ]);
     }
 }

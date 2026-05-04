@@ -103,6 +103,8 @@ class EventController extends Controller
                 'cover_url' => $event->cover_url,
                 'waktu_mulai' => optional($event->waktu_mulai)->format('d M Y H:i'),
                 'waktu_selesai' => optional($event->waktu_selesai)->format('d M Y H:i'),
+                'waktu_mulai_jual' => optional($event->waktu_mulai_jual)->format('d M Y H:i'),
+                'tanggal_tutup_daftar' => optional($event->tanggal_tutup_daftar)->format('d M Y'),
                 'participants' => $event->participants ?? 0,
             ],
             'pesertaList' => $event->pendaftaran()
@@ -219,5 +221,29 @@ class EventController extends Controller
         ]);
 
         return back()->with('success', 'Berhasil daftar event');
+    }
+
+    public function catalog()
+    {
+        $userId = Auth::id();
+        $events = Event::where('user_id', $userId)
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($e) => [
+                'id' => "event:{$e->id}",
+                'product_id' => $e->id,
+                'type' => 'event',
+                'nama' => $e->nama,
+                'harga' => $e->harga ?? 0,
+                'status' => $e->status,
+                'tanggal' => $e->waktu_mulai ? $e->waktu_mulai->format('d M Y H:i') : $e->created_at->format('d M Y H:i'),
+                'terjual' => $e->pendaftaran()->count(),
+                'kategori' => 'Event',
+            ]);
+
+        return Inertia::render('event/catalog', [
+            'produk' => $events,
+        ]);
     }
 }

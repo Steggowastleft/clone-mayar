@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class PaymentLinkController extends Controller
 {
@@ -148,6 +149,46 @@ public function destroy(PaymentLink $paymentLink)
     return redirect()->route('payment-link.index')
         ->with('success', 'Link pembayaran berhasil dihapus.');
 }
+
+    // ─────────────────────────────────────────────────────
+    // Catalog – daftar payment links yang dipublikasi
+    // ─────────────────────────────────────────────────────
+    public function catalog(): Response
+    {
+        $links = PaymentLink::where('user_id', Auth::id())
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($l) => [
+                'id' => "payment-link:{$l->id}",
+                'product_id' => $l->id,
+                'type' => 'payment-link',
+                'nama' => $l->nama,
+                'harga' => $l->harga ?? 0,
+                'status' => $l->status,
+                'tanggal' => $l->created_at->format('d M Y H:i'),
+                'terjual' => 0,
+                'kategori' => 'Link Pembayaran',
+            ]);
+
+        return Inertia::render('payment-link/catalog', [
+            'produk' => $links,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────
+    // Public Show – tampilkan payment link untuk public
+    // ─────────────────────────────────────────────────────
+    public function publicShow(PaymentLink $paymentLink): Response
+    {
+        if ($paymentLink->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('payment-link/public', [
+            'link' => $this->formatLink($paymentLink),
+        ]);
+    }
 
     // ─────────────────────────────────────────────────────
     // Helper – format link untuk Inertia

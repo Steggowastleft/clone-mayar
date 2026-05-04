@@ -54,7 +54,7 @@ class SemuaProdukController extends Controller
                 'harga' => $e->harga ?? 0,
                 'status' => $e->status,
                 'tanggal' => $e->created_at->format('d M Y H:i'),
-                'terjual' => 0,
+                'terjual' => $e->pendaftaran()->count(),
                 'kategori' => 'Event',
             ])->toArray();
         $products = array_merge($products, $events);
@@ -93,7 +93,7 @@ class SemuaProdukController extends Controller
             ])->toArray();
         $products = array_merge($products, $paymentLink);
 
-        // Fetch Bootcamp (Kelas Online)
+        // Fetch Bootcamp
         $bootcamp = Bootcamp::where('user_id', $userId)
             ->orderByDesc('created_at')
             ->get()
@@ -101,12 +101,12 @@ class SemuaProdukController extends Controller
                 'id' => "bootcamp:{$b->id}",
                 'product_id' => $b->id,
                 'type' => 'bootcamp',
-                'nama' => $b->nama,
+                'nama' => $b->name,
                 'harga' => $b->harga ?? 0,
                 'status' => $b->status,
                 'tanggal' => $b->created_at->format('d M Y H:i'),
-                'terjual' => 0,
-                'kategori' => 'Kelas Online',
+                'terjual' => $b->pendaftaran()->count(),
+                'kategori' => 'Bootcamp',
             ])->toArray();
         $products = array_merge($products, $bootcamp);
 
@@ -219,7 +219,7 @@ class SemuaProdukController extends Controller
         */
 
         // Sort by created_at descending
-        usort($products, function($a, $b) {
+        usort($products, function ($a, $b) {
             return strcmp($b['tanggal'], $a['tanggal']);
         });
 
@@ -238,24 +238,19 @@ class SemuaProdukController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new product
-     */
     public function create(): Response
     {
         return Inertia::render('semua-produk/create', [
             'productTypes' => [
+                ['value' => 'kelas-online', 'label' => 'Kelas Online'],
                 ['value' => 'webinar', 'label' => 'Webinar'],
-                ['value' => 'event', 'label' => 'Event'],
-                ['value' => 'bootcamp', 'label' => 'Kelas Online'],
-                ['value' => 'coaching-mentoring', 'label' => 'Coaching / Mentoring'],
+                ['value' => 'bootcamp', 'label' => 'Bootcamp'],
                 ['value' => 'produk-digital', 'label' => 'Produk Digital'],
-                ['value' => 'payment-link', 'label' => 'Link Pembayaran'],
                 ['value' => 'penggalangan-dana', 'label' => 'Penggalangan Dana'],
-                ['value' => 'tulisan', 'label' => 'Tulisan'],
-                // ['value' => 'ebook', 'label' => 'Ebook'],
-                // ['value' => 'produk-fisik', 'label' => 'Produk Fisik'],
-                // ['value' => 'paket-berlangganan', 'label' => 'Paket Berlangganan'],
+                ['value' => 'event', 'label' => 'Event / Acara'],
+                ['value' => 'payment-link', 'label' => 'Link Pembayaran'],
+                ['value' => 'pembayaran-tagihan', 'label' => 'Pembayaran Tagihan'],
+                ['value' => 'faktur-pembayaran', 'label' => 'Faktur Pembayaran'],
             ],
         ]);
     }
@@ -267,7 +262,7 @@ class SemuaProdukController extends Controller
     {
         $type = $request->input('type');
 
-        return match($type) {
+        return match ($type) {
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -288,13 +283,18 @@ class SemuaProdukController extends Controller
      */
     public function show(string $id): Response
     {
-        // Parse the composite ID (e.g., "webinar:1")
-        [$type, $productId] = explode(':', $id, 2);
-        
-        // Map underscore types back to hyphen format
+        $parts = explode(':', $id, 2);
+
+        // 🚨 guard clause (WAJIB)
+        if (count($parts) < 2) {
+            abort(404, 'Invalid product ID');
+        }
+
+        [$type, $productId] = $parts;
+
         $type = str_replace('_', '-', $type);
 
-        $product = match($type) {
+        $product = match ($type) {
             'webinar' => Webinar::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'event' => Event::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'bootcamp' => Bootcamp::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
@@ -318,11 +318,11 @@ class SemuaProdukController extends Controller
     public function edit(string $id): Response
     {
         [$type, $productId] = explode(':', $id, 2);
-        
+
         // Map underscore types back to hyphen format
         $type = str_replace('_', '-', $type);
 
-        $product = match($type) {
+        $product = match ($type) {
             'webinar' => Webinar::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'event' => Event::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'bootcamp' => Bootcamp::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
@@ -346,11 +346,11 @@ class SemuaProdukController extends Controller
     public function update(Request $request, string $id)
     {
         [$type, $productId] = explode(':', $id, 2);
-        
+
         // Map underscore types back to hyphen format
         $type = str_replace('_', '-', $type);
 
-        return match($type) {
+        return match ($type) {
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -372,11 +372,11 @@ class SemuaProdukController extends Controller
     public function destroy(string $id)
     {
         [$type, $productId] = explode(':', $id, 2);
-        
+
         // Map underscore types back to hyphen format
         $type = str_replace('_', '-', $type);
 
-        return match($type) {
+        return match ($type) {
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -390,5 +390,18 @@ class SemuaProdukController extends Controller
             // 'paket-berlangganan' => redirect()->route('paket-berlangganan.index'),
             default => redirect()->route('semua-produk.index'),
         };
+    }
+
+    public function catalog(): Response
+    {
+        $products = $this->getAllProducts();
+
+        // Only show published products in the public catalog
+        $publishedProducts = array_filter($products, fn($p) => $p['status'] === 'published');
+        $publishedProducts = array_values($publishedProducts);
+
+        return Inertia::render('semua-produk/catalog', [
+            'produk' => $publishedProducts,
+        ]);
     }
 }

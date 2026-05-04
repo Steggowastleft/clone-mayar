@@ -120,5 +120,8 @@ class PenggalanganDana extends Model
         return $this->morphMany(Pendaftaran::class, 'registrable');
     }
 
-    
+    public function kabars()
+    {
+        return $this->hasMany(PenggalanganDanaKabar::class)->latest();
+    }
 }

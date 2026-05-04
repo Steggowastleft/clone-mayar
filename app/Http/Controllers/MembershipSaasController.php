@@ -17,7 +17,7 @@ class MembershipSaasController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('membership-saas/indexcreate');
+        return Inertia::render('membership-saas/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class MembershipSaasController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('membership-saas/indexshow', [
+        return Inertia::render('membership-saas/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('membership-saas/indexedit', [
+        return Inertia::render('membership-saas/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class MembershipSaasController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('membership-saas.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('membership-saas/catalog', [
+            'produk' => [],
+        ]);
     }
 }

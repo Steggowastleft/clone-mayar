@@ -124,7 +124,7 @@ export default function CoachingMentoringDetail({ coaching }: Props) {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">PRODUK</Button>
+            <Button variant="outline" onClick={() => window.open("/coaching-mentoring/catalog", "_blank")}>PRODUK</Button>
             <Button>+ BUAT</Button>
           </div>
         </div>

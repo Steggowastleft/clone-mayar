@@ -12,4 +12,11 @@ class BundleController extends Controller
             'bundles' => [],
         ]);
     }
+
+    public function catalog()
+    {
+        return Inertia::render('bundle/catalog', [
+            'produk' => [],
+        ]);
+    }
 }

@@ -177,6 +177,19 @@ class PenggalanganDanaController extends Controller
         ]);
     }
 
+    public function publicShow(PenggalanganDana $penggalanganDana): Response
+    {
+        if ($penggalanganDana->status !== 'published') {
+            abort(404);
+        }
+
+        $penggalanganDana->load('kabars');
+
+        return Inertia::render('penggalangan-dana/public', [
+            'penggalangan_dana' => $penggalanganDana,
+        ]);
+    }
+
     /**
      * Show the form for editing the specified penggalangan dana.
      */
@@ -335,6 +348,21 @@ class PenggalanganDanaController extends Controller
     }
 
     /**
+     * Store kabar terbaru for penggalangan dana.
+     */
+    public function storeKabar(Request $request, PenggalanganDana $penggalanganDana)
+    {
+        $validated = $request->validate([
+            'judul'     => 'required|string|max:255',
+            'deskripsi' => 'required|string',
+        ]);
+
+        $penggalanganDana->kabars()->create($validated);
+
+        return redirect()->route('penggalangan-dana.show', $penggalanganDana->id);
+    }
+
+    /**
      * Remove the specified penggalangan dana.
      */
     public function destroy(PenggalanganDana $penggalanganDana)
@@ -349,5 +377,27 @@ class PenggalanganDanaController extends Controller
 
         return redirect()->route('penggalangan-dana.index');
     }
-}
+    public function catalog(): Response
+    {
+        $produk = PenggalanganDana::where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($p) => [
+                'id' => "penggalangan-dana:{$p->id}",
+                'product_id' => $p->id,
+                'type' => 'penggalangan-dana',
+                'nama' => $p->nama,
+                'harga' => $p->harga ?? 0,
+                'terkumpul' => $p->terkumpul ?? 0,
+                'status' => $p->status,
+                'tanggal' => $p->created_at->format('d M Y H:i'),
+                'terjual' => $p->pembeli ?? 0,
+                'kategori' => ucfirst($p->tipe),
+                'progress_percent' => $p->progress_percent ?? 0,
+            ]);
 
+        return Inertia::render('penggalangan-dana/catalog', [
+            'produk' => $produk,
+        ]);
+    }
+}

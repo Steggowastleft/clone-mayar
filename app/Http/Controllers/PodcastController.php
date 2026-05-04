@@ -17,7 +17,7 @@ class PodcastController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('podcast/indexcreate');
+        return Inertia::render('podcast/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class PodcastController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('podcast/indexshow', [
+        return Inertia::render('podcast/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('podcast/indexedit', [
+        return Inertia::render('podcast/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class PodcastController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('podcast.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('podcast/catalog', [
+            'produk' => [],
+        ]);
     }
 }

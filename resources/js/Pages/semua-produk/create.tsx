@@ -5,10 +5,12 @@ import {
   BookOpen,
   Video,
   ShoppingBag,
-  DollarSign,
+  Heart,
+  CalendarDays,
   Link2Icon,
-  Zap,
-  User,
+  Receipt,
+  FileText,
+  MonitorPlay,
 } from "lucide-react";
 
 type ProductType = {
@@ -21,30 +23,39 @@ type Props = {
 };
 
 const productTypeIcons: Record<string, React.ReactNode> = {
+  "kelas-online": <MonitorPlay className="h-8 w-8" />,
   webinar: <Video className="h-8 w-8" />,
-  event: <Zap className="h-8 w-8" />,
   bootcamp: <BookOpen className="h-8 w-8" />,
-  "coaching-mentoring": <User className="h-8 w-8" />,
   "produk-digital": <ShoppingBag className="h-8 w-8" />,
+  "penggalangan-dana": <Heart className="h-8 w-8" />,
+  event: <CalendarDays className="h-8 w-8" />,
   "payment-link": <Link2Icon className="h-8 w-8" />,
+  "pembayaran-tagihan": <Receipt className="h-8 w-8" />,
+  "faktur-pembayaran": <FileText className="h-8 w-8" />,
 };
 
 const productTypeDescriptions: Record<string, string> = {
+  "kelas-online": "Buat kelas online dengan modul dan materi lengkap",
   webinar: "Buat webinar interaktif untuk sharing ilmu dengan peserta",
-  event: "Buat event atau acara khusus dengan berbagai tiket",
   bootcamp: "Buat program pembelajaran intensif dengan kurikulum lengkap",
-  "coaching-mentoring": "Tawarkan sesi coaching atau mentoring 1-on-1",
   "produk-digital": "Jual produk digital seperti ebook, template, atau resource",
+  "penggalangan-dana": "Buat kampanye donasi atau penggalangan dana",
+  event: "Buat event atau acara khusus dengan berbagai tiket",
   "payment-link": "Buat link pembayaran untuk produk atau layanan apapun",
+  "pembayaran-tagihan": "Terima pembayaran tagihan bulanan dari pelanggan",
+  "faktur-pembayaran": "Buat dan kirim faktur pembayaran ke klien",
 };
 
 const routeMap: Record<string, string> = {
-  webinar: "webinar.index",
-  event: "event.index",
-  bootcamp: "bootcamp.index",
-  "coaching-mentoring": "coaching-mentoring.create",
-  "produk-digital": "produk-digital.index",
-  "payment-link": "payment-link.index",
+  "kelas-online": "/kelas-online",
+  webinar: "/webinar",
+  bootcamp: "/bootcamps",
+  "produk-digital": "/produk-digital",
+  "penggalangan-dana": "/penggalangan-dana",
+  event: "/event",
+  "payment-link": "/payment-link",
+  "pembayaran-tagihan": "/pembayaran-tagihan",
+  "faktur-pembayaran": "/faktur-pembayaran",
 };
 
 export default function CreateProduct({ productTypes }: Props) {
@@ -62,7 +73,7 @@ export default function CreateProduct({ productTypes }: Props) {
         <div className="flex-1 p-6">
           <Button
             variant="ghost"
-            onClick={() => router.visit("/semua-produk")}
+            onClick={() => router.visit("/dashboard")}
             className="mb-6 text-gray-600"
           >
             ← Kembali

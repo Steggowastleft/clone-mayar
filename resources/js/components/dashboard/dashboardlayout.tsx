@@ -1,5 +1,6 @@
 import { Head, usePage } from "@inertiajs/react";
 import { DashboardSidebar } from "@/components/dashboard/dashboardsidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 type Props = {
   title?: string;
@@ -24,6 +25,7 @@ export default function DashboardLayout({ title, children }: Props) {
           {children}
         </main>
       </div>
+      <Toaster position="top-right" richColors />
     </>
   );
 }

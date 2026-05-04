@@ -60,6 +60,9 @@ use App\Http\Controllers\Peserta\SertifikatController;
 use App\Http\Controllers\Peserta\QuizController;
 use App\Http\Controllers\SoalController;
 use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\WebinarCatalogController;
+use App\Http\Controllers\WebinarPaymentController;
+use App\Http\Controllers\Admin\WithdrawalController;
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIK — tidak perlu login apapun
@@ -89,6 +92,59 @@ Route::post('/pembayaran/upload-bukti', [PembayaranController::class, 'uploadBuk
 
 // Verifikasi sertifikat (publik)
 Route::get('/sertifikat/verify/{token}', [SertifikatController::class, 'verify'])->name('sertifikat.verify');
+
+// ── Catalog Routes (PUBLIC) ─────────────────────────────
+Route::get('/webinar/catalog', [WebinarCatalogController::class, 'index'])->name('webinar.catalog');
+Route::get('/webinars/catalog', [WebinarCatalogController::class, 'index'])->name('webinar.katalog');
+Route::get('/webinar/katalog', [WebinarCatalogController::class, 'index']);
+Route::get('/webinars/katalog', [WebinarCatalogController::class, 'index']);
+
+Route::get('/bootcamp/catalog', [BootcampCatalogController::class, 'index'])->name('bootcamp.catalog');
+Route::get('/bootcamps/catalog', [BootcampCatalogController::class, 'index'])->name('bootcamps.catalog');
+Route::get('/bootcamp/katalog', [BootcampCatalogController::class, 'index']);
+Route::get('/bootcamps/katalog', [BootcampCatalogController::class, 'index']);
+
+Route::get('/ebook/catalog', [EbookController::class, 'catalog'])->name('ebook.catalog');
+Route::get('/ebook/katalog', [EbookController::class, 'catalog']);
+Route::get('/ebook/{ebook}/p', [EbookController::class, 'publicShow'])->name('ebook.public');
+
+Route::get('/produk-digital/catalog', [ProdukDigitalController::class, 'catalog'])->name('produk-digital.catalog');
+Route::get('/produk-digital/katalog', [ProdukDigitalController::class, 'catalog']);
+Route::get('/produk-digital/{produkDigital}/p', [ProdukDigitalController::class, 'publicShow'])->name('produk-digital.public');
+
+Route::get('/coaching-mentoring/catalog', [CoachingMentoringController::class, 'catalog'])->name('coaching-mentoring.catalog');
+Route::get('/coaching-mentoring/katalog', [CoachingMentoringController::class, 'catalog']);
+Route::get('/coaching-mentoring/{coachingMentoring}/p', [CoachingMentoringController::class, 'publicShow'])->name('coaching-mentoring.public');
+
+Route::get('/payment-link/catalog', [PaymentLinkController::class, 'catalog'])->name('payment-link.catalog');
+Route::get('/payment-link/katalog', [PaymentLinkController::class, 'catalog']);
+Route::get('/payment-link/{paymentLink}/p', [PaymentLinkController::class, 'publicShow'])->name('payment-link.public');
+
+Route::get('/tulisan/catalog', [TulisanController::class, 'catalog'])->name('tulisan.catalog');
+Route::get('/tulisan/katalog', [TulisanController::class, 'catalog']);
+Route::get('/tulisan/{tulisan}/p', [TulisanController::class, 'publicShow'])->name('tulisan.public');
+
+Route::get('/penggalangan-dana/catalog', [PenggalanganDanaController::class, 'catalog'])->name('penggalangan-dana.catalog');
+Route::get('/penggalangan-dana/katalog', [PenggalanganDanaController::class, 'catalog']);
+Route::get('/penggalangan-dana/{penggalanganDana}/p', [PenggalanganDanaController::class, 'publicShow'])->name('penggalangan-dana.public');
+
+Route::get('/event/catalog', [EventController::class, 'catalog'])->name('event.catalog');
+Route::get('/event/katalog', [EventController::class, 'catalog']);
+Route::get('/event/{event}/p', [EventController::class, 'publicShow'])->name('event.public');
+
+Route::get('/webinar/{webinar}', [WebinarCatalogController::class, 'show'])->name('webinar.show');
+Route::get('/p/{webinar}/webinar', [WebinarCatalogController::class, 'show'])->name('webinar.public');
+Route::get('/webinar/{webinar}/detail', [WebinarCatalogController::class, 'show'])->name('webinar.show.detail');
+Route::get('/webinar/{webinar}/checkout', [WebinarPaymentController::class, 'checkout'])->name('webinar.checkout');
+Route::post('/webinar/{webinar}/payment/process', [WebinarPaymentController::class, 'processPayment'])->name('webinar.payment.process');
+Route::post('/webinar/payment/validate', [WebinarPaymentController::class, 'validate'])->name('webinar.payment.validate');
+Route::get('/webinar/confirmation', function () {
+    return Inertia::render('webinar/confirmation', [
+        'order_id' => request('order_id'),
+        'status' => request('status'),
+    ]);
+})->name('webinar.confirmation');
+Route::post('/webinar/payment/notification', [WebinarPaymentController::class, 'notification'])->name('webinar.payment.notification');
 
 // ══════════════════════════════════════════════════════════════
 // AUTH ADMIN
@@ -164,12 +220,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/dashboard', function () {
-        return redirect()->route('bootcamps.index');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/bootcamps/katalog', [BootcampCatalogController::class, 'index'])
-    ->name('bootcamps.katalog');
+
 
     // ── Produk Digital ────────────────────────────────────────
     Route::prefix('produk-digital')->name('produk-digital.')->group(function () {
@@ -183,8 +236,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('/{produkDigital}/status',    [ProdukDigitalController::class, 'updateStatus'])->name('update-status');
         Route::post('/{produkDigital}/duplicate',  [ProdukDigitalController::class, 'duplicate'])->name('duplicate');
     });
+    // ── Bundle ───────────────────────────────────────────────
+    Route::get('bundle/catalog', [BundleController::class, 'catalog'])->name('bundle.catalog');
+    Route::get('bundle',         [BundleController::class, 'index'])->name('bundle.index');
+
     // ── Webinar ───────────────────────────────────────────────
-    Route::get('/webinar', [WebinarController::class, 'index'])->name('webinar.index');
     Route::get('/webinar', [WebinarController::class, 'index'])->name('webinar.index');
     Route::post('/webinars', [WebinarController::class, 'store'])->name('webinars.store');
     Route::get('/webinars/{webinar}', [WebinarController::class, 'show'])->name('webinar.detail');
@@ -192,6 +248,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/webinars/{webinar}', [WebinarController::class, 'destroy'])->name('webinar.destroy');
     Route::patch('/webinars/{webinar}/status', [WebinarController::class, 'toggleStatus'])->name('webinar.toggle-status');
     Route::post('/webinars/{webinar}/duplicate', [WebinarController::class, 'duplicate'])->name('webinar.duplicate');
+    Route::post('/webinars/{webinar}/pembicara', [WebinarController::class, 'storePembicara'])->name('webinar.pembicara.store');
+
+    Route::get('/semua-produk/catalog', [SemuaProdukController::class, 'catalog'])->name('semua-produk.catalog');
+    Route::get('/catalog', [SemuaProdukController::class, 'catalog'])->name('catalog.index');
+
     // ── Event ─────────────────────────────────────────────────
     Route::get('/event',                  [EventController::class, 'index'])->name('event.index');
     Route::post('/event',                 [EventController::class, 'store'])->name('event.store');
@@ -297,6 +358,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Produk Fisik ──────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('produk-fisik/catalog',   [ProdukFisikController::class, 'catalog'])->name('produk-fisik.catalog');
     Route::get('produk-fisik',           [ProdukFisikController::class, 'index'])->name('produk-fisik.index');
     Route::get('produk-fisik/create',    [ProdukFisikController::class, 'create'])->name('produk-fisik.create');
     Route::post('produk-fisik',          [ProdukFisikController::class, 'store'])->name('produk-fisik.store');
@@ -320,7 +382,7 @@ Route::middleware('auth')->group(function () {
     // ── Coaching & Mentoring ──────────────────────────────────
     // ─────────────────────────────────────────────────────────
     Route::get('coaching-mentoring',                                    [CoachingMentoringController::class, 'index'])->name('coaching-mentoring.index');
-    Route::get('coaching-mentoring/create',                                 [CoachingMentoringController::class, 'create'])->name('coaching-mentoring.create');     
+    Route::get('coaching-mentoring/create',                                 [CoachingMentoringController::class, 'create'])->name('coaching-mentoring.create');
     Route::post('coaching-mentoring',                                   [CoachingMentoringController::class, 'store'])->name('coaching-mentoring.store');
     Route::get('coaching-mentoring/{coachingMentoring}',                [CoachingMentoringController::class, 'show'])->name('coaching-mentoring.show');
     Route::get('coaching-mentoring/{coachingMentoring}/edit',           [CoachingMentoringController::class, 'edit'])->name('coaching-mentoring.edit');
@@ -340,11 +402,13 @@ Route::middleware('auth')->group(function () {
     Route::put('penggalangan-dana/{penggalanganDana}',          [PenggalanganDanaController::class, 'update'])->name('penggalangan-dana.update');
     Route::patch('penggalangan-dana/{penggalanganDana}/status', [PenggalanganDanaController::class, 'updateStatus'])->name('penggalangan-dana.status');
     Route::post('penggalangan-dana/{penggalanganDana}/duplicate', [PenggalanganDanaController::class, 'duplicate'])->name('penggalangan-dana.duplicate');
+    Route::post('penggalangan-dana/{penggalanganDana}/kabar', [PenggalanganDanaController::class, 'storeKabar'])->name('penggalangan-dana.kabar.store');
     Route::delete('penggalangan-dana/{penggalanganDana}',       [PenggalanganDanaController::class, 'destroy'])->name('penggalangan-dana.destroy');
 
     // ─────────────────────────────────────────────────────────
     // ── Paket Berlangganan ────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('paket-berlangganan/catalog',   [PaketBerlanggananController::class, 'catalog'])->name('paket-berlangganan.catalog');
     Route::get('paket-berlangganan',           [PaketBerlanggananController::class, 'index'])->name('paket-berlangganan.index');
     Route::get('paket-berlangganan/create',    [PaketBerlanggananController::class, 'create'])->name('paket-berlangganan.create');
     Route::post('paket-berlangganan',          [PaketBerlanggananController::class, 'store'])->name('paket-berlangganan.store');
@@ -369,6 +433,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Podcast ───────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('podcast/catalog',   [PodcastController::class, 'catalog'])->name('podcast.catalog');
     Route::get('podcast',           [PodcastController::class, 'index'])->name('podcast.index');
     Route::get('podcast/create',    [PodcastController::class, 'create'])->name('podcast.create');
     Route::post('podcast',          [PodcastController::class, 'store'])->name('podcast.store');
@@ -380,6 +445,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Audio Book ────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('audio-book/catalog',   [AudioBookController::class, 'catalog'])->name('audio-book.catalog');
     Route::get('audio-book',           [AudioBookController::class, 'index'])->name('audio-book.index');
     Route::get('audio-book/create',    [AudioBookController::class, 'create'])->name('audio-book.create');
     Route::post('audio-book',          [AudioBookController::class, 'store'])->name('audio-book.store');
@@ -393,8 +459,9 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Tulisan ───────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
-    Route::get('tulisan',           [TulisanController::class, 'index'])->name('tulisan.index');
-    Route::get('tulisan/create',    [TulisanController::class, 'create'])->name('tulisan.create');
+    Route::get('/tulisan',                [TulisanController::class, 'index'])->name('tulisan.index');
+    Route::get('/tulisan/catalog',        [TulisanController::class, 'catalog'])->name('tulisan.catalog');
+    Route::get('/tulisan/create',         [TulisanController::class, 'create'])->name('tulisan.create');
     Route::post('tulisan',          [TulisanController::class, 'store'])->name('tulisan.store');
     Route::get('tulisan/{tulisan}',      [TulisanController::class, 'show'])->name('tulisan.show');
     Route::get('tulisan/{tulisan}/edit', [TulisanController::class, 'edit'])->name('tulisan.edit');
@@ -406,6 +473,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Web Komik ─────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('web-komik/catalog',   [WebKomikController::class, 'catalog'])->name('web-komik.catalog');
     Route::get('web-komik',           [WebKomikController::class, 'index'])->name('web-komik.index');
     Route::get('web-komik/create',    [WebKomikController::class, 'create'])->name('web-komik.create');
     Route::post('web-komik',          [WebKomikController::class, 'store'])->name('web-komik.store');
@@ -417,6 +485,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Creator Support Page ──────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('creator-support-page/catalog',   [CreatorSupportPageController::class, 'catalog'])->name('creator-support-page.catalog');
     Route::get('creator-support-page',           [CreatorSupportPageController::class, 'index'])->name('creator-support-page.index');
     Route::get('creator-support-page/create',    [CreatorSupportPageController::class, 'create'])->name('creator-support-page.create');
     Route::post('creator-support-page',          [CreatorSupportPageController::class, 'store'])->name('creator-support-page.store');
@@ -428,6 +497,7 @@ Route::middleware('auth')->group(function () {
     // ─────────────────────────────────────────────────────────
     // ── Membership & SaaS ─────────────────────────────────────
     // ─────────────────────────────────────────────────────────
+    Route::get('membership-saas/catalog',   [MembershipSaasController::class, 'catalog'])->name('membership-saas.catalog');
     Route::get('membership-saas',           [MembershipSaasController::class, 'index'])->name('membership-saas.index');
     Route::get('membership-saas/create',    [MembershipSaasController::class, 'create'])->name('membership-saas.create');
     Route::post('membership-saas',          [MembershipSaasController::class, 'store'])->name('membership-saas.store');
@@ -436,31 +506,7 @@ Route::middleware('auth')->group(function () {
     Route::put('membership-saas/{id}',      [MembershipSaasController::class, 'update'])->name('membership-saas.update');
     Route::delete('membership-saas/{id}',   [MembershipSaasController::class, 'destroy'])->name('membership-saas.destroy');
 
-    // ─────────────────────────────────────────────────────────
-    // ── Bootcamp CRUD ─────────────────────────────────────────
-    // ─────────────────────────────────────────────────────────
-    Route::get('/bootcamps',                         [BootcampController::class, 'index'])->name('bootcamps.index');
-    Route::post('/bootcamps',                        [BootcampController::class, 'store'])->name('bootcamps.store');
-    Route::get('/bootcamps/{bootcamp}',              [BootcampController::class, 'show'])->name('bootcamps.show');
-    Route::put('/bootcamps/{bootcamp}',              [BootcampController::class, 'update'])->name('bootcamps.update');
-    Route::patch('/bootcamps/{bootcamp}/status',     [BootcampController::class, 'updateStatus'])->name('bootcamps.status');
-    Route::post('/bootcamps/{bootcamp}/duplicate',   [BootcampController::class, 'duplicate'])->name('bootcamps.duplicate');
-    Route::delete('/bootcamps/{bootcamp}',           [BootcampController::class, 'destroy'])->name('bootcamps.destroy');
 
-    // ── Sesi Meeting ──────────────────────────────────────────
-    Route::post('/bootcamps/{bootcamp}/sesi',              [SesiController::class, 'store'])->name('sesi.store');
-    Route::put('/bootcamps/{bootcamp}/sesi/{sesi}',        [SesiController::class, 'update'])->name('sesi.update');
-    Route::delete('/bootcamps/{bootcamp}/sesi/{sesi}',     [SesiController::class, 'destroy'])->name('sesi.destroy');
-
-    // ── Bab ───────────────────────────────────────────────────
-    Route::post('/bootcamps/{bootcamp}/bab',              [BabController::class, 'store'])->name('bab.store');
-    Route::put('/bootcamps/{bootcamp}/bab/{bab}',         [BabController::class, 'update'])->name('bab.update');
-    Route::delete('/bootcamps/{bootcamp}/bab/{bab}',      [BabController::class, 'destroy'])->name('bab.destroy');
-
-    // ── Materi ────────────────────────────────────────────────
-    Route::post('/bootcamps/{bootcamp}/bab/{bab}/materi',            [MateriController::class, 'store'])->name('materi.store');
-    Route::put('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}',    [MateriController::class, 'update'])->name('materi.update');
-    Route::delete('/bootcamps/{bootcamp}/bab/{bab}/materi/{materi}', [MateriController::class, 'destroy'])->name('materi.destroy');
 
     // ── Assignment ────────────────────────────────────────────
 
@@ -490,4 +536,16 @@ Route::middleware('auth')->group(function () {
 
     // Kustom Form (admin simpan config)
     Route::post('/bootcamps/{bootcamp}/kustom-form', [KustomFormController::class, 'store'])->name('kustom-form.store');
+
+    // ─────────────────────────────────────────────────────────
+    // ── Admin Withdrawal Management ───────────────────────────
+    // ─────────────────────────────────────────────────────────
+    Route::prefix('admin/withdrawal')->name('admin.withdrawal.')->group(function () {
+        Route::get('/', [WithdrawalController::class, 'index'])->name('index');
+        Route::get('/{withdrawal}', [WithdrawalController::class, 'show'])->name('show');
+        Route::post('/{withdrawal}/approve', [WithdrawalController::class, 'approve'])->name('approve');
+        Route::post('/{withdrawal}/reject', [WithdrawalController::class, 'reject'])->name('reject');
+        Route::post('/{withdrawal}/mark-completed', [WithdrawalController::class, 'markCompleted'])->name('mark-completed');
+    });
+    Route::get('/admin/withdrawal/stats', [WithdrawalController::class, 'stats'])->name('withdrawal.stats');
 });

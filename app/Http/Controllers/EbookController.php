@@ -26,7 +26,9 @@ class EbookController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('ebook/indexcreate');
+        return Inertia::render('ebook/index', [
+            'createOpen' => true
+        ]);
     }
 
     public function store(Request $request)
@@ -107,10 +109,11 @@ class EbookController extends Controller
         ]);
     }
 
-    public function edit(string $id): Response
+    public function edit(Ebook $ebook): Response
     {
-        return Inertia::render('ebook/indexedit', [
-            'id' => $id,
+        return Inertia::render('ebook/detail', [
+            'ebook' => $ebook,
+            'isEdit' => true
         ]);
     }
 
@@ -230,5 +233,39 @@ class EbookController extends Controller
         $copy->save();
 
         return redirect()->route('ebook.show', $copy->id);
+    }
+
+    public function catalog(): Response
+    {
+        $userId = Auth::id();
+        $ebooks = Ebook::where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($e) => [
+                'id' => "ebook:{$e->id}",
+                'product_id' => $e->id,
+                'type' => 'ebook',
+                'nama' => $e->nama,
+                'harga' => $e->harga ?? 0,
+                'status' => $e->status,
+                'tanggal' => $e->created_at->format('d M Y H:i'),
+                'terjual' => $e->terjual ?? 0,
+                'kategori' => 'Ebook',
+            ]);
+
+        return Inertia::render('ebook/catalog', [
+            'produk' => $ebooks,
+        ]);
+    }
+
+    public function publicShow(Ebook $ebook): Response
+    {
+        if ($ebook->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('ebook/public', [
+            'ebook' => $ebook,
+        ]);
     }
 }

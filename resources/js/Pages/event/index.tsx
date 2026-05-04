@@ -1,12 +1,14 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
 import { useState, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { MapPicker } from "@/components/ui/mappicker";
 import {
   Dialog,
   DialogContent,
@@ -126,10 +128,10 @@ const defaultForm = {
   tipe: "online" as "online" | "offline",
   lokasi: "",
   lokasiMap: "",
+  linkMeeting: "",
   instruksi: "",
   syaratKetentuan: "",
   maxTiketPerTransaksi: "1",
-  redirectUrl: "",
   bisaAffiliate: false,
 };
 
@@ -221,25 +223,45 @@ export default function Index({ events }: IndexProps) {
   };
 
   const handleSubmit = () => {
-    if (!formData.nama.trim()) return alert("Nama event tidak boleh kosong");
-    if (!formData.deskripsi.trim())
-      return alert("Deskripsi tidak boleh kosong");
-    if (!waktuMulai) return alert("Waktu mulai harus diisi");
+    if (!formData.nama.trim()) {
+      toast.error("Nama event tidak boleh kosong");
+      return;
+    }
+    if (!formData.deskripsi.trim()) {
+      toast.error("Deskripsi tidak boleh kosong");
+      return;
+    }
+    if (!waktuMulai) {
+      toast.error("Waktu mulai harus diisi");
+      return;
+    }
+    if (formData.tipe === "online" && !formData.linkMeeting.trim()) {
+      toast.error("Link meeting harus diisi untuk event online");
+      return;
+    }
+    if (formData.tipe === "offline" && !formData.lokasi.trim()) {
+      toast.error("Lokasi harus diisi untuk event offline");
+      return;
+    }
     setIsSubmitting(true);
 
     const payload = new FormData();
     payload.append("nama", formData.nama);
     payload.append("deskripsi", formData.deskripsi);
     payload.append("tipe", formData.tipe);
-    payload.append("lokasi", formData.lokasi);
-    payload.append("lokasi_map", formData.lokasiMap);
+    if (formData.tipe === "offline") {
+      payload.append("lokasi", formData.lokasi);
+      if (formData.lokasiMap) payload.append("lokasi_map", formData.lokasiMap);
+    }
+    if (formData.tipe === "online" && formData.linkMeeting) {
+      payload.append("redirect_url", formData.linkMeeting);
+    }
     payload.append("instruksi", formData.instruksi);
     payload.append("syarat_ketentuan", formData.syaratKetentuan);
     payload.append(
       "max_tiket_per_transaksi",
       formData.maxTiketPerTransaksi
     );
-    payload.append("redirect_url", formData.redirectUrl);
     payload.append("bisa_affiliate", formData.bisaAffiliate ? "1" : "0");
     if (waktuMulai)
       payload.append(
@@ -268,9 +290,12 @@ export default function Index({ events }: IndexProps) {
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
+        toast.success("Event berhasil dibuat!");
       },
-      onError: () => {
+      onError: (errors) => {
         setIsSubmitting(false);
+        const errorMsg = Object.values(errors)[0] as string || "Terjadi kesalahan saat membuat event";
+        toast.error(errorMsg);
       },
     });
   };
@@ -548,82 +573,61 @@ export default function Index({ events }: IndexProps) {
               />
             </div>
 
-            {/* Tipe Event */}
+            {/* Tipe Event - Dropdown */}
             <div className="space-y-1">
               <Label className="text-sm font-medium text-gray-700">
-                Tipe Event
+                Tipe Event <span className="text-red-500">*</span>
               </Label>
-              <div className="flex gap-3">
-                {(["online", "offline"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setFormData({ ...formData, tipe: t })
-                    }
-                    className={cn(
-                      "flex-1 py-2.5 rounded-md text-sm font-semibold border transition",
-                      formData.tipe === t
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                    )}
-                  >
-                    {t === "online" ? "EVENT ONLINE" : "EVENT OFFLINE"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Lokasi */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Lokasi / Alamat Venue
-              </Label>
-              <Textarea
-                placeholder="Tulis lokasi acara selengkapnya (nama venue, jalan, kota, provinsi)"
-                rows={2}
-                maxLength={300}
-                value={formData.lokasi}
-                onChange={(e) =>
-                  setFormData({ ...formData, lokasi: e.target.value })
+              <Select
+                value={formData.tipe}
+                onValueChange={(value: "online" | "offline") =>
+                  setFormData({ ...formData, tipe: value })
                 }
-              />
-              <p className="text-xs text-gray-400 text-right">
-                {formData.lokasi.length}/300
-              </p>
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih tipe event" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">Online (Virtual Meeting)</SelectItem>
+                  <SelectItem value="offline">Offline (On-site / Venue)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Lokasi Map */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Lokasi dalam Map{" "}
-                <span className="text-gray-400 font-normal">
-                  (Opsional)
-                </span>
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            {/* Link Meeting - Only for Online */}
+            {formData.tipe === "online" && (
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">
+                  Link Meeting / Join URL <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  className="pl-9"
-                  placeholder="Cari lokasi..."
-                  value={formData.lokasiMap}
+                  type="url"
+                  placeholder="https://zoom.us/j/xxxxxx atau https://meet.google.com/xxx-xxxx-xxx"
+                  value={formData.linkMeeting}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      lokasiMap: e.target.value,
-                    })
+                    setFormData({ ...formData, linkMeeting: e.target.value })
                   }
                 />
+                <p className="text-xs text-gray-400">
+                  Link untuk peserta bergabung ke event online (Zoom, Google Meet, dll)
+                </p>
               </div>
-              {/* Map placeholder */}
-              <div className="w-full h-32 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center mt-1">
-                <div className="text-center text-gray-400">
-                  <MapPin className="h-6 w-6 mx-auto mb-1" />
-                  <p className="text-xs">
-                    Peta akan tampil setelah lokasi dipilih
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
+
+            {/* Lokasi - Only for Offline */}
+            {formData.tipe === "offline" && (
+              <MapPicker
+                address={formData.lokasi}
+                mapUrl={formData.lokasiMap}
+                onAddressChange={(address) =>
+                  setFormData({ ...formData, lokasi: address })
+                }
+                onMapUrlChange={(url) =>
+                  setFormData({ ...formData, lokasiMap: url })
+                }
+                label="Lokasi / Alamat Venue *"
+              />
+            )}
 
             {/* Waktu */}
             <div className="grid grid-cols-2 gap-4">

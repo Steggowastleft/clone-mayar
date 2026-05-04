@@ -17,7 +17,7 @@ class WebKomikController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('web-komik/indexcreate');
+        return Inertia::render('web-komik/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class WebKomikController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('web-komik/indexshow', [
+        return Inertia::render('web-komik/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('web-komik/indexedit', [
+        return Inertia::render('web-komik/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class WebKomikController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('web-komik.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('web-komik/catalog', [
+            'produk' => [],
+        ]);
     }
 }

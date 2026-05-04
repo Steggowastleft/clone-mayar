@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
 import { useState, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -122,6 +123,7 @@ function DatePickerField({
 const defaultForm = {
   nama: "",
   deskripsi: "",
+  kategori: "" as "" | "e-book" | "novel" | "komik" | "template" | "tulisan" | "video",
   tipePembayaran: "berbayar" as "berbayar" | "gratis",
   harga: "",
   hargaCoret: "",
@@ -131,6 +133,15 @@ const defaultForm = {
   maxPembayaran: "",
   bisaAffiliate: false,
 };
+
+const KATEGORI_OPTIONS = [
+  { value: "e-book", label: "E-Book" },
+  { value: "novel", label: "Novel" },
+  { value: "komik", label: "Komik" },
+  { value: "template", label: "Template" },
+  { value: "tulisan", label: "Tulisan / Artikel" },
+  { value: "video", label: "Video" },
+] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -219,18 +230,29 @@ export default function Index({ produkList }: IndexProps) {
   };
 
   const handleSubmit = () => {
-    if (!formData.nama.trim()) return alert("Nama produk tidak boleh kosong");
-    if (!formData.deskripsi.trim()) return alert("Deskripsi tidak boleh kosong");
-    if (formData.tipePembayaran === "berbayar" && !formData.harga)
-      return alert("Harga harus diisi untuk produk berbayar");
-    if (formData.sumberFile === "upload" && !kontenFile)
-      return alert("File konten harus diupload");
+    if (!formData.nama.trim()) {
+      toast.error("Nama produk tidak boleh kosong");
+      return;
+    }
+    if (!formData.deskripsi.trim()) {
+      toast.error("Deskripsi tidak boleh kosong");
+      return;
+    }
+    if (formData.tipePembayaran === "berbayar" && !formData.harga) {
+      toast.error("Harga harus diisi untuk produk berbayar");
+      return;
+    }
+    if (formData.sumberFile === "upload" && !kontenFile) {
+      toast.error("File konten harus diupload");
+      return;
+    }
 
     setIsSubmitting(true);
 
     const payload = new FormData();
     payload.append("nama", formData.nama);
     payload.append("deskripsi", formData.deskripsi);
+    if (formData.kategori) payload.append("kategori", formData.kategori);
     payload.append("tipe_pembayaran", formData.tipePembayaran);
     payload.append("harga", formData.harga || "0");
     if (formData.hargaCoret) payload.append("harga_coret", formData.hargaCoret);
@@ -251,9 +273,12 @@ export default function Index({ produkList }: IndexProps) {
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
+        toast.success("Produk digital berhasil dibuat!");
       },
-      onError: () => {
+      onError: (errors) => {
         setIsSubmitting(false);
+        const errorMsg = Object.values(errors)[0] as string || "Terjadi kesalahan saat membuat produk";
+        toast.error(errorMsg);
       },
     });
   };
@@ -460,6 +485,26 @@ export default function Index({ produkList }: IndexProps) {
                 onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
               />
               <p className="text-xs text-gray-400 text-right">{formData.nama.length}/200</p>
+            </div>
+
+            {/* Kategori */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Kategori <span className="text-gray-400 font-normal">(Opsional)</span>
+              </Label>
+              <select
+                value={formData.kategori}
+                onChange={(e) => setFormData({ ...formData, kategori: e.target.value as typeof formData.kategori })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="">Pilih Kategori...</option>
+                {KATEGORI_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400">Pilih kategori untuk memudahkan pencarian produk</p>
             </div>
 
             {/* Tipe Pembayaran */}

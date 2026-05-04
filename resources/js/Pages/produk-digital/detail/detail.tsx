@@ -39,6 +39,16 @@ export default function TabDetail({ produk }: { produk: ProdukDigitalData }) {
     },
     { label: "Nama Produk", value: produk.nama },
     {
+      label: "Kategori",
+      value: produk.kategori ? (
+        <Badge className="bg-purple-100 text-purple-700 border border-purple-200 capitalize">
+          {produk.kategori}
+        </Badge>
+      ) : (
+        "-"
+      ),
+    },
+    {
       label: "Tipe Pembayaran",
       value: (
         <Badge

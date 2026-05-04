@@ -17,7 +17,7 @@ class CreatorSupportPageController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('creator-support-page/indexcreate');
+        return Inertia::render('creator-support-page/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class CreatorSupportPageController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('creator-support-page/indexshow', [
+        return Inertia::render('creator-support-page/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('creator-support-page/indexedit', [
+        return Inertia::render('creator-support-page/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class CreatorSupportPageController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('creator-support-page.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('creator-support-page/catalog', [
+            'produk' => [],
+        ]);
     }
 }

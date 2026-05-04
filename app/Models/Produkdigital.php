@@ -17,6 +17,7 @@ class ProdukDigital extends Model
         'user_id',
         'nama',
         'deskripsi',
+        'kategori',
         'slug',
         'tipe_pembayaran',
         'harga',

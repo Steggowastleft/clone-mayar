@@ -10,7 +10,6 @@ class Bootcamp extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'nama',
         'batch',
         'status',
         'date',
@@ -34,11 +33,11 @@ class Bootcamp extends Model
     ];
 
     protected $casts = [
-        'bisa_affiliate' => 'boolean',
-        'harga' => 'decimal:2',
-        'harga_coret' => 'decimal:2',
-        'tanggal_mulai_jual' => 'date:Y-m-d',
-        'tanggal_tutup_daftar' => 'date:Y-m-d',
+        'bisa_affiliate'             => 'boolean',
+        'harga'                      => 'decimal:2',
+        'harga_coret'                => 'decimal:2',
+        'tanggal_mulai_jual'         => 'date:Y-m-d',
+        'tanggal_tutup_daftar'       => 'date:Y-m-d',
         'tanggal_mulai_pembelajaran' => 'date:Y-m-d',
         'tanggal_batas_pembelajaran' => 'date:Y-m-d',
     ];
@@ -84,24 +83,14 @@ class Bootcamp extends Model
 
     public function kustomForm()
     {
-        return $this->hasOne(\App\Models\KustomForm::class);
+        return $this->hasOne(\App\Models\Kustomform::class);
     }
 
+    // 🔥 Polymorphic: Bootcamp bisa didaftari peserta
     public function pendaftaran()
     {
-
         return $this->morphMany(Pendaftaran::class, 'registrable');
-
-    return $this->hasMany(\App\Models\Pendaftaran::class, 'bootcamp_id', 'id');
     }
-
-    public function ratings()
-    {
-        return $this->hasMany(\App\Models\Rating::class);
-    }
-
-}
-
 
     public function pembayaran()
     {
@@ -112,5 +101,9 @@ class Bootcamp extends Model
     {
         return $this->hasMany(\App\Models\Sertifikat::class);
     }
-}
 
+    public function ratings()
+    {
+        return $this->hasMany(\App\Models\Rating::class);
+    }
+}

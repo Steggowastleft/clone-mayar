@@ -129,7 +129,7 @@ export default function PenggalanganDanaDetail({
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">PRODUK</Button>
+            <Button variant="outline" onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}>PRODUK</Button>
             <Button>+ BUAT</Button>
           </div>
         </div>

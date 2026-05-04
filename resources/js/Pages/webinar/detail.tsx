@@ -38,6 +38,14 @@ export type Webinar = {
 
   harga: number;
   harga_coret: number | null;
+
+  pembicaras?: {
+    id: number;
+    nama: string;
+    pekerjaan: string;
+    profil: string;
+    foto_url: string | null;
+  }[];
 };
 
 type Props = {
@@ -120,7 +128,7 @@ export default function WebinarDetail({
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">PRODUK</Button>
+            <Button variant="outline" onClick={() => window.open("/webinars/catalog", "_blank")}>PRODUK</Button>
             <Button>+ BUAT</Button>
           </div>
         </div>

@@ -17,7 +17,7 @@ class KelasOnlineController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('kelas-online/indexcreate');
+        return Inertia::render('kelas-online/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class KelasOnlineController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('kelas-online/indexshow', [
+        return Inertia::render('kelas-online/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('kelas-online/indexedit', [
+        return Inertia::render('kelas-online/index', [
             'id' => $id,
         ]);
     }

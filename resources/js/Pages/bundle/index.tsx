@@ -55,7 +55,7 @@ export default function BundleIndex({ bundles = [] }: Props) {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-800">Bundle</h1>
             <div className="flex gap-2">
-              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50">PRODUK</Button>
+              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50" onClick={() => window.open("/bundle/catalog", "_blank")}>PRODUK</Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">+ BUAT</Button>
             </div>
           </div>

@@ -25,6 +25,7 @@ export type ProdukDigitalData = {
   slug: string;
   status: "published" | "unpublished" | "unlisted";
   tipe_pembayaran: "berbayar" | "gratis";
+  kategori?: "e-book" | "novel" | "komik" | "template" | "tulisan" | "video";
   harga: number;
   harga_coret: number | null;
   deskripsi: string;

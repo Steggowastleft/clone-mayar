@@ -29,9 +29,14 @@ export default function SemuaProduk({ produk = [] }: Props) {
   const categories = [...new Set(produk.map(p => p.kategori))];
 
   const filtered = produk.filter((p) => {
-    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
+    const nama = p.nama ?? "";
+    const kategori = p.kategori ?? "";
+
+    const matchSearch = nama.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchCategory = categoryFilter === "all" || p.kategori === categoryFilter;
+    const matchCategory =
+      categoryFilter === "all" || kategori === categoryFilter;
+
     return matchSearch && matchStatus && matchCategory;
   });
 

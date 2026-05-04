@@ -90,7 +90,7 @@ export function SidebarPanel({ event }: { event: Event }) {
 
     setIsLoading(true);
     router.patch(
-      `/events/${event.id}/status`,
+      `/event/${event.id}/status`,
       { status: newStatus },
       {
         preserveScroll: true,
@@ -109,14 +109,12 @@ export function SidebarPanel({ event }: { event: Event }) {
   };
 
   const handleDuplicate = () => {
-    router.post(`/events/${event.id}/duplicate`, {}, {
-      onSuccess: () => toast.success("Event berhasil diduplikat!"),
-      onError: () => toast.error("Gagal duplicate."),
-    });
+    // Note: Duplicate route not implemented yet
+    toast.error("Fitur duplicate belum tersedia");
   };
 
   const handleTutup = () => {
-    router.patch(`/events/${event.id}/status`, { status: "unpublished" }, {
+    router.patch(`/event/${event.id}/status`, { status: "unpublished" }, {
       onSuccess: () => {
         toast.success("Event berhasil ditutup.");
         router.reload({ only: ["event"] });
@@ -126,10 +124,10 @@ export function SidebarPanel({ event }: { event: Event }) {
   };
 
   const handleHapus = () => {
-    router.delete(`/events/${event.id}`, {
+    router.delete(`/event/${event.id}`, {
       onSuccess: () => {
         toast.success("Event berhasil dihapus.");
-        router.visit("/events");
+        router.visit("/event");
       },
       onError: () => toast.error("Gagal hapus."),
     });

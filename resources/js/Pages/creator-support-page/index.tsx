@@ -54,7 +54,7 @@ export default function CreatorSupportPage({ produk = [] }: Props) {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-800">Creator Support Page</h1>
             <div className="flex gap-2">
-              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50">
+              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50" onClick={() => window.open("/creator-support-page/catalog", "_blank")}>
                 PRODUK
               </Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">+ BUAT</Button>

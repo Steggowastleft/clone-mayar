@@ -100,6 +100,8 @@ class WebinarController extends Controller
             abort(403);
         }
 
+        $webinar->load('pembicaras');
+
         return Inertia::render('webinar/detail', [
             'webinar' => $webinar,
         ]);
@@ -193,5 +195,36 @@ class WebinarController extends Controller
         $copy->save();
 
         return redirect()->route('webinar.detail', $copy->id);
+    }
+
+    /**
+     * Store webinar pembicara
+     */
+    public function storePembicara(Request $request, Webinar $webinar)
+    {
+        if ($webinar->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'nama'      => 'required|string|max:255',
+            'pekerjaan' => 'required|string|max:255',
+            'profil'    => 'required|string',
+            'foto'      => 'nullable|image|max:2048',
+        ]);
+
+        $fotoPath = null;
+        if ($request->hasFile('foto')) {
+            $fotoPath = $request->file('foto')->store('webinars/pembicara', 'public');
+        }
+
+        $webinar->pembicaras()->create([
+            'nama'      => $validated['nama'],
+            'pekerjaan' => $validated['pekerjaan'],
+            'profil'    => $validated['profil'],
+            'foto'      => $fotoPath,
+        ]);
+
+        return back()->with('success', 'Pembicara berhasil ditambahkan.');
     }
 }

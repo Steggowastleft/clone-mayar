@@ -17,7 +17,7 @@ class ProdukFisikController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('produk-fisik/indexcreate');
+        return Inertia::render('produk-fisik/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class ProdukFisikController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('produk-fisik/indexshow', [
+        return Inertia::render('produk-fisik/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('produk-fisik/indexedit', [
+        return Inertia::render('produk-fisik/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class ProdukFisikController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('produk-fisik.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('produk-fisik/catalog', [
+            'produk' => [],
+        ]);
     }
 }

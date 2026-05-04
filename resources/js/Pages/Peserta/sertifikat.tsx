@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Head, router } from "@inertiajs/react";
 import { Award, Download, Share2, ArrowLeft, CheckCircle2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import QRCode from "qrcode";
+// import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 
 // ─────────────────────────────────────────────
@@ -133,14 +133,14 @@ export default function PesertaSertifikat({ sertifikat, peserta }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copying,   setCopying]   = useState(false);
 
-  // Generate QR code
-  useEffect(() => {
-    QRCode.toDataURL(sertifikat.verifikasi_url, {
-      width: 128,
-      margin: 1,
-      color: { dark: "#1e3a5f", light: "#ffffff" },
-    }).then(setQrDataUrl).catch(console.error);
-  }, [sertifikat.verifikasi_url]);
+  // // Generate QR code
+  // useEffect(() => {
+  //   QRCode.toDataURL(sertifikat.verifikasi_url, {
+  //     width: 128,
+  //     margin: 1,
+  //     color: { dark: "#1e3a5f", light: "#ffffff" },
+  //   }).then(setQrDataUrl).catch(console.error);
+  // }, [sertifikat.verifikasi_url]);
 
   const handlePrint = () => {
     window.print();

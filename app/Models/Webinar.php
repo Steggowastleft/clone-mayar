@@ -74,4 +74,9 @@ class Webinar extends Model
     {
         return $this->morphMany(Pendaftaran::class, 'registrable');
     }
+
+    public function pembicaras()
+    {
+        return $this->hasMany(WebinarPembicara::class)->latest();
+    }
 }

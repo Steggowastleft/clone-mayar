@@ -17,7 +17,7 @@ class AudioBookController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('audio-book/indexcreate');
+        return Inertia::render('audio-book/index');
     }
 
     public function store(Request $request)
@@ -28,14 +28,14 @@ class AudioBookController extends Controller
 
     public function show(string $id): Response
     {
-        return Inertia::render('audio-book/indexshow', [
+        return Inertia::render('audio-book/index', [
             'id' => $id,
         ]);
     }
 
     public function edit(string $id): Response
     {
-        return Inertia::render('audio-book/indexedit', [
+        return Inertia::render('audio-book/index', [
             'id' => $id,
         ]);
     }
@@ -50,5 +50,13 @@ class AudioBookController extends Controller
     {
         // TODO: hapus data
         return redirect()->route('audio-book.index');
+    }
+
+    public function catalog()
+    {
+        // For now returning empty until Model is implemented
+        return Inertia::render('audio-book/catalog', [
+            'produk' => [],
+        ]);
     }
 }

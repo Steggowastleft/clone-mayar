@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { router } from "@inertiajs/react";
-import { Edit, Trash2, Copy, ChevronDown } from "lucide-react";
+import { Edit, Trash2, Copy, ChevronDown, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ConfirmDialog } from "./confirmdialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 type PenggalanganDana = {
   id: number;
@@ -37,6 +42,10 @@ export function SidebarPanel({ produk }: { produk: PenggalanganDana }) {
   const [dupOpen, setDupOpen] = useState(false);
   const [tutupOpen, setTutupOpen] = useState(false);
   const [hapusOpen, setHapusOpen] = useState(false);
+  const [kabarOpen, setKabarOpen] = useState(false);
+
+  const [kabarForm, setKabarForm] = useState({ judul: "", deskripsi: "" });
+  const [isSubmittingKabar, setIsSubmittingKabar] = useState(false);
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === produk.status) {
@@ -88,6 +97,30 @@ export function SidebarPanel({ produk }: { produk: PenggalanganDana }) {
     });
   };
 
+  const handleKabarSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kabarForm.judul.trim() || !kabarForm.deskripsi.trim()) {
+      toast.error("Judul dan deskripsi wajib diisi");
+      return;
+    }
+    
+    setIsSubmittingKabar(true);
+    // Kita arahkan POST ini ke endpoint yang akan memproses kabar terbaru
+    // Nanti endpoint ini harus dibuat di backend
+    router.post(`/penggalangan-dana/${produk.id}/kabar`, kabarForm, {
+      onSuccess: () => {
+        toast.success("Kabar Terbaru berhasil dikirim!");
+        setKabarOpen(false);
+        setKabarForm({ judul: "", deskripsi: "" });
+        setIsSubmittingKabar(false);
+      },
+      onError: () => {
+        toast.error("Gagal mengirim Kabar Terbaru.");
+        setIsSubmittingKabar(false);
+      }
+    });
+  };
+
   return (
     <>
       <div className="space-y-3">
@@ -131,6 +164,13 @@ export function SidebarPanel({ produk }: { produk: PenggalanganDana }) {
           <button className={btnClass} onClick={() => setHapusOpen(true)}>
             <Trash2 className="h-4 w-4" /> HAPUS
           </button>
+          
+          <button 
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-blue-200 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition mt-2"
+            onClick={() => setKabarOpen(true)}
+          >
+            <Megaphone className="h-4 w-4" /> BUAT KABAR TERBARU
+          </button>
         </div>
       </div>
 
@@ -138,6 +178,61 @@ export function SidebarPanel({ produk }: { produk: PenggalanganDana }) {
       <ConfirmDialog open={dupOpen} onOpenChange={setDupOpen} onConfirm={handleDuplicate} title="Duplicate?" />
       <ConfirmDialog open={tutupOpen} onOpenChange={setTutupOpen} onConfirm={handleTutup} title="Tutup Penggalangan Dana?" />
       <ConfirmDialog open={hapusOpen} onOpenChange={setHapusOpen} onConfirm={handleHapus} title="Hapus Penggalangan Dana?" />
+
+      {/* DIALOG KABAR TERBARU */}
+      <Dialog open={kabarOpen} onOpenChange={setKabarOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Buat Kabar Terbaru</DialogTitle>
+          </DialogHeader>
+          
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+            <p className="text-sm text-blue-800 font-semibold mb-1">Anda dapat membuat kabar terbaru hanya untuk:</p>
+            <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
+              <li>Memberi ucapan terima kasih dari penggalang dana / penerima manfaat.</li>
+              <li>Memberi tahu progres, bukti & dokumentasi penggunaan dana yang terkumpul.</li>
+            </ul>
+          </div>
+
+          <form onSubmit={handleKabarSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="judul">Judul Kabar Terbaru <span className="text-red-500">*</span></Label>
+              <Input 
+                id="judul"
+                placeholder="Contoh: Penyaluran Dana Kepada Warga Pengungsi Bencana Alam"
+                value={kabarForm.judul}
+                onChange={(e) => setKabarForm({ ...kabarForm, judul: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="deskripsi">Deskripsi Kabar Terbaru <span className="text-red-500">*</span></Label>
+              <Textarea 
+                id="deskripsi"
+                placeholder="Tuliskan detail kabar terbaru di sini..."
+                className="min-h-[120px]"
+                value={kabarForm.deskripsi}
+                onChange={(e) => setKabarForm({ ...kabarForm, deskripsi: e.target.value })}
+                required
+              />
+            </div>
+
+            <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+              <span className="font-bold">Penting!</span> ketika kabar sudah terkirim kamu hanya dapat menghapusnya melalui detail kabar terbaru.
+            </p>
+
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => setKabarOpen(false)} disabled={isSubmittingKabar}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmittingKabar} className="bg-blue-600 hover:bg-blue-700 text-white">
+                {isSubmittingKabar ? "Mengirim..." : "Kirim Kabar Terbaru"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

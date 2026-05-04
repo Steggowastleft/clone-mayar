@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class CoachingMentoringController extends Controller
 {
@@ -214,12 +215,49 @@ class CoachingMentoringController extends Controller
         }
 
         $copy = $coachingMentoring->replicate();
-        $copy->status = 'unpublished';
+        $copy->status = 'published';
         $copy->nama = $copy->nama . ' (Copy)';
         $copy->user_id = Auth::id();
         $copy->total_penjualan = 0;
         $copy->save();
 
         return redirect()->route('coaching-mentoring.show', $copy->id);
+    }
+
+    /**
+     * Display a published coaching/mentoring session for public view
+     */
+    public function publicShow(CoachingMentoring $coachingMentoring): Response
+    {
+        if ($coachingMentoring->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('coaching-mentoring/public', [
+            'coaching' => $coachingMentoring,
+        ]);
+    }
+
+    public function catalog()
+    {
+        $coachings = CoachingMentoring::where('user_id', Auth::id())
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($c) => [
+                'id' => "coaching-mentoring:{$c->id}",
+                'product_id' => $c->id,
+                'type' => 'coaching-mentoring',
+                'nama' => $c->nama,
+                'harga' => $c->harga ?? 0,
+                'status' => $c->status,
+                'tanggal' => $c->created_at->format('d M Y H:i'),
+                'terjual' => $c->total_penjualan ?? 0,
+                'kategori' => 'Coaching / Mentoring',
+            ]);
+
+        return Inertia::render('coaching-mentoring/catalog', [
+            'produk' => $coachings,
+        ]);
     }
 }

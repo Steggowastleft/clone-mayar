@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { router } from "@inertiajs/react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,8 @@ import { Button } from "@/components/ui/button";
 type ProdukDigital = {
   id: number;
   nama: string;
-  deskripsi?: string; // ✅ tambahin ini
+  deskripsi?: string;
+  kategori?: "e-book" | "novel" | "komik" | "template" | "tulisan" | "video";
   tipe_pembayaran: "berbayar" | "gratis";
   harga: number;
   harga_coret: number | null;
@@ -22,6 +24,15 @@ type ProdukDigital = {
   total_penjualan: number;
   created_at: string;
 };
+
+const KATEGORI_OPTIONS = [
+  { value: "e-book", label: "E-Book" },
+  { value: "novel", label: "Novel" },
+  { value: "komik", label: "Komik" },
+  { value: "template", label: "Template" },
+  { value: "tulisan", label: "Tulisan / Artikel" },
+  { value: "video", label: "Video" },
+] as const;
 
 export function EditProdukDigitalDialog({
   open,
@@ -35,6 +46,7 @@ export function EditProdukDigitalDialog({
   const [form, setForm] = useState({
     nama: "",
     deskripsi: "",
+    kategori: "" as "" | "e-book" | "novel" | "komik" | "template" | "tulisan" | "video",
     harga: 0,
     harga_coret: 0,
     tipe_pembayaran: "gratis" as "berbayar" | "gratis",
@@ -49,6 +61,7 @@ export function EditProdukDigitalDialog({
       setForm({
         nama: produk.nama || "",
         deskripsi: produk.deskripsi || "",
+        kategori: produk.kategori || "",
         harga: produk.harga || 0,
         harga_coret: produk.harga_coret || 0,
         tipe_pembayaran: produk.tipe_pembayaran || "gratis",
@@ -64,6 +77,7 @@ export function EditProdukDigitalDialog({
       setForm({
         nama: produk.nama || "",
         deskripsi: produk.deskripsi || "",
+        kategori: produk.kategori || "",
         harga: produk.harga || 0,
         harga_coret: produk.harga_coret || 0,
         tipe_pembayaran: produk.tipe_pembayaran || "gratis",
@@ -74,7 +88,7 @@ export function EditProdukDigitalDialog({
 
   const handleSave = () => {
     if (!form.nama.trim()) {
-      alert("Nama produk wajib diisi");
+      toast.error("Nama produk wajib diisi");
       return;
     }
 
@@ -85,9 +99,12 @@ export function EditProdukDigitalDialog({
       onSuccess: () => {
         setIsSubmitting(false);
         onOpenChange(false);
+        toast.success("Produk berhasil diperbarui!");
       },
-      onError: () => {
+      onError: (errors) => {
         setIsSubmitting(false);
+        const errorMsg = Object.values(errors)[0] as string || "Gagal memperbarui produk";
+        toast.error(errorMsg);
       },
     });
   };
@@ -112,6 +129,27 @@ export function EditProdukDigitalDialog({
                 setForm({ ...form, nama: e.target.value })
               }
             />
+          </div>
+
+          {/* Kategori */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">
+              Kategori <span className="text-gray-400 font-normal">(Opsional)</span>
+            </label>
+            <select
+              value={form.kategori}
+              onChange={(e) =>
+                setForm({ ...form, kategori: e.target.value as typeof form.kategori })
+              }
+              className="w-full px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Pilih Kategori...</option>
+              {KATEGORI_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Harga */}
