@@ -17,15 +17,35 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        // Bypass CSRF sementara
+        // Bypass CSRF untuk semua route yang pakai fetch/axios dari frontend
         $middleware->validateCsrfTokens(except: [
             'login',
             'logout',
+            // Auth peserta
+            'peserta/login',
+            'peserta/logout',
+            'peserta/check-email',
+            'peserta/login-checkout',
+            'peserta/register-checkout',
+            // Dashboard peserta
+            'peserta/assignments/*',
+            'peserta/assignments/*/submit',
+            'peserta/assignments/*/quiz',
+            'peserta/bootcamp/*',
+            'peserta/bootcamp/*/materi/*/selesai',
+            'peserta/bootcamp/*/rating',
+            'peserta/bootcamp/*/sertifikat',
+            // Daftar bootcamp
+            'bootcamps/*/daftar',
+            // Soal quiz (penjual)
+            'assignments/*/soal',
+            'assignments/*/soal/*',
         ]);
 
-        // Alias middleware peserta — DIGABUNG di sini, bukan ->withMiddleware kedua
+        // Alias middleware peserta
         $middleware->alias([
-            'auth.peserta' => \App\Http\Middleware\PesertaAuth::class,
+            'auth.peserta'  => \App\Http\Middleware\PesertaAuth::class,
+            'guest.peserta' => \App\Http\Middleware\PesertaGuest::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

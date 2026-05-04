@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DateRange } from "react-day-picker";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import SoalEditor, { type Soal } from "./components/soaleditor";
 import { id as idLocale } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -42,14 +44,18 @@ export type Assignment = {
   tanggal_mulai?: string;
   tanggal_akhir?: string;
   is_wajib: boolean;
+  is_tugas_akhir?: boolean;
+  tipe?: "upload" | "quiz";
+  soals?: Soal[];
 };
 
 const emptyForm = {
-  judul: "",
-  tugas: "",
-  tanggal_mulai: undefined as Date | undefined,
-  tanggal_akhir: undefined as Date | undefined,
-  is_wajib: false,
+  judul:          "",
+  tugas:          "",
+  rangeTanggal: undefined as DateRange | undefined,
+  is_wajib:       false,
+  is_tugas_akhir: false,
+  tipe:           "upload" as "upload" | "quiz",
 };
 
 // ─────────────────────────────────────────────
@@ -345,7 +351,7 @@ function AssignmentCard({
       preserveScroll: true,
       onSuccess: () => {
         toast.success("Tugas berhasil dihapus.");
-        router.reload({ only: ["assignmentList"] });
+        
       },
       onError: () => toast.error("Gagal menghapus tugas."),
     });
@@ -358,17 +364,28 @@ function AssignmentCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="font-semibold text-gray-800 text-sm">{assignment.judul}</h4>
-              {assignment.is_wajib && (
+              {assignment.is_tugas_akhir && (
+        <span className="text-xs text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-bold">
+          🏆 Tugas Akhir
+        </span>
+      )}
+      {assignment.is_wajib && (
                 <Badge className="bg-red-100 text-red-700 text-xs border-0">Wajib</Badge>
               )}
             </div>
 
             {/* Preview teks (strip HTML) */}
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2"
-              dangerouslySetInnerHTML={{
-                __html: assignment.tugas.replace(/<[^>]*>/g, " ").slice(0, 120) + "..."
-              }}
-            />
+            <p
+  className="text-xs text-gray-400 mt-1 line-clamp-2"
+  dangerouslySetInnerHTML={{
+    __html:
+      ((assignment.tugas ?? "")
+        .replace(/<[^>]*>/g, " ")
+        .trim()
+        .slice(0, 120) || "Belum ada deskripsi tugas") +
+      "..."
+  }}
+/>
 
             {/* Tanggal */}
             <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -393,7 +410,12 @@ function AssignmentCard({
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-1 shrink-0">
+          <div className="flex items-start gap-1 shrink-0">
+            {assignment.tipe === "quiz" && (
+              <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200 self-center mr-1">
+                📝 Quiz
+              </span>
+            )}
             <button
               onClick={() => onView(assignment)}
               className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition"
@@ -418,6 +440,17 @@ function AssignmentCard({
           </div>
         </div>
       </div>
+
+      {/* SoalEditor untuk quiz & upload (uraian) */}
+      {(assignment.tipe === "quiz" || assignment.tipe === "upload") && (
+        <div className="border border-blue-100 rounded-lg p-4 bg-blue-50/50 mt-2">
+          <SoalEditor
+            assignmentId={assignment.id}
+            initialSoals={assignment.soals ?? []}
+            onReload={() => router.reload({ only: ["assignmentList"], preserveScroll: true })}
+          />
+        </div>
+      )}
 
       {/* Confirm hapus */}
       <Dialog open={hapusOpen} onOpenChange={setHapusOpen}>
@@ -528,6 +561,7 @@ export default function TabAssignment({
 
   // Form state
   const [form, setForm] = useState(emptyForm);
+  const tipeRef = useRef<"upload" | "quiz">("upload"); // track tipe via ref to avoid stale closure
   const [newFiles, setNewFiles]           = useState<File[]>([]);
   const [existingFiles, setExistingFiles] = useState<AssignmentFile[]>([]);
 
@@ -543,14 +577,22 @@ export default function TabAssignment({
     setForm({
       judul:         a.judul,
       tugas:         a.tugas,
-      tanggal_mulai: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
-      tanggal_akhir: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,
+      rangeTanggal: {
+      from: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
+      to: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,},
       is_wajib:      a.is_wajib,
+      is_tugas_akhir: a.is_tugas_akhir ?? false,
+      tipe:           a.tipe ?? "upload",
     });
     setExistingFiles(a.files || []);
     setNewFiles([]);
     setCreateOpen(true);
   };
+
+  // Sync tipeRef whenever form.tipe changes
+  useEffect(() => {
+    tipeRef.current = form.tipe;
+  }, [form.tipe]);
 
   const handleClose = () => {
     setCreateOpen(false);
@@ -566,7 +608,7 @@ export default function TabAssignment({
     const e: Record<string, string> = {};
     if (!form.judul.trim()) e.judul = "Judul wajib diisi.";
     if (!form.tugas.replace(/<[^>]*>/g, "").trim()) e.tugas = "Konten tugas wajib diisi.";
-    if (!form.tanggal_mulai) e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+    if (!form.rangeTanggal?.from) e.tanggal_mulai = "Tanggal mulai wajib diisi.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -583,15 +625,21 @@ export default function TabAssignment({
 
     // Gunakan FormData agar bisa kirim files
     const fd = new FormData();
+    // Inject CSRF token
+    const csrfMeta = document.head.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+    if (csrfMeta) fd.append("_token", csrfMeta.content);
     fd.append("judul",         form.judul);
     fd.append("tugas",         form.tugas);
     fd.append("is_wajib",      form.is_wajib ? "1" : "0");
-    if (form.tanggal_mulai) fd.append("tanggal_mulai", format(form.tanggal_mulai, "yyyy-MM-dd"));
-    if (form.tanggal_akhir) fd.append("tanggal_akhir", format(form.tanggal_akhir, "yyyy-MM-dd"));
+    fd.append("is_tugas_akhir", form.is_tugas_akhir ? "1" : "0");
+    fd.append("tipe", tipeRef.current); // use ref to avoid stale closure
+    if (form.rangeTanggal?.from) {
+    fd.append("tanggal_mulai", format(form.rangeTanggal.from, "yyyy-MM-dd"));}
+    if (form.rangeTanggal?.to) {
+    fd.append("tanggal_akhir", format(form.rangeTanggal.to, "yyyy-MM-dd"));}
     newFiles.forEach((f, i) => fd.append(`files[${i}]`, f));
     // Kirim id file yang masih dipertahankan (edit mode)
     existingFiles.forEach((f, i) => { if (f.id) fd.append(`existing_files[${i}]`, String(f.id)); });
-    if (isEdit) fd.append("_method", "PUT");
 
     const routerOptions = {
       preserveScroll: true as const,
@@ -609,7 +657,6 @@ export default function TabAssignment({
       },
     };
 
-    // POST untuk create dan edit (pakai _method: PUT untuk spoof)
     router.post(url, fd, routerOptions);
   };
 
@@ -729,37 +776,92 @@ export default function TabAssignment({
             {/* Tanggal */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <DateField
-                  label="Tanggal Mulai *"
-                  value={form.tanggal_mulai}
-                  onChange={(d) => setForm({ ...form, tanggal_mulai: d })}
-                  placeholder="Pilih Tanggal Mulai"
-                />
-                {errors.tanggal_mulai && <p className="text-xs text-red-500 mt-1">{errors.tanggal_mulai}</p>}
-                <p className="text-xs text-gray-400 mt-1">Peserta dapat mengirimkan hasil tugas pada tanggal ini</p>
-              </div>
-              <div>
-                <DateField
-                  label="Tanggal Akhir / Deadline"
-                  value={form.tanggal_akhir}
-                  onChange={(d) => setForm({ ...form, tanggal_akhir: d })}
-                  placeholder="Pilih Tanggal Akhir"
-                />
+                <div className="space-y-1">
+  <Label className="text-sm font-medium text-gray-700">
+    Periode Tugas <span className="text-red-500">*</span>
+  </Label>
+
+  <Popover>
+    <PopoverTrigger asChild>
+      <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm">
+        {form.rangeTanggal?.from && form.rangeTanggal?.to
+          ? `${format(form.rangeTanggal.from, "dd MMM yyyy")} - ${format(form.rangeTanggal.to, "dd MMM yyyy")}`
+          : "Pilih rentang tanggal"}
+      </button>
+    </PopoverTrigger>
+
+    <PopoverContent className="w-auto p-0">
+      <CalendarComponent
+        mode="range"
+        selected={form.rangeTanggal}
+        onSelect={(range) => setForm({ ...form, rangeTanggal: range })}
+        numberOfMonths={2}
+      />
+    </PopoverContent>
+  </Popover>
+
+  {errors.tanggal_mulai && (
+    <p className="text-xs text-red-500">{errors.tanggal_mulai}</p>
+  )}
+</div>
                 <p className="text-xs text-gray-400 mt-1">Peserta tidak dapat mengirimkan tugas setelah tanggal ini</p>
               </div>
             </div>
 
-            {/* Tugas Wajib */}
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={form.is_wajib}
-                onCheckedChange={(v) => setForm({ ...form, is_wajib: v })}
-              />
-              <Label className="text-sm font-medium text-gray-700 cursor-pointer"
-                onClick={() => setForm({ ...form, is_wajib: !form.is_wajib })}>
-                Tugas Wajib
-              </Label>
+            {/* Tipe Assignment */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">Tipe Assignment</Label>
+              <div className="flex gap-2">
+                {(["upload", "quiz"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => { tipeRef.current = t; setForm(prev => ({ ...prev, tipe: t })); }}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition ${
+                      form.tipe === t
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    {t === "upload" ? "📎 Upload / Teks" : "📝 Quiz (Pilihan Ganda)"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400">
+                {form.tipe === "quiz"
+                  ? "Soal bisa ditambahkan setelah assignment dibuat."
+                  : "Peserta mengumpulkan jawaban berupa link atau teks."}
+              </p>
             </div>
+
+            {/* Tugas Wajib + Tugas Akhir */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={form.is_wajib}
+                  onCheckedChange={(v) => setForm({ ...form, is_wajib: v })}
+                />
+                <Label className="text-sm font-medium text-gray-700 cursor-pointer"
+                  onClick={() => setForm({ ...form, is_wajib: !form.is_wajib })}>
+                  Tugas Wajib
+                </Label>
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={form.is_tugas_akhir ?? false}
+                  onCheckedChange={(v) => setForm({ ...form, is_tugas_akhir: v })}
+                />
+                <Label className="text-sm font-medium text-gray-700 cursor-pointer"
+                  onClick={() => setForm({ ...form, is_tugas_akhir: !form.is_tugas_akhir })}>
+                  🏆 Tugas Akhir
+                </Label>
+              </div>
+            </div>
+            {form.is_tugas_akhir && (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-700">
+                Tugas Akhir hanya terbuka setelah peserta menyelesaikan semua materi dan tugas sebelumnya. Submit Tugas Akhir akan menandai kelas sebagai selesai.
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-1">

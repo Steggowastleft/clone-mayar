@@ -46,4 +46,49 @@ class BabController extends Controller
         $bab->delete();
         return back();
     }
+
+    // ─────────────────────────────────────────────
+    // KELAS ONLINE
+    // ─────────────────────────────────────────────
+
+    public function storeForKelasOnline(Request $request, $kelasId)
+    {
+        $kelas = \App\Models\KelasOnline::findOrFail($kelasId);
+        
+        $validated = $request->validate([
+            'judul'     => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+        ]);
+
+        $urutan = $kelas->babs()->max('urutan') + 1;
+
+        $kelas->babs()->create([
+            'judul'     => $validated['judul'],
+            'deskripsi' => $validated['deskripsi'] ?? null,
+            'urutan'    => $urutan,
+        ]);
+
+        return back();
+    }
+
+    public function updateForKelasOnline(Request $request, $kelasId, Bab $bab)
+    {
+        abort_if($bab->kelas_online_id != $kelasId, 403);
+
+        $validated = $request->validate([
+            'judul'     => 'required|string|max:255',
+            'deskripsi' => 'nullable|string',
+        ]);
+
+        $bab->update($validated);
+
+        return back();
+    }
+
+    public function destroyForKelasOnline($kelasId, Bab $bab)
+    {
+        abort_if($bab->kelas_online_id != $kelasId, 403);
+        $bab->delete();
+        return back();
+    }
 }

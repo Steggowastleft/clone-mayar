@@ -87,6 +87,21 @@ class Bootcamp extends Model
 
     public function pendaftaran()
     {
-    return $this->hasMany(\App\Models\Pendaftaran::class);
+    return $this->hasMany(\App\Models\Pendaftaran::class, 'bootcamp_id', 'id');
+    }
+
+    public function ratings()
+    {
+    return $this->hasMany(\App\Models\Rating::class);
+    }
+
+    public function pembayaran()
+    {
+        return $this->hasMany(\App\Models\Pembayaran::class);
+    }
+
+    public function sertifikat()
+    {
+        return $this->hasMany(\App\Models\Sertifikat::class);
     }
 }

@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Submission extends Model
+{
+    protected $table = 'submissions';
+
+    protected $fillable = [
+        'assignment_id',
+        'peserta_id',
+        'submission_url',
+        'submission_teks',
+        'submission_file',
+        'submission_file_name',
+        'grade',
+        'waktu_kirim',
+    ];
+
+    protected $casts = [
+        'grade'      => 'integer',
+        'waktu_kirim' => 'datetime',
+    ];
+
+    protected $appends = ['file_url'];
+
+    public function getFileUrlAttribute()
+    {
+        return $this->submission_file ? asset('storage/' . $this->submission_file) : null;
+    }
+
+    public function assignment()
+    {
+        return $this->belongsTo(Assignment::class);
+    }
+
+    public function peserta()
+    {
+        return $this->belongsTo(Peserta::class);
+    }
+}

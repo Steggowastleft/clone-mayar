@@ -1,4 +1,4 @@
-import AppLayout from "@/layouts/app-layout";
+import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router, useForm } from "@inertiajs/react";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
 type Bootcamp = {
   id: number;
@@ -131,10 +132,8 @@ export default function Index({ bootcamps }: IndexProps) {
   const [formData, setFormData] = useState({ ...defaultForm });
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [tanggalMulaiJual, setTanggalMulaiJual] = useState<Date | undefined>();
-  const [tanggalTutupDaftar, setTanggalTutupDaftar] = useState<Date | undefined>();
-  const [tanggalMulaiPembelajaran, setTanggalMulaiPembelajaran] = useState<Date | undefined>();
-  const [tanggalBatasPembelajaran, setTanggalBatasPembelajaran] = useState<Date | undefined>();
+  const [rangePenjualan, setRangePenjualan] = useState<DateRange | undefined>();
+  const [rangePembelajaran, setRangePembelajaran] = useState<DateRange | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form setiap kali dialog dibuka
@@ -142,10 +141,8 @@ export default function Index({ bootcamps }: IndexProps) {
     setFormData({ ...defaultForm });
     setCoverFile(null);
     setCoverPreview(null);
-    setTanggalMulaiJual(undefined);
-    setTanggalTutupDaftar(undefined);
-    setTanggalMulaiPembelajaran(undefined);
-    setTanggalBatasPembelajaran(undefined);
+    setRangePenjualan(undefined);
+    setRangePembelajaran(undefined);
     setCreateOpen(true);
   };
 
@@ -199,10 +196,17 @@ export default function Index({ bootcamps }: IndexProps) {
     payload.append("batasNilaiQuiz", formData.batasNilaiQuiz);
     payload.append("redirectUrl", formData.redirectUrl);
     payload.append("bisaAffiliate", formData.bisaAffiliate ? "1" : "0");
-    if (tanggalMulaiJual) payload.append("tanggalMulaiJual", format(tanggalMulaiJual, "yyyy-MM-dd"));
-    if (tanggalTutupDaftar) payload.append("tanggalTutupDaftar", format(tanggalTutupDaftar, "yyyy-MM-dd"));
-    if (tanggalMulaiPembelajaran) payload.append("tanggalMulaiPembelajaran", format(tanggalMulaiPembelajaran, "yyyy-MM-dd"));
-    if (tanggalBatasPembelajaran) payload.append("tanggalBatasPembelajaran", format(tanggalBatasPembelajaran, "yyyy-MM-dd"));
+    if (rangePenjualan?.from)
+  payload.append("tanggalMulaiJual", format(rangePenjualan.from, "yyyy-MM-dd"));
+
+    if (rangePenjualan?.to)
+  payload.append("tanggalTutupDaftar", format(rangePenjualan.to, "yyyy-MM-dd"));
+
+    if (rangePembelajaran?.from)
+  payload.append("tanggalMulaiPembelajaran", format(rangePembelajaran.from, "yyyy-MM-dd"));
+
+    if (rangePembelajaran?.to)
+  payload.append("tanggalBatasPembelajaran", format(rangePembelajaran.to, "yyyy-MM-dd"));
     if (coverFile) payload.append("cover", coverFile);
 
     router.post("/bootcamps", payload, {
@@ -225,8 +229,7 @@ export default function Index({ bootcamps }: IndexProps) {
   ];
 
   return (
-    <AppLayout>
-      <Head title="Bootcamp Dashboard" />
+    <DashboardLayout title="Kelas Cohort / Bootcamp">
 
       <div className="flex gap-0 min-h-screen">
         {/* MAIN CONTENT */}
@@ -236,7 +239,7 @@ export default function Index({ bootcamps }: IndexProps) {
             <h1 className="text-2xl font-bold text-gray-800">Kelas Cohort / Bootcamp (Batch)</h1>
             <div className="flex gap-2">
               <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/bootcamps/catalog", "_blank")}>
+                onClick={() => window.open("/bootcamps/catalog",)}>
                 PRODUK
               </Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openCreate}>
@@ -326,7 +329,7 @@ export default function Index({ bootcamps }: IndexProps) {
             ))}
           </div>
 
-          <button onClick={() => window.open("/bootcamps/catalog", "_blank")}
+          <button onClick={() => window.open("/bootcamps/katalog", "_blank")}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2">
             KATALOG KELAS COHORT / BOOTCAMP
             <ExternalLink className="h-4 w-4" />
@@ -397,30 +400,54 @@ export default function Index({ bootcamps }: IndexProps) {
               </Select>
             </div>
 
-            {/* Harga */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-                <Input className="pl-9" placeholder="0" type="number"
-                  value={formData.harga} onChange={(e) => setFormData({ ...formData, harga: e.target.value })} />
-              </div>
-            </div>
+            {formData.tipePembayaran !== "gratis" && (
+  <>
+    {/* Harga */}
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
+      <div className="relative">
+        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+        <Input
+          className="pl-9"
+          placeholder="0"
+          type="number"
+          value={formData.harga}
+          onChange={(e) =>
+            setFormData({ ...formData, harga: e.target.value })
+          }
+        />
+      </div>
+    </div>
 
-            {/* Harga Coret */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Harga Coret (Rp) <span className="text-gray-400 font-normal">(Opsional)</span>
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-                <Input className="pl-9" placeholder="Harus lebih besar dari harga awal" type="number"
-                  value={formData.hargaCoret} onChange={(e) => setFormData({ ...formData, hargaCoret: e.target.value })} />
-              </div>
-              {formData.harga && formData.hargaCoret && Number(formData.hargaCoret) <= Number(formData.harga) && (
-                <p className="text-xs text-red-500">Harga coret harus lebih besar dari harga awal</p>
-              )}
-            </div>
+    {/* Harga Coret */}
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-gray-700">
+        Harga Coret (Rp){" "}
+        <span className="text-gray-400 font-normal">(Opsional)</span>
+      </Label>
+      <div className="relative">
+        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+        <Input
+          className="pl-9"
+          placeholder="Harus lebih besar dari harga awal"
+          type="number"
+          value={formData.hargaCoret}
+          onChange={(e) =>
+            setFormData({ ...formData, hargaCoret: e.target.value })
+          }
+        />
+      </div>
+
+      {formData.harga &&
+        formData.hargaCoret &&
+        Number(formData.hargaCoret) <= Number(formData.harga) && (
+          <p className="text-xs text-red-500">
+            Harga coret harus lebih besar dari harga awal
+          </p>
+        )}
+    </div>
+  </>
+)}
 
             {/* Deskripsi */}
             <div className="space-y-1">
@@ -466,13 +493,62 @@ export default function Index({ bootcamps }: IndexProps) {
                 value={formData.syaratKetentuan} onChange={(e) => setFormData({ ...formData, syaratKetentuan: e.target.value })} />
             </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <DatePickerField label="Mulai Tanggal Penjualan" value={tanggalMulaiJual} onChange={setTanggalMulaiJual} />
-              <DatePickerField label="Tanggal Penutupan Pendaftaran" value={tanggalTutupDaftar} onChange={setTanggalTutupDaftar} />
-              <DatePickerField label="Mulai Pembelajaran" value={tanggalMulaiPembelajaran} onChange={setTanggalMulaiPembelajaran} />
-              <DatePickerField label="Batas Pembelajaran" value={tanggalBatasPembelajaran} onChange={setTanggalBatasPembelajaran} optional />
-            </div>
+           {/* Dates */}
+<div className="space-y-4">
+
+  {/* Penjualan */}
+  <div className="space-y-1">
+    <Label className="text-sm font-medium text-gray-700">
+      Periode Penjualan
+    </Label>
+
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
+          {rangePenjualan?.from && rangePenjualan?.to
+            ? `${format(rangePenjualan.from, "dd MMM yyyy")} - ${format(rangePenjualan.to, "dd MMM yyyy")}`
+            : "Pilih periode penjualan..."}
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-auto p-0 z-[200]" align="start">
+        <Calendar
+          mode="range"
+          selected={rangePenjualan}
+          onSelect={setRangePenjualan}
+          numberOfMonths={2}
+        />
+      </PopoverContent>
+    </Popover>
+  </div>
+
+  {/* Pembelajaran */}
+  <div className="space-y-1">
+    <Label className="text-sm font-medium text-gray-700">
+      Periode Pembelajaran
+    </Label>
+
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
+          {rangePembelajaran?.from && rangePembelajaran?.to
+            ? `${format(rangePembelajaran.from, "dd MMM yyyy")} - ${format(rangePembelajaran.to, "dd MMM yyyy")}`
+            : "Pilih periode pembelajaran..."}
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-auto p-0 z-[200]" align="start">
+        <Calendar
+          mode="range"
+          selected={rangePembelajaran}
+          onSelect={setRangePembelajaran}
+          numberOfMonths={2}
+        />
+      </PopoverContent>
+    </Popover>
+  </div>
+
+</div>
 
             {/* Max Peserta */}
             <div className="space-y-1">
@@ -520,6 +596,6 @@ export default function Index({ bootcamps }: IndexProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </DashboardLayout>
   );
 }

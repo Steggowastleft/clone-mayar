@@ -1,5 +1,5 @@
 import { Head } from "@inertiajs/react";
-import { CheckoutDialog } from "@/Pages/Peserta/checkoutdialog";
+import { CheckoutDialog, PaymentDialog } from "@/Pages/Peserta/checkoutdialog";
 import { useState } from "react";
 import {
   ChevronDown, ChevronUp, CheckCircle2,
@@ -130,6 +130,8 @@ function ContentCard({ title, children }: { title: string; children: React.React
 export default function BootcampPublic(props: Props) {
   const { bootcamp, peserta = null } = props;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [paymentOpen,  setPaymentOpen]  = useState(false);
+  const isBerbayar = (bootcamp.harga ?? 0) > 0;
 
   const sesiList   = ensureArray(props.sesiList);
   const babList    = ensureArray(props.babList);
@@ -214,12 +216,30 @@ export default function BootcampPublic(props: Props) {
                       Mulai: {bootcamp.tanggal_mulai_pembelajaran}
                     </p>
                   )}
-                  <button
-                    onClick={() => setCheckoutOpen(true)}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"
-                  >
-                    Daftar Sekarang <ArrowRight className="h-4 w-4" />
-                  </button>
+                  {/* Bootcamp berbayar */}
+                  {isBerbayar ? (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setPaymentOpen(true)}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"
+                      >
+                        Bayar Sekarang <ArrowRight className="h-4 w-4" />
+                      </button>
+                      <button
+                        disabled
+                        className="w-full py-2.5 bg-gray-100 text-gray-400 font-semibold rounded-xl text-xs cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        🔒 Daftar Sekarang (Selesaikan pembayaran dulu)
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCheckoutOpen(true)}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"
+                    >
+                      Daftar Sekarang <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
                   <p className="text-xs text-gray-400 text-center">{bootcamp.batch}</p>
                 </div>
               </div>
@@ -534,14 +554,22 @@ export default function BootcampPublic(props: Props) {
 
       </div>
 
-      {/* Checkout Dialog */}
+      {/* Payment Dialog (berbayar) */}
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        bootcampId={bootcamp.id}
+        bootcampName={bootcamp.name}
+        harga={bootcamp.harga ?? 0}
+      />
+
+      {/* Checkout Dialog (gratis) */}
       <CheckoutDialog
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         bootcampId={bootcamp.id}
         bootcampName={bootcamp.name}
         harga={bootcamp.harga}
-        peserta={peserta}
       />
     </>
   );
