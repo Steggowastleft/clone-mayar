@@ -13,6 +13,8 @@ class Submission extends Model
         'peserta_id',
         'submission_url',
         'submission_teks',
+        'submission_file',
+        'submission_file_name',
         'grade',
         'waktu_kirim',
     ];
@@ -21,6 +23,13 @@ class Submission extends Model
         'grade'      => 'integer',
         'waktu_kirim' => 'datetime',
     ];
+
+    protected $appends = ['file_url'];
+
+    public function getFileUrlAttribute()
+    {
+        return $this->submission_file ? asset('storage/' . $this->submission_file) : null;
+    }
 
     public function assignment()
     {

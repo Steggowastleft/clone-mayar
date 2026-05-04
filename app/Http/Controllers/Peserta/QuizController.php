@@ -10,7 +10,9 @@ use App\Models\Soal;
 use App\Models\QuizAttempt;
 use App\Models\Submission;
 use App\Models\Bootcamp;
+use App\Models\KelasOnline;
 use App\Models\Pendaftaran;
+use App\Models\KelasOnlinePeserta;
 
 class QuizController extends Controller
 {
@@ -30,7 +32,6 @@ class QuizController extends Controller
         $soals = Soal::where('assignment_id', $assignment->id)->get();
 
         // Hitung nilai
-        $totalSoal       = $soals->count();
         $totalPilganSoal = $soals->where('tipe_soal', 'pilihan_ganda')->count();
         $benar           = 0;
 
@@ -41,7 +42,6 @@ class QuizController extends Controller
             }
         }
 
-        // Nilai = (benar / total pilgan) * 100, essay tidak dihitung otomatis
         $nilai = $totalPilganSoal > 0
             ? (int) round(($benar / $totalPilganSoal) * 100)
             : 0;
@@ -55,12 +55,11 @@ class QuizController extends Controller
             'dikerjakan_at' => now(),
         ]);
 
-        // Ambil nilai tertinggi dari semua attempt
         $nilaiTertinggi = QuizAttempt::where('assignment_id', $assignment->id)
             ->where('peserta_id', $peserta->id)
             ->max('nilai');
 
-        // Update atau buat submission dengan nilai tertinggi
+        // Update atau buat submission
         Submission::updateOrCreate(
             [
                 'assignment_id' => $assignment->id,
@@ -73,17 +72,31 @@ class QuizController extends Controller
             ]
         );
 
-        // Cek apakah Tugas Akhir dan semua syarat terpenuhi
+        // Update status / progress
         if ($assignment->is_tugas_akhir) {
-            Pendaftaran::where('bootcamp_id', $assignment->bootcamp_id)
-                ->where('peserta_id', $peserta->id)
-                ->where('status', 'active')
-                ->update(['status' => 'completed', 'tanggal_expired' => now()]);
+            if ($assignment->bootcamp_id) {
+                Pendaftaran::where('bootcamp_id', $assignment->bootcamp_id)
+                    ->where('peserta_id', $peserta->id)
+                    ->update(['status' => 'completed', 'tanggal_expired' => now()]);
+            } else if ($assignment->kelas_online_id) {
+                KelasOnlinePeserta::where('kelas_online_id', $assignment->kelas_online_id)
+                    ->where('peserta_id', $peserta->id)
+                    ->update(['status' => 'completed']);
+            }
         } else {
-            $bootcamp = Bootcamp::with(['babs.materis', 'assignments'])
-                ->findOrFail($assignment->bootcamp_id);
-            $progress = PesertaProgressController::hitungProgress($bootcamp, $peserta->id);
-            PesertaProgressController::cekDanUpdateStatus($bootcamp, $peserta->id, $progress);
+            if ($assignment->bootcamp_id) {
+                $bootcamp = Bootcamp::with(['babs.materis', 'assignments'])->findOrFail($assignment->bootcamp_id);
+                $progress = PesertaProgressController::hitungProgress($bootcamp, $peserta->id);
+                PesertaProgressController::cekDanUpdateStatus($bootcamp, $peserta->id, $progress);
+            }
+        }
+
+        // Trigger sertifikat jika ini Kelas Online
+        if ($assignment->kelas_online_id) {
+            $kelas = KelasOnline::find($assignment->kelas_online_id);
+            if ($kelas) {
+                app(\App\Services\CertificateService::class)->createCertificateIfEligible($kelas, $peserta);
+            }
         }
 
         return back()->with('quizResult', [

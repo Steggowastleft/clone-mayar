@@ -24,6 +24,13 @@ class PesertaDashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Load Kelas Online peserta
+        $kelasOnlinePeserta = \App\Models\KelasOnlinePeserta::with(['kelasOnline.owner'])
+            ->where('peserta_id', $peserta->id)
+            ->where('status', 'aktif')
+            ->orderBy('mendaftar_pada', 'desc')
+            ->get();
+
         // Load ratings peserta
         $myRatings = Rating::where('peserta_id', $peserta->id)
             ->pluck('bintang', 'bootcamp_id');
@@ -40,6 +47,15 @@ class PesertaDashboardController extends Controller
             'rating'         => $myRatings->get($p->bootcamp->id),
         ]);
 
+        $kelasOnlines = $kelasOnlinePeserta->map(fn($p) => [
+            'id'            => $p->kelasOnline->id,
+            'name'          => $p->kelasOnline->nama,
+            'cover_url'     => $p->kelasOnline->thumbnail ? asset('storage/' . $p->kelasOnline->thumbnail) : null,
+            'owner_name'    => $p->kelasOnline->owner->name,
+            'tanggal_aktif' => $p->mendaftar_pada?->format('d M Y'),
+            'status'        => $p->status,
+        ]);
+
         return Inertia::render('Peserta/dashboard', [
             'peserta'   => [
                 'id'       => $peserta->id,
@@ -48,7 +64,8 @@ class PesertaDashboardController extends Controller
                 'no_hp'    => $peserta->no_hp,
                 'foto_url' => $peserta->foto_url,
             ],
-            'bootcamps' => $bootcamps,
+            'bootcamps'    => $bootcamps,
+            'kelasOnlines' => $kelasOnlines,
         ]);
     }
 
@@ -145,6 +162,40 @@ class PesertaDashboardController extends Controller
                     ] : null,
                 ];
             })->values(),
+        ]);
+    }
+
+    public function kelasOnline($id)
+    {
+        $peserta = Auth::guard('peserta')->user();
+
+        // Cek apakah terdaftar
+        $enrollment = \App\Models\KelasOnlinePeserta::where('kelas_online_id', $id)
+            ->where('peserta_id', $peserta->id)
+            ->where('status', 'aktif')
+            ->firstOrFail();
+
+        $kelas = \App\Models\KelasOnline::with([
+            'sesi', 'owner', 'instruktur', 'meetings', 
+            'assignments.files', 
+            'assignments.soals',
+            'assignments.submissions' => function($q) use ($peserta) {
+                $q->where('peserta_id', $peserta->id);
+            }
+        ])->findOrFail($id);
+
+        return Inertia::render('Peserta/KelasOnline/Belajar', [
+            'kelas'   => $kelas,
+            'peserta' => [
+                'id'       => $peserta->id,
+                'nama'     => $peserta->nama,
+                'email'    => $peserta->email,
+                'foto_url' => $peserta->foto_url,
+            ],
+            'materi'  => [
+                'file' => $kelas->materi_file ? asset('storage/' . $kelas->materi_file) : null,
+                'name' => $kelas->materi_nama_asli,
+            ],
         ]);
     }
 }
