@@ -103,9 +103,9 @@ Route::get('/kelas-online/sertifikat/verify/{qr_token}', [KelasOnlineController:
     ->name('kelas-online.sertifikat.public-verify');
 
 // Halaman publik kelas online (share link untuk pendaftaran peserta)
-Route::get('/kelas-online/{id}', [KelasOnlinePublicController::class, 'show'])
+Route::get('/p/{id}/kelas-online', [KelasOnlinePublicController::class, 'show'])
     ->name('kelas-online.public');
-Route::post('/kelas-online/{id}/daftar', [KelasOnlinePublicController::class, 'daftar'])
+Route::post('/p/{id}/kelas-online/daftar', [KelasOnlinePublicController::class, 'daftar'])
     ->name('kelas-online.daftar');
 
 // ── Catalog Routes (PUBLIC) ─────────────────────────────
@@ -118,6 +118,9 @@ Route::get('/bootcamp/catalog', [BootcampCatalogController::class, 'index'])->na
 Route::get('/bootcamps/catalog', [BootcampCatalogController::class, 'index'])->name('bootcamps.catalog');
 Route::get('/bootcamp/katalog', [BootcampCatalogController::class, 'index']);
 Route::get('/bootcamps/katalog', [BootcampCatalogController::class, 'index']);
+
+Route::get('/kelas-online/catalog', [\App\Http\Controllers\KelasOnlineCatalogController::class, 'index'])->name('kelas-online.catalog');
+Route::get('/kelas-online/katalog', [\App\Http\Controllers\KelasOnlineCatalogController::class, 'index'])->name('kelas-online.katalog');
 
 Route::get('/ebook/catalog', [EbookController::class, 'catalog'])->name('ebook.catalog');
 Route::get('/ebook/katalog', [EbookController::class, 'catalog']);

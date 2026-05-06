@@ -1,5 +1,5 @@
 import { Head, router } from "@inertiajs/react";
-import AppLayout from "@/layouts/app-layout";
+import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import TabEngineKelasOnline from "./detail/tab-engine";
 import { Button } from "@/components/ui/button";
 
@@ -39,7 +39,7 @@ interface Props {
 
 export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignments, submissions, pesertaList }: Props) {
   return (
-    <AppLayout>
+    <DashboardLayout>
       <Head title={kelas?.nama || "Kelas Online Detail"} />
 
       <div className="p-6">
@@ -61,10 +61,10 @@ export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignment
                 {kelas?.nama}
               </h1>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full
-                ${kelas.status === "aktif"
+                ${kelas.status === "published"
                   ? "bg-emerald-100 text-emerald-700"
-                  : kelas.status === "draft"
-                  ? "bg-gray-100 text-gray-600"
+                  : kelas.status === "unpublished"
+                  ? "bg-yellow-100 text-yellow-700"
                   : "bg-blue-100 text-blue-700"}`}>
                 {kelas.status}
               </span>
@@ -97,6 +97,6 @@ export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignment
           pesertaList={pesertaList}
         />
       </div>
-    </AppLayout>
+    </DashboardLayout>
   );
 }

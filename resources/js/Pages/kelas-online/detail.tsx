@@ -7,7 +7,7 @@ interface KelasOnline {
   thumbnail: string | null;
   harga: number;
   is_gratis: boolean;
-  status: "draft" | "aktif" | "selesai" | "dibatalkan";
+  status: "published" | "unpublished" | "unlisted";
   tanggal_mulai: string | null;
   peserta_terdaftar_count: number;
 }
@@ -21,11 +21,10 @@ interface Props {
   };
 }
 
-const STATUS_CFG = {
-  draft:       { label: "Draft",      cls: "bg-slate-100 text-slate-600" },
-  aktif:       { label: "Aktif",      cls: "bg-emerald-100 text-emerald-700" },
-  selesai:     { label: "Selesai",    cls: "bg-blue-100 text-blue-700" },
-  dibatalkan:  { label: "Dibatalkan", cls: "bg-red-100 text-red-700" },
+const STATUS_CFG: Record<string, { label: string; cls: string }> = {
+  published:   { label: "Published",    cls: "bg-emerald-100 text-emerald-700" },
+  unpublished: { label: "Unpublished",  cls: "bg-yellow-100 text-yellow-700" },
+  unlisted:    { label: "Unlisted",     cls: "bg-blue-100 text-blue-700" },
 };
 
 export default function KelasOnlineIndex({ produk }: Props) {

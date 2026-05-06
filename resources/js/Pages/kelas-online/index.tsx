@@ -34,7 +34,7 @@ interface KelasOnline {
   thumbnail: string | null;
   harga: number;
   is_gratis: boolean;
-  status: "draft" | "aktif" | "selesai" | "dibatalkan";
+  status: "published" | "unpublished" | "unlisted";
   tanggal_mulai: string | null;
   peserta_terdaftar_count: number;
   require_quiz_sertifikat: boolean;
@@ -113,14 +113,12 @@ export default function KelasOnlineIndex({ produk }: Props) {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "aktif":
-        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Aktif</Badge>;
-      case "draft":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Draft</Badge>;
-      case "selesai":
-        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Selesai</Badge>;
-      case "dibatalkan":
-        return <Badge className="bg-red-500 hover:bg-red-600 text-white">Dibatalkan</Badge>;
+      case "published":
+        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Published</Badge>;
+      case "unpublished":
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Unpublished</Badge>;
+      case "unlisted":
+        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Unlisted</Badge>;
       default:
         return <Badge>Unknown</Badge>;
     }
@@ -128,10 +126,9 @@ export default function KelasOnlineIndex({ produk }: Props) {
 
   const filterButtons = [
     { label: "SEMUA", value: "all" },
-    { label: "AKTIF", value: "aktif" },
-    { label: "DRAFT", value: "draft" },
-    { label: "SELESAI", value: "selesai" },
-    { label: "DIBATALKAN", value: "dibatalkan" },
+    { label: "PUBLISHED", value: "published" },
+    { label: "UNPUBLISHED", value: "unpublished" },
+    { label: "UNLISTED", value: "unlisted" },
   ];
 
   return (
@@ -356,7 +353,7 @@ export default function KelasOnlineIndex({ produk }: Props) {
           </button>
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             Katalog Kelas adalah halaman katalog online dimana semua Kelas
-            Online anda yang aktif ditampilkan.
+            Online anda yang published ditampilkan.
           </p>
 
           <Dialog>

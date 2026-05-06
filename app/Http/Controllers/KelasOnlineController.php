@@ -68,7 +68,7 @@ class KelasOnlineController extends Controller
         $kelas = KelasOnline::create([
             ...$data,
             'user_id' => auth()->id(),
-            'status'  => 'draft',
+            'status'  => 'unpublished',
         ]);
 
         // Auto-buat 3 sesi presensi
@@ -157,7 +157,7 @@ class KelasOnlineController extends Controller
             'deskripsi'               => 'nullable|string',
             'harga'                   => 'required|numeric|min:0',
             'is_gratis'               => 'boolean',
-            'status'                  => 'in:draft,aktif,selesai,dibatalkan',
+            'status'                  => 'in:published,unpublished,unlisted',
             'tanggal_mulai'           => 'nullable|date',
             'tanggal_selesai'         => 'nullable|date',
             'require_quiz_sertifikat' => 'boolean',
@@ -185,7 +185,7 @@ class KelasOnlineController extends Controller
         $this->authorizeOwner($kelas);
 
         $request->validate([
-            'status' => 'required|in:draft,aktif,selesai,dibatalkan',
+            'status' => 'required|in:published,unpublished,unlisted',
         ]);
 
         $kelas->update(['status' => $request->status]);

@@ -140,7 +140,7 @@ export function KelasOnlineCheckoutDialog({ open, onOpenChange, kelas }: Props) 
       if (res.ok && data.peserta) {
         setPeserta(data.peserta);
         // Cek apakah sudah terdaftar (CSRF diambil ulang setelah session baru)
-        const checkRes = await fetch(`/kelas-online/${kelas.id}/daftar`, {
+        const checkRes = await fetch(`/p/${kelas.id}/kelas-online/daftar`, {
           method:  "POST",
           headers: jsonHeaders(),     // getCsrfToken() re-read cookie terbaru
           body:    JSON.stringify({}),
@@ -196,7 +196,7 @@ export function KelasOnlineCheckoutDialog({ open, onOpenChange, kelas }: Props) 
     setErrors({});
     setLoading(true);
     try {
-      const res  = await fetch(`/kelas-online/${kelas.id}/daftar`, {
+      const res  = await fetch(`/p/${kelas.id}/kelas-online/daftar`, {
         method:  "POST",
         headers: jsonHeaders(),     // token terbaru dari cookie
         body:    JSON.stringify({ no_hp: noHp }),

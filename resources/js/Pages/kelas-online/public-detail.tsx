@@ -112,7 +112,7 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
             <div className="lg:col-span-3 space-y-5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                  kelas.status === "aktif"
+                  kelas.status === "published"
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                     : "bg-white/10 text-white/60 border-white/20"
                 }`}>

@@ -7,17 +7,15 @@ import { ConfirmDialog } from "@/components/dashboard/confirmdialog";
 import { EditKelasOnlineDialog } from "@/components/dashboard/editkelasonlinedialog";
 
 const statusOptions = [
-  { value: "aktif",      label: "Aktif",      dot: "bg-emerald-500", text: "text-emerald-700" },
-  { value: "draft",      label: "Draft",      dot: "bg-gray-500",    text: "text-gray-700" },
-  { value: "selesai",    label: "Selesai",    dot: "bg-blue-500",    text: "text-blue-700" },
-  { value: "dibatalkan", label: "Dibatalkan", dot: "bg-red-500",     text: "text-red-700" },
+  { value: "published",   label: "Published",   dot: "bg-emerald-500", text: "text-emerald-700" },
+  { value: "unpublished", label: "Unpublished", dot: "bg-yellow-500",  text: "text-yellow-700" },
+  { value: "unlisted",    label: "Unlisted",    dot: "bg-blue-500",    text: "text-blue-700" },
 ];
 
 const statusBgMap: Record<string, string> = {
-  aktif:      "bg-emerald-600 hover:bg-emerald-700",
-  draft:      "bg-gray-500 hover:bg-gray-600",
-  selesai:    "bg-blue-600 hover:bg-blue-700",
-  dibatalkan: "bg-red-600 hover:bg-red-700",
+  published:   "bg-emerald-600 hover:bg-emerald-700",
+  unpublished: "bg-yellow-500 hover:bg-yellow-600",
+  unlisted:    "bg-blue-600 hover:bg-blue-700",
 };
 
 export function SidebarPanel({ kelas }: { kelas: any }) {

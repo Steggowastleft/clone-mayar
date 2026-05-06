@@ -24,7 +24,7 @@ interface Props {
 
 export default function TabDetail({ kelas, isOwner }: Props) {
   const [copied, setCopied] = useState(false);
-  const shareLink = `${window.location.origin}/kelas-online/${kelas.id}`;
+  const shareLink = `${window.location.origin}/p/${kelas.id}/kelas-online`;
 
   return (
     <div className="space-y-6">
@@ -97,10 +97,10 @@ export default function TabDetail({ kelas, isOwner }: Props) {
                 <span className="text-gray-500">{label}</span>
                 {isStatus ? (
                   <span className={`font-semibold text-xs px-2.5 py-0.5 rounded-full
-                    ${value === "aktif"   ? "bg-emerald-100 text-emerald-700" :
-                      value === "draft"   ? "bg-gray-100 text-gray-600" :
-                      value === "selesai" ? "bg-blue-100 text-blue-700" :
-                      "bg-red-100 text-red-600"}`}>
+                    ${value === "published"   ? "bg-emerald-100 text-emerald-700" :
+                      value === "unpublished" ? "bg-yellow-100 text-yellow-700" :
+                      value === "unlisted"    ? "bg-blue-100 text-blue-700" :
+                      "bg-gray-100 text-gray-600"}`}>
                     {value}
                   </span>
                 ) : (

@@ -14,19 +14,18 @@ class BootcampCatalogController extends Controller
             ->latest()
             ->get()
             ->map(fn($b) => [
-                'id' => "bootcamp:{$b->id}",
-                'product_id' => $b->id,
-                'type' => 'bootcamp',
-                'nama' => $b->name,
+                'id' => $b->id,
+                'name' => $b->name,
+                'deskripsi' => $b->deskripsi,
                 'harga' => $b->harga ?? 0,
+                'is_free' => $b->harga == 0,
+                'cover_url' => $b->cover_url,
+                'peserta_count' => $b->pendaftaran()->count(),
                 'status' => $b->status,
-                'tanggal' => $b->created_at->format('d M Y H:i'),
-                'terjual' => $b->pendaftaran()->count(),
-                'kategori' => 'Kelas Online',
             ]);
 
-        return Inertia::render('bootcamps/catalog', [
-            'produk' => $bootcamps
+        return Inertia::render('bootcamps/katalog', [
+            'bootcamps' => $bootcamps
         ]);
     }
 }

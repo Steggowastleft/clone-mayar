@@ -100,6 +100,6 @@ class KelasOnline extends Model
 
     public function isAktif(): bool
     {
-        return $this->status === 'aktif';
+        return $this->status === 'published';
     }
 }
