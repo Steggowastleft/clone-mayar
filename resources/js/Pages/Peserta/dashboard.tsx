@@ -129,7 +129,7 @@ export default function PesertaDashboard({
                 <p className="text-sm font-semibold text-gray-500">Belum ada Kelas Online yang diikuti</p>
                 <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">Tingkatkan keahlianmu dengan mengikuti berbagai kelas online yang tersedia.</p>
                 <button
-                  onClick={() => router.visit("/kelas-online")}
+                  onClick={() => router.visit("/kelas-online/katalog")}
                   className="mt-4 px-6 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition"
                 >
                   Cari Kelas Online
@@ -208,6 +208,12 @@ export default function PesertaDashboard({
                 </div>
                 <p className="text-sm font-semibold text-gray-500">Belum ada Bootcamp yang diikuti</p>
                 <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">Ayo bergabung dengan komunitas belajar kami dan percepat kariermu.</p>
+                <button
+                  onClick={() => router.visit("/bootcamps/katalog")}
+                  className="mt-4 px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition"
+                >
+                  Cari Bootcamp
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
