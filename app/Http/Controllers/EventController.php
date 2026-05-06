@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\EventTiket;
+use App\Models\EventPembicara;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -118,6 +120,7 @@ class EventController extends Controller
                     'tanggal_daftar' => $p->created_at->format('d M Y H:i'),
                 ]),
             'tiketList' => $event->tiket,
+            'pembicaraList' => $event->pembicaras,
             'ratings'     => [],
         ]);
     }
@@ -245,5 +248,51 @@ class EventController extends Controller
         return Inertia::render('event/catalog', [
             'produk' => $events,
         ]);
+    }
+
+    // ─────────────────────────────────────
+    // STORE TIKET
+    // ─────────────────────────────────────
+    public function storeTiket(Request $request, Event $event)
+    {
+        $validated = $request->validate([
+            'nama' => 'required|string|max:100',
+            'harga' => 'required|numeric|min:0',
+            'kuota' => 'required|integer|min:1',
+            'deskripsi' => 'nullable|string',
+            'waktu_mulai' => 'required|date',
+            'waktu_selesai' => 'nullable|date|after:waktu_mulai',
+        ]);
+
+        $tiket = $event->tiket()->create($validated);
+
+        return back()->with('success', 'Tiket berhasil dibuat');
+    }
+
+    // ─────────────────────────────────────
+    // STORE PEMBICARA
+    // ─────────────────────────────────────
+    public function storePembicara(Request $request, Event $event)
+    {
+        $validated = $request->validate([
+            'nama' => 'required|string|max:100',
+            'pekerjaan' => 'required|string|max:100',
+            'profil' => 'required|string',
+            'foto' => 'nullable|file|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
+        $fotoPath = null;
+        if ($request->hasFile('foto')) {
+            $fotoPath = $request->file('foto')->store('event/pembicara', 'public');
+        }
+
+        $pembicara = $event->pembicaras()->create([
+            'nama' => $validated['nama'],
+            'pekerjaan' => $validated['pekerjaan'],
+            'profil' => $validated['profil'],
+            'foto' => $fotoPath,
+        ]);
+
+        return back()->with('success', 'Pembicara berhasil ditambahkan');
     }
 }

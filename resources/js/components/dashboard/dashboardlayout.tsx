@@ -12,7 +12,7 @@ export default function DashboardLayout({ title, children }: Props) {
 
   return (
     <>
-      {title && <Head title={`${title} — BootcampOS`} />}
+      {title && <Head title={`${title} — BiinsCart`} />}
       <div className="flex min-h-screen bg-gray-50">
         <DashboardSidebar
           user={{

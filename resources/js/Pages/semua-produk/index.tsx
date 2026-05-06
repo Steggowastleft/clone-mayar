@@ -14,7 +14,7 @@ type Produk = {
   nama: string;
   kategori: string;
   harga: number;
-  status: "published" | "unpublished" | "unlisted";
+  status: "published" | "unpublished" | "unlisted" | "aktif" | "draft" | "selesai" | "dibatalkan";
   terjual: number;
   tanggal: string;
 };
@@ -48,6 +48,14 @@ export default function SemuaProduk({ produk = [] }: Props) {
         return <Badge className="bg-yellow-500 text-white">Unpublished</Badge>;
       case "unlisted":
         return <Badge className="bg-gray-500 text-white">Unlisted</Badge>;
+      case "aktif":
+        return <Badge className="bg-green-500 text-white">Aktif</Badge>;
+      case "draft":
+        return <Badge className="bg-blue-500 text-white">Draft</Badge>;
+      case "selesai":
+        return <Badge className="bg-gray-500 text-white">Selesai</Badge>;
+      case "dibatalkan":
+        return <Badge className="bg-red-500 text-white">Dibatalkan</Badge>;
       default:
         return <Badge>-</Badge>;
     }

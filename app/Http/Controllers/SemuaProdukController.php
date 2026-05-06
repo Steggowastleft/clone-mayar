@@ -10,6 +10,7 @@ use App\Models\Bootcamp;
 use App\Models\CoachingMentoring;
 use App\Models\PenggalanganDana;
 use App\Models\Tulisan;
+use App\Models\KelasOnline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -161,6 +162,23 @@ class SemuaProdukController extends Controller
             ])->toArray();
         $products = array_merge($products, $tulisan);
 
+        // Fetch Kelas Online
+        $kelasOnline = KelasOnline::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($k) => [
+                'id' => "kelas_online:{$k->id}",
+                'product_id' => $k->id,
+                'type' => 'kelas-online',
+                'nama' => $k->nama,
+                'harga' => $k->harga ?? 0,
+                'status' => $k->status,
+                'tanggal' => $k->created_at->format('d M Y H:i'),
+                'terjual' => $k->pesertaTerdaftar()->count(),
+                'kategori' => 'Kelas Online',
+            ])->toArray();
+        $products = array_merge($products, $kelasOnline);
+
         // Fetch Ebook (Belum Ada Model - Commented out)
         /*
         $ebook = Ebook::where('user_id', $userId)
@@ -263,6 +281,7 @@ class SemuaProdukController extends Controller
         $type = $request->input('type');
 
         return match ($type) {
+            'kelas-online' => redirect()->route('kelas-online.index'),
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -295,6 +314,7 @@ class SemuaProdukController extends Controller
         $type = str_replace('_', '-', $type);
 
         $product = match ($type) {
+            'kelas-online' => KelasOnline::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'webinar' => Webinar::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'event' => Event::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'bootcamp' => Bootcamp::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
@@ -323,6 +343,7 @@ class SemuaProdukController extends Controller
         $type = str_replace('_', '-', $type);
 
         $product = match ($type) {
+            'kelas-online' => KelasOnline::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'webinar' => Webinar::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'event' => Event::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
             'bootcamp' => Bootcamp::where('id', $productId)->where('user_id', Auth::id())->firstOrFail(),
@@ -351,6 +372,7 @@ class SemuaProdukController extends Controller
         $type = str_replace('_', '-', $type);
 
         return match ($type) {
+            'kelas-online' => redirect()->route('kelas-online.index'),
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -377,6 +399,7 @@ class SemuaProdukController extends Controller
         $type = str_replace('_', '-', $type);
 
         return match ($type) {
+            'kelas-online' => redirect()->route('kelas-online.index'),
             'webinar' => redirect()->route('webinar.index'),
             'event' => redirect()->route('event.index'),
             'bootcamp' => redirect()->route('bootcamp.index'),
@@ -397,7 +420,8 @@ class SemuaProdukController extends Controller
         $products = $this->getAllProducts();
 
         // Only show published products in the public catalog
-        $publishedProducts = array_filter($products, fn($p) => $p['status'] === 'published');
+        // KelasOnline uses 'aktif', while other products use 'published'
+        $publishedProducts = array_filter($products, fn($p) => $p['status'] === 'published' || $p['status'] === 'aktif');
         $publishedProducts = array_values($publishedProducts);
 
         return Inertia::render('semua-produk/catalog', [

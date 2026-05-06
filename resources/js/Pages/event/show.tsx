@@ -51,11 +51,20 @@ export type EventData = {
   participants: number;
 };
 
+export type PembicaraItem = {
+  id: number;
+  nama: string;
+  pekerjaan: string;
+  profil: string;
+  foto_url?: string;
+};
+
 type Props = {
   event: EventData;
   pesertaList?: PesertaItem[];
   ratings?: RatingItem[];
   tiketList?: any[];
+  pembicaraList?: PembicaraItem[];
 };
 
 // ─────────────────────────────────────────────
@@ -79,6 +88,7 @@ export default function EventDetail({
   pesertaList = [],
   ratings = [],
   tiketList = [],
+  pembicaraList = [],
 }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
@@ -125,7 +135,7 @@ export default function EventDetail({
       case "transaksi":
         return <TabTransaksi />;
       case "detail":
-        return <TabDetail event={event} />;
+        return <TabDetail event={event} pembicaraList={pembicaraList} />;
       case "tiket":
         return <TabTiket eventId={event.id} tiketList={tiketList} />;
       case "peserta":

@@ -133,6 +133,12 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     route: "/bundle",
     gradient: "from-indigo-500 to-purple-700",
   },
+  "kelas-online": {
+    Icon: GraduationCap,
+    color: "text-purple-500",
+    route: "/kelas-online",
+    gradient: "from-purple-400 to-indigo-600",
+  },
 };
 
 function formatHarga(n?: number) {
@@ -224,7 +230,7 @@ export default function Katalog({ produk }: Props) {
                           ? router.visit(
                               p.type === 'bootcamp' 
                                 ? cfg.route
-                                : `${cfg.route}/${p.product_id}${p.type === 'webinar' ? '' : '/p'}`
+                                : `${cfg.route}/${p.product_id}${(p.type === 'webinar' || p.type === 'kelas-online') ? '' : '/p'}`
                             )
                           : undefined
                       }

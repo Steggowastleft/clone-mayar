@@ -30,7 +30,7 @@ export default function PenjualLogin() {
 
   return (
     <>
-      <Head title="Masuk — BootcampOS" />
+      <Head title="Masuk — BiinsCart" />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
         * { box-sizing: border-box; }
@@ -144,7 +144,7 @@ export default function PenjualLogin() {
             <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-lg">
               <Zap className="h-5 w-5 text-blue-600" fill="currentColor" />
             </div>
-            <span className="text-white font-black text-xl tracking-tight">BootcampOS</span>
+            <span className="text-white font-black text-xl tracking-tight">BiinsCart</span>
           </div>
 
           {/* Headline */}
@@ -194,7 +194,7 @@ export default function PenjualLogin() {
               <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Zap className="h-5 w-5 text-white" fill="currentColor" />
               </div>
-              <span className="font-black text-gray-900 text-xl">BootcampOS</span>
+              <span className="font-black text-gray-900 text-xl">BiinsCart</span>
             </div>
 
             {/* Heading */}

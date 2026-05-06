@@ -11,6 +11,14 @@ class EventTiket extends Model
         'nama',
         'harga',
         'kuota',
+        'deskripsi',
+        'waktu_mulai',
+        'waktu_selesai',
+    ];
+
+    protected $casts = [
+        'waktu_mulai' => 'datetime',
+        'waktu_selesai' => 'datetime',
     ];
 
     public function event()
