@@ -61,6 +61,15 @@ const emptyForm = {
   tipe:           "upload" as "upload" | "quiz",
 };
 
+function formatTanggal(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    return format(new Date(dateStr), "dd MMM yyyy", { locale: idLocale });
+  } catch {
+    return dateStr;
+  }
+}
+
 // ─────────────────────────────────────────────
 // Simple Rich Text Toolbar
 // ─────────────────────────────────────────────
@@ -388,12 +397,12 @@ function AssignmentCard({
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               {assignment.tanggal_mulai && (
                 <span className="text-xs text-gray-500 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Mulai: {assignment.tanggal_mulai}
+                  <Calendar className="h-3 w-3" /> Mulai: {formatTanggal(assignment.tanggal_mulai)}
                 </span>
               )}
               {assignment.tanggal_akhir && (
                 <span className="text-xs text-orange-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Deadline: {assignment.tanggal_akhir}
+                  <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir)}
                 </span>
               )}
             </div>
@@ -495,12 +504,12 @@ function ViewDialog({ assignment, open, onClose }: { assignment: Assignment | nu
           <div className="flex gap-4 flex-wrap pt-1">
             {assignment.tanggal_mulai && (
               <span className="text-xs text-gray-500 flex items-center gap-1">
-                <Calendar className="h-3 w-3" /> Mulai: {assignment.tanggal_mulai}
+                <Calendar className="h-3 w-3" /> Mulai: {formatTanggal(assignment.tanggal_mulai)}
               </span>
             )}
             {assignment.tanggal_akhir && (
               <span className="text-xs text-orange-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Deadline: {assignment.tanggal_akhir}
+                <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir)}
               </span>
             )}
           </div>
