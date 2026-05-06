@@ -32,6 +32,10 @@ const typeConfig: Record<string, {
     label: "Kelas Online",
     editRoute: (id) => `/bootcamps/${id}`,
   },
+  "kelas-online": {
+    label: "Kelas Online",
+    editRoute: (id) => `/kelas-online/${id}/edit`,
+  },
   "produk-digital": {
     label: "Produk Digital",
     editRoute: (id) => `/produk-digital/${id}`,

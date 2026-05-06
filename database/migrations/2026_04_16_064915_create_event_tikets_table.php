@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('nama');
             $table->decimal('harga', 12, 2)->default(0);
             $table->integer('kuota')->nullable();
+            $table->text('deskripsi')->nullable();
+            $table->timestamp('waktu_mulai')->nullable();
+            $table->timestamp('waktu_selesai')->nullable();
             $table->timestamps();
         });
     }

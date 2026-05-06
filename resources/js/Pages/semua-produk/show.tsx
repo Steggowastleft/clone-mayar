@@ -46,6 +46,12 @@ const typeConfig: Record<string, {
     listRoute: "bootcamp.index",
     color: "bg-green-100 text-green-700",
   },
+  "kelas-online": {
+    label: "Kelas Online",
+    editRoute: "kelas-online.edit",
+    listRoute: "kelas-online.index",
+    color: "bg-indigo-100 text-indigo-700",
+  },
   "produk-digital": {
     label: "Produk Digital",
     editRoute: "produk-digital.show",
@@ -68,6 +74,8 @@ const getDetailRoute = (type: string, id: number) => {
       return `/event/${id}`;
     case "bootcamp":
       return `/bootcamp/catalog`;
+    case "kelas-online":
+      return `/kelas-online/${id}`;
     case "produk-digital":
       return `/produk-digital/${id}`;
     case "payment-link":
@@ -80,11 +88,17 @@ const getDetailRoute = (type: string, id: number) => {
 const statusColor = (status: string) => {
   switch (status) {
     case "published":
+    case "aktif":
       return "bg-green-100 text-green-700";
     case "unpublished":
       return "bg-yellow-100 text-yellow-700";
     case "unlisted":
+    case "dibatalkan":
       return "bg-gray-100 text-gray-700";
+    case "draft":
+      return "bg-blue-100 text-blue-700";
+    case "selesai":
+      return "bg-slate-100 text-slate-700";
     default:
       return "bg-gray-100 text-gray-700";
   }

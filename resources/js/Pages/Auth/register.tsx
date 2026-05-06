@@ -33,7 +33,7 @@ export default function PenjualRegister() {
 
   return (
     <>
-      <Head title="Daftar Penjual — BootcampOS" />
+      <Head title="Daftar Penjual — BiinsCart" />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
         .font-cabinet  { font-family: 'Cabinet Grotesk', sans-serif; }
@@ -111,7 +111,7 @@ export default function PenjualRegister() {
               <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200">
                 <Zap className="h-5 w-5 text-white" fill="currentColor" />
               </div>
-              <span className="font-black text-gray-900 text-xl tracking-tight">BootcampOS</span>
+              <span className="font-black text-gray-900 text-xl tracking-tight">BiinsCart</span>
               <span className="text-xs bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">Penjual</span>
             </div>
 
@@ -219,7 +219,7 @@ export default function PenjualRegister() {
 
           <div className="relative z-10">
             <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mb-3">
-              Kenapa BootcampOS?
+              Kenapa BiinsCart?
             </p>
             <h3 className="text-blue-900 text-4xl font-black leading-tight tracking-tight mb-3">
               Semua yang kamu<br />

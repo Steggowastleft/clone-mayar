@@ -82,6 +82,11 @@ public function getParticipantsAttribute(): int
         return $this->hasMany(EventTiket::class);
     }
 
+    public function pembicaras(): HasMany
+    {
+        return $this->hasMany(EventPembicara::class);
+    }
+
     // ─── Scopes ──────────────────────────────────────────
     public function scopePublished($query)
     {

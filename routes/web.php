@@ -14,6 +14,7 @@ use App\Http\Controllers\ProdukDigitalController;
 use App\Http\Controllers\WebinarController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\BundleController;
+use App\Http\Controllers\DiskonController;
 use App\Http\Controllers\PaymentLinkController;
 use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\AffiliasiController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\MembershipSaasController;
 
 // Controllers — Bootcamp
 use App\Http\Controllers\BootcampController;
+use App\Http\Controllers\BundlingController;
 use App\Http\Controllers\SesiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BabController;
@@ -284,6 +286,26 @@ Route::middleware('auth')->group(function () {
     Route::get('bundle/catalog', [BundleController::class, 'catalog'])->name('bundle.catalog');
     Route::get('bundle',         [BundleController::class, 'index'])->name('bundle.index');
 
+    // ── Bundling ──────────────────────────────────────────────
+    Route::prefix('bundling')->name('bundlings.')->group(function () {
+        Route::get('/',                          [BundlingController::class, 'index'])->name('index');
+        Route::get('/create',                    [BundlingController::class, 'create'])->name('create');
+        Route::post('/',                         [BundlingController::class, 'store'])->name('store');
+        Route::get('/{bundling}',                [BundlingController::class, 'show'])->name('show');
+        Route::get('/{bundling}/edit',           [BundlingController::class, 'edit'])->name('edit');
+        Route::post('/{bundling}',               [BundlingController::class, 'update'])->name('update');
+        Route::patch('/{bundling}/status',       [BundlingController::class, 'updateStatus'])->name('status');
+        Route::delete('/{bundling}',             [BundlingController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Diskon dan Kupon ──────────────────────────────────────
+    Route::get('/diskon-kupon', [DiskonController::class, 'index'])->name('diskon-kupon.index');
+    Route::post('/diskon-kupon', [DiskonController::class, 'store'])->name('diskon-kupon.store');
+    Route::get('/diskon-kupon/{diskon}', [DiskonController::class, 'show'])->name('diskon-kupon.show');
+    Route::put('/diskon-kupon/{diskon}', [DiskonController::class, 'update'])->name('diskon-kupon.update');
+    Route::delete('/diskon-kupon/{diskon}', [DiskonController::class, 'destroy'])->name('diskon-kupon.destroy');
+    Route::patch('/diskon-kupon/{diskon}/status', [DiskonController::class, 'toggleStatus'])->name('diskon-kupon.status');
+
     // ── Webinar ───────────────────────────────────────────────
     Route::get('/webinar', [WebinarController::class, 'index'])->name('webinar.index');
     Route::post('/webinars', [WebinarController::class, 'store'])->name('webinars.store');
@@ -307,6 +329,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/event/{event}/status', [EventController::class, 'updateStatus'])->name('event.status');
     Route::post('/event/{event}/daftar', [EventController::class, 'daftar'])
         ->middleware('auth:peserta');
+    Route::post('/events/{event}/tiket', [EventController::class, 'storeTiket'])->name('event.tiket.store');
+    Route::post('/events/{event}/pembicara', [EventController::class, 'storePembicara'])->name('event.pembicara.store');
+
     // Bootcamp CRUD
     Route::get('/bootcamps',                       [BootcampController::class, 'index'])->name('bootcamps.index');
     Route::post('/bootcamps',                      [BootcampController::class, 'store'])->name('bootcamps.store');
