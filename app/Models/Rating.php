@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Rating extends Model
 {
     protected $fillable = [
-        'bootcamp_id',
+        'bootcamp_id', // keeping for compatibility
         'peserta_id',
+        'rateable_id',
+        'rateable_type',
         'bintang',
         'ulasan',
         'tampil_anonim',
@@ -19,6 +21,14 @@ class Rating extends Model
         'tampil_anonim' => 'boolean',
         'bintang'       => 'integer',
     ];
+
+    /**
+     * Polymorphic relationship to any product.
+     */
+    public function rateable()
+    {
+        return $this->morphTo();
+    }
 
     public function bootcamp()
     {

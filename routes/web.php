@@ -384,6 +384,9 @@ Route::middleware('auth')->group(function () {
     // ── Pengaturan ────────────────────────────────────────────
     Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
 
+    // ── Penilaian dan Ulasan ──────────────────────────────────
+    Route::get('/penilaian-ulasan', [\App\Http\Controllers\PenilaianUlasanController::class, 'index'])->name('penilaian-ulasan.index');
+
     // ─────────────────────────────────────────────────────────
     // ── Berlangganan ──────────────────────────────────────────
     // ─────────────────────────────────────────────────────────
