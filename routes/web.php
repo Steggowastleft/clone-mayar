@@ -473,6 +473,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/verifications/{id}/decline', [AdminAccountVerificationController::class, 'decline'])->name('verifications.decline');
     });
 
+    // ── Penilaian dan Ulasan ──────────────────────────────────
+    Route::get('/penilaian-ulasan', [\App\Http\Controllers\PenilaianUlasanController::class, 'index'])->name('penilaian-ulasan.index');
+
     // ─────────────────────────────────────────────────────────
     // ── Berlangganan ──────────────────────────────────────────
     // ─────────────────────────────────────────────────────────

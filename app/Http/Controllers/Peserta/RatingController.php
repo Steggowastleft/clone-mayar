@@ -42,10 +42,12 @@ class RatingController extends Controller
         // Upsert — update jika sudah pernah rating
         Rating::updateOrCreate(
             [
-                'bootcamp_id' => $bootcamp->id,
+                'bootcamp_id' => $bootcamp->id, // keeping for backward compatibility
                 'peserta_id'  => $peserta->id,
             ],
             [
+                'rateable_id'   => $bootcamp->id,
+                'rateable_type' => Bootcamp::class,
                 'bintang'       => $request->bintang,
                 'ulasan'        => $request->ulasan,
                 'tampil_anonim' => $request->boolean('tampil_anonim'),
