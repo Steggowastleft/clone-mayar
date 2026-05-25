@@ -8,9 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('bundling_items');
         Schema::create('bundling_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('bundling_id')->constrained('bundlings')->cascadeOnDelete();
+            $table->unsignedBigInteger('bundling_id');
+            $table->foreign('bundling_id')
+                ->references('id')
+                ->on('bundlings')
+                ->cascadeOnDelete();
             $table->morphs('itemable'); // product_id & product_type
             $table->timestamps();
             

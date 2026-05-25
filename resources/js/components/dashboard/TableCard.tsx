@@ -7,6 +7,7 @@ interface Product {
   revenue: string | number;
   rating: number;
   image?: string;
+  penjual?: string;
 }
 
 interface TableCardProps {
@@ -56,6 +57,7 @@ export function TableCard({ title, data = [], isLoading = false }: TableCardProp
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="text-left py-3 px-6 text-[11px] font-semibold text-slate-400 uppercase tracking-wide w-10">#</th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Produk</th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Penjual</th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Terjual</th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Pendapatan</th>
                 <th className="text-right py-3 px-6 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Rating</th>
@@ -83,6 +85,11 @@ export function TableCard({ title, data = [], isLoading = false }: TableCardProp
                       )}
                       <span className="text-sm font-medium text-slate-800 line-clamp-1">{product.name}</span>
                     </div>
+                  </td>
+                  <td className="py-4 px-4 text-left">
+                    <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {product.penjual ?? "Admin"}
+                    </span>
                   </td>
                   <td className="py-4 px-4 text-right">
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">

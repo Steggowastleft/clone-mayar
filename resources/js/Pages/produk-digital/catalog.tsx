@@ -1,4 +1,5 @@
 import { Head, router } from "@inertiajs/react";
+import { useState } from "react";
 import {
   Users, DollarSign, ArrowRight,
   Megaphone, Calendar, ShoppingBag, Link,
@@ -15,10 +16,13 @@ type Produk = {
   tanggal: string;
   terjual: number;
   kategori: string;
+  kategori_display: string;
+  cover_url?: string;
 };
 
 type Props = {
   produk: Produk[];
+  categories: Record<string, string>;
 };
 
 type TypeConfig = {
@@ -84,8 +88,13 @@ function formatHarga(n?: number) {
   return `Rp ${Number(n).toLocaleString("id-ID")}`;
 }
 
-export default function Katalog({ produk }: Props) {
+export default function Katalog({ produk, categories }: Props) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const list = produk ?? [];
+
+  const filteredList = selectedCategory
+    ? list.filter((p) => p.kategori === selectedCategory)
+    : list;
 
   return (
     <>
@@ -98,20 +107,51 @@ export default function Katalog({ produk }: Props) {
           <div className="max-w-6xl mx-auto px-4">
             <h1 className="text-3xl font-extrabold">Katalog Produk Digital</h1>
             <p className="text-slate-300 mt-2 text-sm">
-              {list.length} produk tersedia — temukan yang terbaik untuk Anda 🚀
+              {filteredList.length} produk tersedia — temukan yang terbaik untuk Anda 🚀
             </p>
+          </div>
+        </div>
+
+        {/* CATEGORY FILTER */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  selectedCategory === null
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Semua Kategori
+              </button>
+              {Object.entries(categories).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedCategory(key)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                    selectedCategory === key
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* GRID */}
         <div className="max-w-6xl mx-auto px-4 py-8 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {list.length === 0 && (
+          {filteredList.length === 0 && (
             <p className="col-span-full text-center text-gray-400 py-16">
               Belum ada produk yang tersedia.
             </p>
           )}
 
-          {list.map((p) => {
+          {filteredList.map((p) => {
             const cfg = TYPE_CONFIG[p.type];
             const gradient = cfg?.gradient ?? "from-gray-400 to-gray-600";
 

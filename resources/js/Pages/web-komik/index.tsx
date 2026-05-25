@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Download, Printer, ShoppingBag, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
-
 type Produk = {
   id: number;
   nama: string;
@@ -17,11 +20,40 @@ type Produk = {
   tanggal: string;
 };
 
-type Props = { produk?: Produk[] };
+type Props = { produk?: Produk[], createOpen?: boolean };
 
-export default function WebKomik({ produk = [] }: Props) {
+export default function WebKomik({ produk = [], createOpen = false }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [openCreate, setOpenCreate] = useState(createOpen);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [form, setForm] = useState({
+    nama: "",
+    kategori: "komik",
+    genre: "",
+    author: "",
+    format: "",
+    bahasa: "",
+    tipe: "chapter",
+    harga: "",
+    deskripsi: ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.nama) return toast.error("Nama komik wajib diisi");
+    
+    setIsSubmitting(true);
+    router.post("/web-komik", form as any, {
+      onSuccess: () => {
+        setOpenCreate(false);
+        setIsSubmitting(false);
+        toast.success("Web Komik berhasil dibuat");
+      },
+      onError: () => setIsSubmitting(false)
+    });
+  };
 
   const filtered = produk.filter((p) => {
     const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
@@ -57,7 +89,7 @@ export default function WebKomik({ produk = [] }: Props) {
               <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50" onClick={() => window.open("/web-komik/catalog", "_blank")}>
                 PRODUK
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">+ BUAT</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setOpenCreate(true)}>+ BUAT</Button>
             </div>
           </div>
 
@@ -135,11 +167,76 @@ export default function WebKomik({ produk = [] }: Props) {
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             Katalog adalah halaman online dimana semua Web Komik Anda yang aktif ditampilkan.
           </p>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">
+          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold" onClick={() => setOpenCreate(true)}>
             + Buat Web Komik Baru
           </Button>
         </div>
       </div>
+
+      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-blue-600 p-4 -mx-6 -mt-6 mb-4">
+            <DialogTitle className="text-white">Buat Web Komik Baru</DialogTitle>
+            <p className="text-blue-100 text-sm">Tambahkan detail komik anda</p>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Nama Komik <span className="text-red-500">*</span></Label>
+              <Input value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} placeholder="Judul Komik" required />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Author / Komikus</Label>
+                <Input value={form.author} onChange={e => setForm({...form, author: e.target.value})} placeholder="Nama Komikus" />
+              </div>
+              <div className="space-y-1">
+                <Label>Genre</Label>
+                <Input value={form.genre} onChange={e => setForm({...form, genre: e.target.value})} placeholder="Contoh: Action, Fantasy" />
+              </div>
+              <div className="space-y-1">
+                <Label>Format File</Label>
+                <Input value={form.format} onChange={e => setForm({...form, format: e.target.value})} placeholder="Contoh: PDF, JPG" />
+              </div>
+              <div className="space-y-1">
+                <Label>Bahasa</Label>
+                <Input value={form.bahasa} onChange={e => setForm({...form, bahasa: e.target.value})} placeholder="Contoh: Indonesia" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Tipe Terbitan</Label>
+                <select 
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-gray-700"
+                  value={form.tipe} 
+                  onChange={e => setForm({...form, tipe: e.target.value})}
+                >
+                  <option value="one_shot">One Shot</option>
+                  <option value="chapter">Ber-Chapter / Volume</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label>Harga (Rp)</Label>
+                <Input type="number" value={form.harga} onChange={e => setForm({...form, harga: e.target.value})} placeholder="0" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Deskripsi / Sinopsis</Label>
+              <Textarea value={form.deskripsi} onChange={e => setForm({...form, deskripsi: e.target.value})} rows={3} placeholder="Sinopsis komik..." />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setOpenCreate(false)}>Batal</Button>
+              <Button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

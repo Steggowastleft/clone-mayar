@@ -8,7 +8,9 @@ type Props = {
 };
 
 export default function DashboardLayout({ title, children }: Props) {
-  const { auth, ziggy } = usePage().props as any;
+  const { auth } = usePage().props as any;
+  const { url } = usePage();
+  const currentPath = url.split(/[?#]/)[0];
 
   return (
     <>
@@ -18,8 +20,9 @@ export default function DashboardLayout({ title, children }: Props) {
           user={{
             name:  auth?.user?.name  || "Penjual",
             email: auth?.user?.email || "",
+            role:  auth?.user?.role,
           }}
-          currentPath={ziggy?.location ? new URL(ziggy.location).pathname : ""}
+          currentPath={currentPath}
         />
         <main className="flex-1 min-w-0 overflow-y-auto">
           {children}

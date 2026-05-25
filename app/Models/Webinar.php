@@ -79,4 +79,10 @@ class Webinar extends Model
     {
         return $this->hasMany(WebinarPembicara::class)->latest();
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
+

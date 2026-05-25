@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
             'bootcamp' => \App\Models\Bootcamp::class,
             'event' => \App\Models\Event::class,
             'webinar' => \App\Models\Webinar::class,
+            'ebook' => \App\Models\Ebook::class,
+            'produkdigital' => \App\Models\Produkdigital::class,
+            'bundling' => \App\Models\Bundling::class,
+            'user' => \App\Models\User::class,
+            'kelas_online' => \App\Models\KelasOnline::class,
         ]);
     }
 }

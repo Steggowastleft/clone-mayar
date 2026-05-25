@@ -8,6 +8,10 @@ use App\Models\Webinar;
 use App\Models\Bootcamp;
 use App\Models\Ebook;
 use App\Models\Produkdigital;
+use App\Models\CoachingMentoring;
+use App\Models\Tulisan;
+use App\Models\KelasOnline;
+use App\Models\PaymentLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +25,7 @@ class DiskonController extends Controller
     // ─────────────────────────────────────
     public function index(): Response
     {
-        $diskons = Diskon::where('user_id', Auth::id())
+        $diskons = Diskon::with('user')
             ->latest()
             ->get()
             ->map(fn($d) => [
@@ -37,6 +41,7 @@ class DiskonController extends Controller
                 'batas_pemakaian' => $d->batas_pemakaian,
                 'tanggal_kadaluarsa' => $d->tanggal_kadaluarsa?->format('d M Y H:i'),
                 'created_at' => $d->created_at->format('d M Y'),
+                'penjual' => $d->user?->name ?? 'Admin',
             ]);
 
         // Get all products for selection
@@ -65,6 +70,7 @@ class DiskonController extends Controller
             'untuk_pelanggan' => 'required|in:semua,pilih',
             'kode_kupon' => 'required|string|max:50|unique:diskons,kode_kupon',
             'batas_pemakaian' => 'nullable|integer|min:1',
+            'batas_per_orang' => 'nullable|integer|min:1',
             'waktu_mulai' => 'nullable|date',
             'tanggal_kadaluarsa' => 'nullable|date|after:waktu_mulai',
         ]);
@@ -142,6 +148,7 @@ class DiskonController extends Controller
             'untuk_pelanggan' => 'required|in:semua,pilih',
             'kode_kupon' => 'required|string|max:50|unique:diskons,kode_kupon,' . $diskon->id,
             'batas_pemakaian' => 'nullable|integer|min:1',
+            'batas_per_orang' => 'nullable|integer|min:1',
             'waktu_mulai' => 'nullable|date',
             'tanggal_kadaluarsa' => 'nullable|date|after:waktu_mulai',
             'status' => 'required|in:aktif,nonaktif',
@@ -201,7 +208,7 @@ class DiskonController extends Controller
                 'id' => 'event:' . $e->id,
                 'nama' => $e->nama,
                 'tipe' => 'Event',
-                'harga' => 0, // Events might have tickets with different prices
+                'harga' => 0,
             ]);
         $produk = array_merge($produk, $events->toArray());
 
@@ -223,7 +230,7 @@ class DiskonController extends Controller
             ->get()
             ->map(fn($b) => [
                 'id' => 'bootcamp:' . $b->id,
-                'nama' => $b->nama,
+                'nama' => $b->nama ?? $b->name,
                 'tipe' => 'Bootcamp',
                 'harga' => $b->harga ?? 0,
             ]);
@@ -253,6 +260,54 @@ class DiskonController extends Controller
             ]);
         $produk = array_merge($produk, $produkDigital->toArray());
 
+        // Coaching Mentoring
+        $coachings = CoachingMentoring::where('user_id', $userId)
+            ->where('status', 'published')
+            ->get()
+            ->map(fn($c) => [
+                'id' => 'coaching-mentoring:' . $c->id,
+                'nama' => $c->nama,
+                'tipe' => 'Coaching / Mentoring',
+                'harga' => $c->harga ?? 0,
+            ]);
+        $produk = array_merge($produk, $coachings->toArray());
+
+        // Tulisan
+        $tulisans = Tulisan::where('user_id', $userId)
+            ->where('status', 'published')
+            ->get()
+            ->map(fn($t) => [
+                'id' => 'tulisan:' . $t->id,
+                'nama' => $t->nama,
+                'tipe' => 'Tulisan',
+                'harga' => $t->harga ?? 0,
+            ]);
+        $produk = array_merge($produk, $tulisans->toArray());
+
+        // Kelas Online
+        $kelasOnlines = KelasOnline::where('user_id', $userId)
+            ->whereIn('status', ['published', 'aktif'])
+            ->get()
+            ->map(fn($k) => [
+                'id' => 'kelas-online:' . $k->id,
+                'nama' => $k->nama,
+                'tipe' => 'Kelas Online',
+                'harga' => $k->harga ?? 0,
+            ]);
+        $produk = array_merge($produk, $kelasOnlines->toArray());
+
+        // Payment Link
+        $paymentLinks = PaymentLink::where('user_id', $userId)
+            ->where('status', 'published')
+            ->get()
+            ->map(fn($l) => [
+                'id' => 'payment-link:' . $l->id,
+                'nama' => $l->nama,
+                'tipe' => 'Link Pembayaran',
+                'harga' => $l->harga ?? 0,
+            ]);
+        $produk = array_merge($produk, $paymentLinks->toArray());
+
         return $produk;
     }
 
@@ -275,18 +330,131 @@ class DiskonController extends Controller
                 'bootcamp' => Bootcamp::find($realId),
                 'ebook' => Ebook::find($realId),
                 'produk-digital' => Produkdigital::find($realId),
+                'coaching-mentoring' => CoachingMentoring::find($realId),
+                'tulisan' => Tulisan::find($realId),
+                'kelas-online' => KelasOnline::find($realId),
+                'payment-link' => PaymentLink::find($realId),
                 default => null,
             };
 
             if ($model) {
                 $result[] = [
                     'id' => $id,
-                    'nama' => $model->nama,
+                    'nama' => $model->nama ?? $model->name,
                     'tipe' => ucfirst(str_replace('-', ' ', $type)),
                 ];
             }
         }
 
         return $result;
+    }
+
+    public function validateCoupon(Request $request)
+    {
+        $request->validate([
+            'kode_kupon' => 'required|string',
+            'product_id' => 'required|string', // format: "type:id" e.g. "ebook:1"
+            'harga' => 'required|numeric',
+        ]);
+
+        $kode = strtoupper($request->kode_kupon);
+        $productId = $request->product_id;
+        $harga = floatval($request->harga);
+
+        // Find diskon
+        $diskon = Diskon::whereRaw('UPPER(kode_kupon) = ?', [$kode])->first();
+
+        if (!$diskon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode kupon tidak valid atau tidak ditemukan.',
+            ], 422);
+        }
+
+        // Check status
+        $isAktif = ($diskon->status === 'aktif' || $diskon->is_aktif);
+        if (!$isAktif) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kupon ini sudah tidak aktif.',
+            ], 422);
+        }
+
+        // Check tanggal mulai
+        if ($diskon->waktu_mulai && now() < \Carbon\Carbon::parse($diskon->waktu_mulai)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kupon ini belum bisa digunakan.',
+            ], 422);
+        }
+
+        // Check tanggal kadaluarsa
+        if ($diskon->tanggal_kadaluarsa && now() > \Carbon\Carbon::parse($diskon->tanggal_kadaluarsa)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kupon ini sudah kedaluwarsa.',
+            ], 422);
+        }
+
+        // Check limit pemakaian
+        if ($diskon->batas_pemakaian !== null && $diskon->jumlah_dipakai >= $diskon->batas_pemakaian) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kuota penggunaan kupon ini sudah habis.',
+            ], 422);
+        }
+
+        // Check minimum pembelian
+        if ($diskon->minimum_pembelian !== null && $harga < $diskon->minimum_pembelian) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Minimum pembelian untuk menggunakan kupon ini adalah Rp ' . number_format($diskon->minimum_pembelian, 0, ',', '.'),
+            ], 422);
+        }
+
+        // Check target produk
+        if ($diskon->untuk_produk === 'pilih') {
+            $productIds = $diskon->produk_ids ?? [];
+            if (!is_array($productIds)) {
+                $productIds = json_decode($productIds, true) ?? [];
+            }
+            // Normalize product ID comparison. In DB, it might be stored as e.g. "ebook:1", or type name might have underscores, etc.
+            // Let's normalize it to lowercase
+            $normalizedProductId = strtolower($productId);
+            $normalizedProductIds = array_map('strtolower', $productIds);
+
+            if (!in_array($normalizedProductId, $normalizedProductIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kupon ini tidak dapat digunakan untuk produk ini.',
+                ], 422);
+            }
+        }
+
+        // Calculate discount
+        $besaran = floatval($diskon->besaran);
+        $discountAmount = 0;
+        if ($diskon->tipe_diskon === 'persentase') {
+            $discountAmount = ($besaran / 100) * $harga;
+        } else {
+            $discountAmount = $besaran;
+        }
+
+        // Discount cannot exceed original price
+        if ($discountAmount > $harga) {
+            $discountAmount = $harga;
+        }
+
+        $finalPrice = $harga - $discountAmount;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kupon berhasil diterapkan!',
+            'diskon_id' => $diskon->id,
+            'tipe_diskon' => $diskon->tipe_diskon,
+            'besaran' => $besaran,
+            'discount_amount' => $discountAmount,
+            'final_price' => $finalPrice,
+        ]);
     }
 }

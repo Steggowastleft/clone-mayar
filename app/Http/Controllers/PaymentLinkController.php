@@ -54,6 +54,13 @@ class PaymentLinkController extends Controller
     // ─────────────────────────────────────────────────────
     public function store(Request $request)
     {
+        // Guard: only allow users with approved verification to create payment links
+        $user = Auth::user();
+        $verif = \App\Models\AccountVerification::where('user_id', $user->id)->orderByDesc('created_at')->first();
+        if (!$verif || $verif->status !== 'approved') {
+            return back()->with('error', 'Akun kamu belum terverifikasi. Silakan verifikasi akun terlebih dahulu untuk membuat pembayaran.');
+        }
+
         $validated = $request->validate([
             'nama'                => 'required|string|max:150',
             'harga'               => 'required|integer|min:0',

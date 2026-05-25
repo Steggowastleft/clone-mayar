@@ -40,6 +40,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $w->created_at->format('d M Y H:i'),
                 'terjual' => $w->peserta ?? 0,
                 'kategori' => 'Webinar',
+                'cover_url' => $w->cover ? asset('storage/' . $w->cover) : null,
             ])->toArray();
         $products = array_merge($products, $webinars);
 
@@ -57,6 +58,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $e->created_at->format('d M Y H:i'),
                 'terjual' => $e->pendaftaran()->count(),
                 'kategori' => 'Event',
+                'cover_url' => $e->cover_url,
             ])->toArray();
         $products = array_merge($products, $events);
 
@@ -74,6 +76,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $p->created_at->format('d M Y H:i'),
                 'terjual' => $p->total_penjualan ?? 0,
                 'kategori' => 'Produk Digital',
+                'cover_url' => $p->cover_url,
             ])->toArray();
         $products = array_merge($products, $produkDigital);
 
@@ -91,6 +94,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $l->created_at->format('d M Y H:i'),
                 'terjual' => 0,
                 'kategori' => 'Link Pembayaran',
+                'cover_url' => $l->cover_url,
             ])->toArray();
         $products = array_merge($products, $paymentLink);
 
@@ -108,6 +112,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $b->created_at->format('d M Y H:i'),
                 'terjual' => $b->pendaftaran()->count(),
                 'kategori' => 'Bootcamp',
+                'cover_url' => $b->cover_url,
             ])->toArray();
         $products = array_merge($products, $bootcamp);
 
@@ -125,6 +130,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $c->created_at->format('d M Y H:i'),
                 'terjual' => $c->total_penjualan ?? 0,
                 'kategori' => 'Coaching / Mentoring',
+                'cover_url' => $c->cover ? asset('storage/' . $c->cover) : null,
             ])->toArray();
         $products = array_merge($products, $coachings);
 
@@ -142,6 +148,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $p->created_at->format('d M Y H:i'),
                 'terjual' => $p->pembeli ?? 0,
                 'kategori' => 'Penggalangan Dana',
+                'cover_url' => $p->cover ? asset('storage/' . $p->cover) : null,
             ])->toArray();
         $products = array_merge($products, $penggalanganDana);
 
@@ -159,6 +166,7 @@ class SemuaProdukController extends Controller
                 'tanggal' => $t->created_at->format('d M Y H:i'),
                 'terjual' => $t->terjual ?? 0,
                 'kategori' => 'Tulisan',
+                'cover_url' => $t->cover ? asset('storage/' . $t->cover) : null,
             ])->toArray();
         $products = array_merge($products, $tulisan);
 
@@ -176,8 +184,10 @@ class SemuaProdukController extends Controller
                 'tanggal' => $k->created_at->format('d M Y H:i'),
                 'terjual' => $k->pesertaTerdaftar()->count(),
                 'kategori' => 'Kelas Online',
+                'cover_url' => $k->thumbnail ? asset('storage/' . $k->thumbnail) : null,
             ])->toArray();
         $products = array_merge($products, $kelasOnline);
+
 
         // Fetch Ebook (Belum Ada Model - Commented out)
         /*
@@ -326,9 +336,28 @@ class SemuaProdukController extends Controller
             default => abort(404),
         };
 
+        $oldFiles = [];
+        if ($type === 'produk-digital') {
+            $oldFiles = Produkdigital::where('user_id', Auth::id())
+                ->whereNotNull('file_path')
+                ->where('sumber_file', 'upload')
+                ->select('id', 'file_path', 'file_url', 'nama')
+                ->latest()
+                ->get()
+                ->map(fn($p) => [
+                    'id' => $p->file_path,
+                    'label' => $p->nama . ' (' . basename($p->file_path) . ')',
+                    'file_path' => $p->file_path,
+                    'file_url' => $p->file_url,
+                ])
+                ->unique('id')
+                ->values();
+        }
+
         return Inertia::render('semua-produk/show', [
             'product' => $product,
             'type' => $type,
+            'oldFiles' => $oldFiles,
         ]);
     }
 

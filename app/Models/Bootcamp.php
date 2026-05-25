@@ -107,5 +107,8 @@ class Bootcamp extends Model
         return $this->hasMany(\App\Models\Sertifikat::class);
     }
 
-
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
 }

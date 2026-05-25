@@ -611,21 +611,7 @@ export default function Index({ links }: IndexProps) {
               </p>
             </div>
 
-            {/* Affiliate Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <Label className="text-sm font-medium text-gray-700">
-                  Produk bisa diaffiliate
-                </Label>
-                <p className="text-xs text-gray-400">
-                  Izinkan affiliate untuk mempromosikan link pembayaran ini
-                </p>
-              </div>
-              <Switch
-                checked={formData.bisa_affiliate}
-                onCheckedChange={(v) => setFormData({ ...formData, bisa_affiliate: v })}
-              />
-            </div>
+
 
             {/* Buttons */}
             <div className="flex gap-3 pt-2">

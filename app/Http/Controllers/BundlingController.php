@@ -9,6 +9,10 @@ use App\Models\Ebook;
 use App\Models\Webinar;
 use App\Models\Event;
 use App\Models\Produkdigital;
+use App\Models\CoachingMentoring;
+use App\Models\Tulisan;
+use App\Models\KelasOnline;
+use App\Models\PaymentLink;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -34,8 +38,11 @@ class BundlingController extends Controller
                 ];
             });
 
+        $products = $this->getAvailableProducts();
+
         return Inertia::render('bundlings/index', [
             'bundlings' => $bundlings,
+            'products' => $products,
         ]);
     }
 
@@ -63,7 +70,7 @@ class BundlingController extends Controller
             'redirectUrl' => 'nullable|url',
             'bisaAffiliate' => 'nullable|boolean',
             'produkIds' => 'required|array|min:1',
-            'produkIds.*' => 'required|string',
+            'produkIds.*' => 'required',
         ]);
 
         $coverPath = null;
@@ -97,7 +104,7 @@ class BundlingController extends Controller
 
     public function show(Bundling $bundling)
     {
-        $this->authorize('update', $bundling);
+      
 
         $bundling->load(['items', 'registrations']);
 
@@ -108,7 +115,7 @@ class BundlingController extends Controller
                 'nama' => $product->nama ?? $product->name ?? $product->judul ?? '-',
                 'tipe' => class_basename($item->itemable_type),
                 'harga' => $product->harga ?? 0,
-                'cover' => $product->cover_url ?? $product->cover_url ?? null,
+                'cover' => $product->cover_url ?? $product->cover ?? null,
             ];
         });
 
@@ -136,14 +143,25 @@ class BundlingController extends Controller
 
     public function edit(Bundling $bundling)
     {
-        $this->authorize('update', $bundling);
+        
 
         $bundling->load('items');
         $products = $this->getAvailableProducts();
         $selectedProducts = $bundling->items->map(function ($item) {
+            $typeStr = class_basename($item->itemable_type);
+            if ($typeStr === 'Produkdigital') {
+                $typeStr = 'Produk Digital';
+            } elseif ($typeStr === 'CoachingMentoring') {
+                $typeStr = 'Coaching / Mentoring';
+            } elseif ($typeStr === 'KelasOnline') {
+                $typeStr = 'Kelas Online';
+            } elseif ($typeStr === 'PaymentLink') {
+                $typeStr = 'Link Pembayaran';
+            }
             return [
                 'id' => $item->itemable_id . '|' . $item->itemable_type,
                 'nama' => $item->itemable->nama ?? $item->itemable->name ?? $item->itemable->judul ?? '-',
+                'type' => $typeStr,
             ];
         });
 
@@ -169,7 +187,7 @@ class BundlingController extends Controller
 
     public function update(Request $request, Bundling $bundling)
     {
-        $this->authorize('update', $bundling);
+        
 
         $request->validate([
             'nama' => 'required|string|max:255',
@@ -184,7 +202,7 @@ class BundlingController extends Controller
             'redirectUrl' => 'nullable|url',
             'bisaAffiliate' => 'nullable|boolean',
             'produkIds' => 'required|array|min:1',
-            'produkIds.*' => 'required|string',
+            'produkIds.*' => 'required',
         ]);
 
         $coverPath = $bundling->cover;
@@ -220,7 +238,7 @@ class BundlingController extends Controller
 
     public function destroy(Bundling $bundling)
     {
-        $this->authorize('delete', $bundling);
+      
 
         if ($bundling->cover) {
             Storage::disk('public')->delete($bundling->cover);
@@ -233,7 +251,6 @@ class BundlingController extends Controller
 
     public function updateStatus(Request $request, Bundling $bundling)
     {
-        $this->authorize('update', $bundling);
 
         $bundling->update([
             'status' => $request->status ?? ($bundling->status === 'published' ? 'unpublished' : 'published'),
@@ -245,8 +262,75 @@ class BundlingController extends Controller
         ]);
     }
 
-    private function addBundlingItem(Bundling $bundling, string $produkId)
+    public function catalog()
     {
+        $bundlings = Bundling::published()
+            ->with('items')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($bundling) {
+                return [
+                    'id' => $bundling->id,
+                    'nama' => $bundling->nama,
+                    'harga' => $bundling->harga,
+                    'harga_coret' => $bundling->harga_coret,
+                    'cover_url' => $bundling->cover_url,
+                    'jumlah_produk' => $bundling->items->count(),
+                    'jumlah_terjual' => $bundling->jumlah_terjual,
+                    'status' => $bundling->status,
+                ];
+            });
+
+        return Inertia::render('bundlings/catalog', [
+            'bundlings' => $bundlings,
+        ]);
+    }
+
+    public function publicShow(Bundling $bundling)
+    {
+        if ($bundling->status !== 'published') {
+            abort(404);
+        }
+
+        $bundling->load('items');
+
+        $items = $bundling->items->map(function ($item) {
+            $product = $item->itemable;
+            return [
+                'id' => $item->id,
+                'nama' => $product->nama ?? $product->name ?? $product->judul ?? '-',
+                'tipe' => class_basename($item->itemable_type),
+                'harga' => $product->harga ?? 0,
+                'cover' => $product->cover_url ?? $product->cover ?? null,
+                'deskripsi' => $product->deskripsi ?? '',
+            ];
+        });
+
+        return Inertia::render('bundlings/public', [
+            'bundling' => [
+                'id' => $bundling->id,
+                'nama' => $bundling->nama,
+                'harga' => $bundling->harga,
+                'harga_coret' => $bundling->harga_coret,
+                'deskripsi' => $bundling->deskripsi,
+                'cover_url' => $bundling->cover_url,
+                'items' => $items,
+                'jumlah_terjual' => $bundling->jumlah_terjual,
+            ],
+        ]);
+    }
+
+    private function addBundlingItem(Bundling $bundling, $produkId)
+    {
+        // Handle if passed as object/array from frontend
+        if (is_array($produkId) && isset($produkId['id'])) {
+            $produkId = $produkId['id'];
+        }
+
+        if (!is_string($produkId) || !str_contains($produkId, '|')) {
+            return;
+        }
+
         [$id, $type] = explode('|', $produkId);
 
         $modelClass = $this->getModelClass($type);
@@ -291,7 +375,7 @@ class BundlingController extends Controller
 
         // Get Webinars
         $webinars = Webinar::where('user_id', $userId)
-            ->select('id', 'judul as nama', 'harga', 'cover')
+            ->select('id', 'nama', 'harga', 'cover')
             ->get()
             ->map(fn($w) => array_merge($w->toArray(), [
                 'type' => 'Webinar',
@@ -300,7 +384,7 @@ class BundlingController extends Controller
 
         // Get Events
         $events = Event::where('user_id', $userId)
-            ->select('id', 'judul as nama', 'harga', 'cover')
+            ->select('id', 'nama', 'harga', 'cover')
             ->get()
             ->map(fn($e) => array_merge($e->toArray(), [
                 'type' => 'Event',
@@ -316,24 +400,73 @@ class BundlingController extends Controller
                 'id_type' => $p->id . '|' . Produkdigital::class,
             ]));
 
+        // Get Coaching / Mentoring
+        $coachings = CoachingMentoring::where('user_id', $userId)
+            ->select('id', 'nama', 'harga', 'cover')
+            ->get()
+            ->map(fn($c) => array_merge($c->toArray(), [
+                'type' => 'Coaching / Mentoring',
+                'id_type' => $c->id . '|' . CoachingMentoring::class,
+            ]));
+
+        // Get Tulisan
+        $tulisans = Tulisan::where('user_id', $userId)
+            ->select('id', 'nama', 'harga', 'cover')
+            ->get()
+            ->map(fn($t) => array_merge($t->toArray(), [
+                'type' => 'Tulisan',
+                'id_type' => $t->id . '|' . Tulisan::class,
+            ]));
+
+        // Get Kelas Online
+        $kelasOnlines = KelasOnline::where('user_id', $userId)
+            ->select('id', 'nama', 'harga', 'thumbnail as cover')
+            ->get()
+            ->map(fn($k) => array_merge($k->toArray(), [
+                'type' => 'Kelas Online',
+                'id_type' => $k->id . '|' . KelasOnline::class,
+            ]));
+
+        // Get Link Pembayaran
+        $paymentLinks = PaymentLink::where('user_id', $userId)
+            ->select('id', 'nama', 'harga', 'cover')
+            ->get()
+            ->map(fn($l) => array_merge($l->toArray(), [
+                'type' => 'Link Pembayaran',
+                'id_type' => $l->id . '|' . PaymentLink::class,
+            ]));
+
         return collect()
             ->concat($bootcamps)
             ->concat($ebooks)
             ->concat($webinars)
             ->concat($events)
             ->concat($produksDigital)
+            ->concat($coachings)
+            ->concat($tulisans)
+            ->concat($kelasOnlines)
+            ->concat($paymentLinks)
             ->sortBy('nama')
             ->values();
     }
 
     private function getModelClass(string $type): ?string
     {
+        // If it's already a full class name
+        if (str_contains($type, 'App\\Models\\')) {
+            return $type;
+        }
+
         $models = [
             'Bootcamp' => Bootcamp::class,
             'Ebook' => Ebook::class,
             'Webinar' => Webinar::class,
             'Event' => Event::class,
             'Produkdigital' => Produkdigital::class,
+            'CoachingMentoring' => CoachingMentoring::class,
+            'Tulisan' => Tulisan::class,
+            'KelasOnline' => KelasOnline::class,
+            'PaymentLink' => PaymentLink::class,
         ];
 
         return $models[$type] ?? null;

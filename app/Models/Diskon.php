@@ -19,6 +19,7 @@ class Diskon extends Model
         'untuk_pelanggan',
         'kode_kupon',
         'batas_pemakaian',
+        'batas_per_orang',
         'waktu_mulai',
         'tanggal_kadaluarsa',
         'status',
@@ -32,6 +33,7 @@ class Diskon extends Model
         'waktu_mulai' => 'datetime',
         'tanggal_kadaluarsa' => 'datetime',
         'batas_pemakaian' => 'integer',
+        'batas_per_orang' => 'integer',
         'jumlah_dipakai' => 'integer',
     ];
 

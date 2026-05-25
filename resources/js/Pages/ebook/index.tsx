@@ -53,6 +53,7 @@ type Ebook = {
 
 type IndexProps = {
   produk: Ebook[];
+  createOpen?: boolean;
 };
 
 // ─── DateTimePickerField ───
@@ -151,7 +152,6 @@ const defaultForm = {
   format: "",
   bahasa: "",
   jumlah_halaman: "",
-  affiliate_enabled: false,
 };
 
 // ─── Formatter ───
@@ -160,12 +160,12 @@ const formatRupiah = (number: string | number) => {
 };
 
 // ─── Main ───
-export default function Index({ produk = [] }: IndexProps) {
+export default function Index({ produk = [], createOpen: initialCreateOpen = false }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dateOpen, setDateOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(initialCreateOpen);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({ ...defaultForm });
@@ -256,7 +256,6 @@ export default function Index({ produk = [] }: IndexProps) {
     payload.append("format", formData.format);
     payload.append("bahasa", formData.bahasa);
     payload.append("jumlah_halaman", formData.jumlah_halaman);
-    payload.append("affiliate_enabled", formData.affiliate_enabled ? "1" : "0");
 
     if (tanggalMulaiJual) payload.append("tanggal_mulai_jual", format(tanggalMulaiJual, "yyyy-MM-dd HH:mm:ss"));
     if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd HH:mm:ss"));
@@ -739,16 +738,6 @@ export default function Index({ produk = [] }: IndexProps) {
                   </Popover>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Produk bisa diaffiliate</Label>
-                    <p className="text-xs text-gray-400">Izinkan affiliate untuk mempromosikan ebook ini</p>
-                  </div>
-                  <Switch
-                    checked={formData.affiliate_enabled}
-                    onCheckedChange={(v) => setFormData({ ...formData, affiliate_enabled: v })}
-                  />
-                </div>
               </div>
             </div>
 

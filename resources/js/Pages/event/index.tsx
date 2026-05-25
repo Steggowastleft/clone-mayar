@@ -132,7 +132,6 @@ const defaultForm = {
   instruksi: "",
   syaratKetentuan: "",
   maxTiketPerTransaksi: "1",
-  bisaAffiliate: false,
 };
 
 // ─── Main ───
@@ -262,7 +261,6 @@ export default function Index({ events }: IndexProps) {
       "max_tiket_per_transaksi",
       formData.maxTiketPerTransaksi
     );
-    payload.append("bisa_affiliate", formData.bisaAffiliate ? "1" : "0");
     if (waktuMulai)
       payload.append(
         "waktu_mulai",
@@ -816,24 +814,6 @@ export default function Index({ events }: IndexProps) {
                 Pelanggan akan dibawa ke halaman ini setelah membayar
                 (opsional / bisa dikosongkan).
               </p>
-            </div>
-
-            {/* Affiliate Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <Label className="text-sm font-medium text-gray-700">
-                  Produk bisa diaffiliate
-                </Label>
-                <p className="text-xs text-gray-400">
-                  Izinkan affiliate untuk mempromosikan event ini
-                </p>
-              </div>
-              <Switch
-                checked={formData.bisaAffiliate}
-                onCheckedChange={(v) =>
-                  setFormData({ ...formData, bisaAffiliate: v })
-                }
-              />
             </div>
 
             {/* Buttons */}

@@ -45,6 +45,7 @@ interface DashboardData {
   transaksiTrend?: number | null;
   chartData: ChartDataPoint[];
   products: Product[];
+  allProducts: any[];
   transactions: Transaction[];
   reviews: Review[];
 }
@@ -53,6 +54,8 @@ type DashboardProps = {
   dashboardData: DashboardData;
   user?: {
     name: string;
+    role?: string;
+    verificationStatus?: 'unverified' | 'pending' | 'approved' | 'rejected';
   };
 };
 
@@ -65,6 +68,7 @@ const EMPTY_DATA: DashboardData = {
   pendingPayment: 0,
   chartData: [],
   products: [],
+  allProducts: [],
   transactions: [],
   reviews: [],
 };
@@ -73,13 +77,17 @@ const EMPTY_DATA: DashboardData = {
 
 export default function Dashboard({ user, dashboardData }: DashboardProps) {
   const userName = user?.name || "Pengguna";
+  const userRole = user?.role || "Creator";
   const safeData = dashboardData ?? EMPTY_DATA;
+  const verificationStatus = user?.verificationStatus || 'unverified';
 
   return (
     <DashboardLayout title="Dashboard">
       <Head title="Dashboard" />
       <AdminDashboard
         userName={userName}
+        userRole={userRole}
+        verificationStatus={verificationStatus}
         serverData={safeData}
       />
     </DashboardLayout>

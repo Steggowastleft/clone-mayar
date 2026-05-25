@@ -44,6 +44,7 @@ export type ProdukDigitalData = {
 
 type Props = {
   produk: ProdukDigitalData;
+  oldFiles: any[];
 };
 
 // ─── Placeholder tab ─────────────────────────────────────────────────
@@ -60,7 +61,7 @@ function TabPlaceholder({ label }: { label: string }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────
 
-export default function ProdukDigitalShow({ produk }: Props) {
+export default function ProdukDigitalShow({ produk, oldFiles }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
   const tabs = [
@@ -173,7 +174,7 @@ export default function ProdukDigitalShow({ produk }: Props) {
         <div className="flex gap-5">
           <div className="flex-1 min-w-0">{renderTab()}</div>
           <div className="w-64 shrink-0">
-            <SidebarPanel produk={produk} />
+            <SidebarPanel produk={produk} oldFiles={oldFiles} />
           </div>
         </div>
       </div>

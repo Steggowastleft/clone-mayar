@@ -16,6 +16,7 @@ type PermintaanBayar = {
   keterangan: string;
   status: "menunggu" | "dibayar" | "kadaluarsa" | "dibatalkan";
   tanggal: string;
+  penjual?: string;
 };
 
 type Props = { permintaan?: PermintaanBayar[] };
@@ -100,7 +101,12 @@ export default function PermintaanBayarIndex({ permintaan = [] }: Props) {
                         <p className="font-semibold text-gray-800">{p.nama}</p>
                         <p className="text-sm text-gray-500">{p.kode} · {p.email} · {p.tanggal}</p>
                         <p className="text-sm text-gray-500">{p.keterangan}</p>
-                        <p className="text-sm font-medium text-blue-600">Rp {p.jumlah.toLocaleString("id-ID")}</p>
+                        <div className="flex gap-4 mt-1">
+                          <p className="text-sm font-medium text-blue-600">Rp {p.jumlah.toLocaleString("id-ID")}</p>
+                          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                            {p.penjual ?? "Admin"}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {statusBadge(p.status)}

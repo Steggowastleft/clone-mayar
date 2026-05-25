@@ -117,7 +117,6 @@ const defaultForm = {
   maxPeserta: "",
   batasNilaiQuiz: "",
   redirectUrl: "",
-  bisaAffiliate: false,
 };
 
 // ─── Main ───
@@ -195,7 +194,6 @@ export default function Index({ bootcamps }: IndexProps) {
     payload.append("maxPeserta", formData.maxPeserta);
     payload.append("batasNilaiQuiz", formData.batasNilaiQuiz);
     payload.append("redirectUrl", formData.redirectUrl);
-    payload.append("bisaAffiliate", formData.bisaAffiliate ? "1" : "0");
     if (rangePenjualan?.from)
   payload.append("tanggalMulaiJual", format(rangePenjualan.from, "yyyy-MM-dd"));
 
@@ -212,9 +210,9 @@ export default function Index({ bootcamps }: IndexProps) {
     router.post("/bootcamps", payload, {
       forceFormData: true,
       onSuccess: (page) => {
-        // Backend harus return redirect ke /bootcamps/{id}
         setCreateOpen(false);
         setIsSubmitting(false);
+        router.reload();
       },
       onError: () => {
         setIsSubmitting(false);
@@ -572,16 +570,6 @@ export default function Index({ bootcamps }: IndexProps) {
               <Input type="url" placeholder="https://example.com/thank-you"
                 value={formData.redirectUrl} onChange={(e) => setFormData({ ...formData, redirectUrl: e.target.value })} />
               <p className="text-xs text-gray-400">Pelanggan akan dibawa ke halaman ini setelah membayar (opsional / bisa dikosongkan).</p>
-            </div>
-
-            {/* Affiliate Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Produk Bisa Diaffiliate</Label>
-                <p className="text-xs text-gray-400">Izinkan affiliate untuk mempromosikan bootcamp ini</p>
-              </div>
-              <Switch checked={formData.bisaAffiliate}
-                onCheckedChange={(v) => setFormData({ ...formData, bisaAffiliate: v })} />
             </div>
 
             {/* Buttons */}

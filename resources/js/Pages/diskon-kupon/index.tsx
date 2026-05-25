@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Search, Plus, Edit2, Trash2, Power, Copy } from "lucide-react";
+import { Ticket, Search, Plus, Edit2, Trash2, Power, Copy, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import {
@@ -16,6 +16,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { DateRangePicker } from "@/components/dashboard/datepickers";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Diskon = {
   id: number;
@@ -30,6 +40,7 @@ type Diskon = {
   batas_pemakaian: number | null;
   tanggal_kadaluarsa: string | null;
   created_at: string;
+  penjual?: string;
 };
 
 type Produk = {
@@ -49,6 +60,20 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [openDialog, setOpenDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [productSearch, setProductSearch] = useState("");
+  const [productTypeFilter, setProductTypeFilter] = useState("all");
+
+  const filteredProducts = produk.filter((p) => {
+    const nama = p.nama ?? "";
+    const tipe = p.tipe ?? "";
+    const matchSearch = nama.toLowerCase().includes(productSearch.toLowerCase());
+    const matchType =
+      productTypeFilter === "all" ||
+      tipe.toLowerCase() === productTypeFilter.toLowerCase() ||
+      (productTypeFilter.toLowerCase().includes("coaching") && tipe.toLowerCase().includes("coaching"));
+    return matchSearch && matchType;
+  });
 
   const [form, setForm] = useState({
     nama: "",
@@ -61,6 +86,7 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
     untuk_pelanggan: "semua" as "semua" | "pilih",
     kode_kupon: "",
     batas_pemakaian: "",
+    batas_per_orang: "1",
     waktu_mulai: "",
     tanggal_kadaluarsa: "",
   });
@@ -84,6 +110,11 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
       return;
     }
 
+    if (diskons.some((d) => d.kode_kupon.toUpperCase() === form.kode_kupon.toUpperCase())) {
+      toast.error("Kode Kupon sudah digunakan, silakan masukkan kode lain");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const data = {
@@ -91,6 +122,9 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
       besaran: Number(form.besaran),
       minimum_pembelian: form.minimum_pembelian ? Number(form.minimum_pembelian) : null,
       batas_pemakaian: form.batas_pemakaian ? Number(form.batas_pemakaian) : null,
+      batas_per_orang: form.batas_per_orang ? Number(form.batas_per_orang) : null,
+      waktu_mulai: form.waktu_mulai || null,
+      tanggal_kadaluarsa: form.tanggal_kadaluarsa || null,
       produk_ids: form.untuk_produk === "pilih" ? form.produk_ids : null,
     };
 
@@ -99,6 +133,7 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
         toast.success("Diskon berhasil dibuat!");
         setOpenDialog(false);
         resetForm();
+        setDateRange(undefined);
         setIsSubmitting(false);
       },
       onError: () => {
@@ -120,9 +155,20 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
       untuk_pelanggan: "semua",
       kode_kupon: "",
       batas_pemakaian: "",
+      batas_per_orang: "1",
       waktu_mulai: "",
       tanggal_kadaluarsa: "",
     });
+  };
+
+  const generateRandomCode = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setForm((prev) => ({ ...prev, kode_kupon: code }));
+    toast.success(`Kode kupon acak dibuat: ${code}`);
   };
 
   const toggleStatus = (id: number) => {
@@ -221,12 +267,18 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-6 gap-4 px-6 py-3 bg-slate-50 border-y border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <div className="col-span-2">Info Kupon</div>
+                      <div>Penjual</div>
+                      <div>Nilai Diskon</div>
+                      <div>Pemakaian</div>
+                      <div className="text-right">Aksi</div>
+                    </div>
               {filtered.map((d) => (
-                <div
-                  key={d.id}
-                  className="p-4 flex items-center justify-between hover:bg-gray-50 transition"
-                >
-                  <div className="flex-1">
+                          <div key={d.id} className="grid grid-cols-6 gap-4 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors">
+                            {/* Info */}
+                            <div className="col-span-2">
                     <div className="flex items-center gap-3 mb-1">
                       <h3 className="font-semibold text-gray-800">{d.nama}</h3>
                       {statusBadge(d)}
@@ -244,24 +296,29 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                           <Copy className="h-3 w-3" />
                         </button>
                       </span>
+                    </div>
+                  </div>
+                            {/* Penjual */}
+                            <div>
+                              <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                                {d.penjual ?? "Admin"}
+                              </span>
+                            </div>
+
+                            {/* Nilai Diskon */}
+                            <div>
                       <span>
                         {d.tipe_diskon === "persentase" ? `${d.besaran}%` : `Rp ${Number(d.besaran).toLocaleString("id-ID")}`}
                       </span>
+                    </div>
+                            {/* Pemakaian */}
+                            <div>
                       <span>
-                        {d.untuk_produk === "semua" ? "Semua Produk" : "Produk Tertentu"}
-                      </span>
-                      <span>
-                        Dipakai: {d.jumlah_dipakai}
+                        {d.jumlah_dipakai}
                         {d.batas_pemakaian ? ` / ${d.batas_pemakaian}` : " / ∞"}
                       </span>
-                      {d.tanggal_kadaluarsa && (
-                        <span className="text-orange-500">
-                          Exp: {d.tanggal_kadaluarsa}
-                        </span>
-                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => toggleStatus(d.id)}
                       className={cn(
@@ -308,10 +365,10 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <form onSubmit={handleSubmit} className="space-y-5 mt-2">
             {/* Nama Diskon */}
-            <div className="space-y-1">
-              <Label htmlFor="nama">
+            <div className="space-y-1.5">
+              <Label htmlFor="nama" className="text-slate-700 font-semibold">
                 Nama Diskon <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -319,55 +376,84 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                 placeholder="Contoh: Diskon Akhir Tahun"
                 value={form.nama}
                 onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                className="rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 required
               />
             </div>
 
             {/* Untuk Produk */}
-            <div className="space-y-1">
-              <Label>
+            <div className="space-y-1.5">
+              <Label className="text-slate-700 font-semibold">
                 Untuk Produk <span className="text-red-500">*</span>
               </Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="untuk_produk"
-                    value="semua"
-                    checked={form.untuk_produk === "semua"}
-                    onChange={(e) =>
-                      setForm({ ...form, untuk_produk: e.target.value as "semua" | "pilih" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Semua Produk</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="untuk_produk"
-                    value="pilih"
-                    checked={form.untuk_produk === "pilih"}
-                    onChange={(e) =>
-                      setForm({ ...form, untuk_produk: e.target.value as "semua" | "pilih" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Pilih Produk</span>
-                </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, untuk_produk: "semua" })}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 border rounded-xl text-center transition hover:bg-slate-50",
+                    form.untuk_produk === "semua"
+                      ? "border-blue-600 bg-blue-50/50 text-blue-700 ring-2 ring-blue-600/10"
+                      : "border-slate-200 text-slate-600"
+                  )}
+                >
+                  <span className="text-sm font-semibold">Semua Produk</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">Kupon berlaku untuk seluruh produk</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, untuk_produk: "pilih" })}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 border rounded-xl text-center transition hover:bg-slate-50",
+                    form.untuk_produk === "pilih"
+                      ? "border-blue-600 bg-blue-50/50 text-blue-700 ring-2 ring-blue-600/10"
+                      : "border-slate-200 text-slate-600"
+                  )}
+                >
+                  <span className="text-sm font-semibold">Pilih Produk</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">Batasi kupon pada produk tertentu</span>
+                </button>
               </div>
             </div>
 
             {/* Produk Selection */}
             {form.untuk_produk === "pilih" && (
-              <div className="space-y-1">
-                <Label>Pilih Produk</Label>
-                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
-                  {produk.length === 0 ? (
-                    <p className="text-sm text-gray-500">Tidak ada produk tersedia</p>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 font-semibold">Pilih Produk</Label>
+                <div className="flex gap-2 mb-2 items-center">
+                  <Input
+                    placeholder="Cari produk..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="h-8 text-xs rounded-lg flex-1"
+                  />
+                  <Select
+                    value={productTypeFilter}
+                    onValueChange={(val) => setProductTypeFilter(val)}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-36 rounded-lg bg-white border border-slate-200">
+                      <SelectValue placeholder="Semua Tipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Tipe</SelectItem>
+                      <SelectItem value="Event">Event</SelectItem>
+                      <SelectItem value="Webinar">Webinar</SelectItem>
+                      <SelectItem value="Bootcamp">Bootcamp</SelectItem>
+                      <SelectItem value="Ebook">Ebook</SelectItem>
+                      <SelectItem value="Produk Digital">Produk Digital</SelectItem>
+                      <SelectItem value="Coaching / Mentoring">Coaching</SelectItem>
+                      <SelectItem value="Tulisan">Tulisan</SelectItem>
+                      <SelectItem value="Kelas Online">Kelas Online</SelectItem>
+                      <SelectItem value="Link Pembayaran">Payment Link</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="border border-slate-200 rounded-xl p-3 max-h-48 overflow-y-auto divide-y divide-slate-100 bg-slate-50/50">
+                  {filteredProducts.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">Tidak ada produk cocok</p>
                   ) : (
-                    produk.map((p) => (
-                      <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+                    filteredProducts.map((p) => (
+                      <label key={p.id} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           value={p.id}
@@ -382,11 +468,12 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                               });
                             }
                           }}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-sm">
-                          {p.nama} <span className="text-gray-500">({p.tipe})</span>
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-700 truncate">{p.nama}</p>
+                          <p className="text-[10px] text-slate-400">{p.tipe}</p>
+                        </div>
                       </label>
                     ))
                   )}
@@ -394,67 +481,71 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
               </div>
             )}
 
-            {/* Tipe Diskon */}
-            <div className="space-y-1">
-              <Label>
-                Tipe Diskon <span className="text-red-500">*</span>
-              </Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipe_diskon"
-                    value="persentase"
-                    checked={form.tipe_diskon === "persentase"}
-                    onChange={(e) =>
-                      setForm({ ...form, tipe_diskon: e.target.value as "persentase" | "nominal" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Persentase (%)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipe_diskon"
-                    value="nominal"
-                    checked={form.tipe_diskon === "nominal"}
-                    onChange={(e) =>
-                      setForm({ ...form, tipe_diskon: e.target.value as "persentase" | "nominal" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Nominal (Rp)</span>
-                </label>
+            {/* Tipe Diskon & Besaran (Grid untuk keringkasan) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tipe Diskon */}
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 font-semibold">
+                  Tipe Diskon <span className="text-red-500">*</span>
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, tipe_diskon: "persentase" })}
+                    className={cn(
+                      "flex items-center justify-center gap-2 p-2.5 border rounded-xl font-medium text-sm transition hover:bg-slate-50",
+                      form.tipe_diskon === "persentase"
+                        ? "border-blue-600 bg-blue-50/50 text-blue-700"
+                        : "border-slate-200 text-slate-600"
+                    )}
+                  >
+                    Persentase (%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, tipe_diskon: "nominal" })}
+                    className={cn(
+                      "flex items-center justify-center gap-2 p-2.5 border rounded-xl font-medium text-sm transition hover:bg-slate-50",
+                      form.tipe_diskon === "nominal"
+                        ? "border-blue-600 bg-blue-50/50 text-blue-700"
+                        : "border-slate-200 text-slate-600"
+                    )}
+                  >
+                    Nominal (Rp)
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Besaran */}
-            <div className="space-y-1">
-              <Label htmlFor="besaran">
-                Besaran <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  {form.tipe_diskon === "persentase" ? "%" : "Rp"}
-                </span>
-                <Input
-                  id="besaran"
-                  type="number"
-                  placeholder="0"
-                  value={form.besaran}
-                  onChange={(e) => setForm({ ...form, besaran: e.target.value })}
-                  className={form.tipe_diskon === "persentase" ? "pl-8" : "pl-10"}
-                  required
-                />
+              {/* Besaran */}
+              <div className="space-y-1.5">
+                <Label htmlFor="besaran" className="text-slate-700 font-semibold">
+                  Besaran <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
+                    {form.tipe_diskon === "persentase" ? "%" : "Rp"}
+                  </span>
+                  <Input
+                    id="besaran"
+                    type="number"
+                    placeholder="0"
+                    value={form.besaran}
+                    onChange={(e) => setForm({ ...form, besaran: e.target.value })}
+                    className={cn(
+                      "rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500",
+                      form.tipe_diskon === "persentase" ? "pl-8" : "pl-10"
+                    )}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             {/* Minimum Pembelian */}
-            <div className="space-y-1">
-              <Label htmlFor="minimum_pembelian">Minimum Pembelian</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="minimum_pembelian" className="text-slate-700 font-semibold">Minimum Pembelian</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
                   Rp
                 </span>
                 <Input
@@ -463,74 +554,62 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                   placeholder="0"
                   value={form.minimum_pembelian}
                   onChange={(e) => setForm({ ...form, minimum_pembelian: e.target.value })}
-                  className="pl-10"
+                  className="pl-10 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
-              <p className="text-xs text-gray-500">Kosongkan jika tidak ada minimum pembelian</p>
+              <p className="text-[11px] text-slate-400">Kosongkan jika tidak ada minimum pembelian</p>
             </div>
 
             {/* Tipe Kupon */}
-            <div className="space-y-1">
-              <Label>
+            <div className="space-y-1.5">
+              <Label className="text-slate-700 font-semibold">
                 Tipe Kupon <span className="text-red-500">*</span>
               </Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipe_kupon"
-                    value="berulang"
-                    checked={form.tipe_kupon === "berulang"}
-                    onChange={(e) =>
-                      setForm({ ...form, tipe_kupon: e.target.value as "berulang" | "sekali" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Berulang</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipe_kupon"
-                    value="sekali"
-                    checked={form.tipe_kupon === "sekali"}
-                    onChange={(e) =>
-                      setForm({ ...form, tipe_kupon: e.target.value as "berulang" | "sekali" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Sekali Pakai</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Untuk Pelanggan */}
-            <div className="space-y-1">
-              <Label>
-                Untuk Pelanggan <span className="text-red-500">*</span>
-              </Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="untuk_pelanggan"
-                    value="semua"
-                    checked={form.untuk_pelanggan === "semua"}
-                    onChange={(e) =>
-                      setForm({ ...form, untuk_pelanggan: e.target.value as "semua" | "pilih" })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm">Semua Pelanggan</span>
-                </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, tipe_kupon: "berulang" })}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 border rounded-xl text-center transition hover:bg-slate-50",
+                    form.tipe_kupon === "berulang"
+                      ? "border-blue-600 bg-blue-50/50 text-blue-700 ring-2 ring-blue-600/10"
+                      : "border-slate-200 text-slate-600"
+                  )}
+                >
+                  <span className="text-sm font-semibold">Berulang</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">Bisa digunakan berkali-kali</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, tipe_kupon: "sekali" })}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 border rounded-xl text-center transition hover:bg-slate-50",
+                    form.tipe_kupon === "sekali"
+                      ? "border-blue-600 bg-blue-50/50 text-blue-700 ring-2 ring-blue-600/10"
+                      : "border-slate-200 text-slate-600"
+                  )}
+                >
+                  <span className="text-sm font-semibold">Sekali Pakai</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">Hanya dapat digunakan 1x pemakaian</span>
+                </button>
               </div>
             </div>
 
             {/* Kode Kupon */}
-            <div className="space-y-1">
-              <Label htmlFor="kode_kupon">
-                Kode Kupon <span className="text-red-500">*</span>
-              </Label>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="kode_kupon" className="text-slate-700 font-semibold">
+                  Kode Kupon <span className="text-red-500">*</span>
+                </Label>
+                <button
+                  type="button"
+                  onClick={generateRandomCode}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-2 py-0.5 rounded-md transition"
+                >
+                  <Sparkles className="h-3 w-3 text-blue-500" />
+                  Buat Kode Acak
+                </button>
+              </div>
               <Input
                 id="kode_kupon"
                 placeholder="Contoh: DISKON50"
@@ -538,66 +617,79 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                 onChange={(e) =>
                   setForm({ ...form, kode_kupon: e.target.value.toUpperCase() })
                 }
+                className="rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 font-mono font-bold"
                 required
               />
-              <p className="text-xs text-gray-500">Kode unik untuk kupon ini</p>
+              <p className="text-[11px] text-slate-400">Kode unik untuk kupon ini</p>
             </div>
 
-            {/* Batas Pemakaian */}
-            <div className="space-y-1">
-              <Label htmlFor="batas_pemakaian">Batas Pemakaian / Limit</Label>
-              <Input
-                id="batas_pemakaian"
-                type="number"
-                placeholder="Kosongkan jika tidak terbatas"
-                value={form.batas_pemakaian}
-                onChange={(e) => setForm({ ...form, batas_pemakaian: e.target.value })}
-              />
-              <p className="text-xs text-gray-500">Kosongkan jika tidak terbatas</p>
+            {/* Limit Pemakaian Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Batas Pemakaian */}
+              <div className="space-y-1.5">
+                <Label htmlFor="batas_pemakaian" className="text-slate-700 font-semibold">Batas Pemakaian / Limit</Label>
+                <Input
+                  id="batas_pemakaian"
+                  type="number"
+                  placeholder="Kosongkan jika tidak terbatas"
+                  value={form.batas_pemakaian}
+                  onChange={(e) => setForm({ ...form, batas_pemakaian: e.target.value })}
+                  className="rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Batas Per Orang */}
+              <div className="space-y-1.5">
+                <Label htmlFor="batas_per_orang" className="text-slate-700 font-semibold">Batas Pemakaian Per Orang</Label>
+                <Input
+                  id="batas_per_orang"
+                  type="number"
+                  placeholder="1"
+                  min="1"
+                  value={form.batas_per_orang}
+                  onChange={(e) => setForm({ ...form, batas_per_orang: e.target.value })}
+                  className="rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
-            {/* Waktu Mulai */}
-            <div className="space-y-1">
-              <Label htmlFor="waktu_mulai">Waktu Mulai Penggunaan</Label>
-              <Input
-                id="waktu_mulai"
-                type="datetime-local"
-                value={form.waktu_mulai}
-                onChange={(e) => setForm({ ...form, waktu_mulai: e.target.value })}
+            {/* Masa Berlaku Kupon (DateRangePicker) */}
+            <div className="space-y-1.5 bg-slate-50 p-4 border border-slate-100 rounded-2xl">
+              <DateRangePicker
+                label="Masa Berlaku Kupon (Mulai - Kadaluarsa)"
+                value={dateRange}
+                onChange={(range) => {
+                  setDateRange(range);
+                  setForm((prev) => ({
+                    ...prev,
+                    waktu_mulai: range?.from ? format(range.from, "yyyy-MM-dd 00:00:00") : "",
+                    tanggal_kadaluarsa: range?.to ? format(range.to, "yyyy-MM-dd 23:59:59") : "",
+                  }));
+                }}
               />
-              <p className="text-xs text-gray-500">
-                Kode diskon akan berlaku pada tanggal dan waktu yang anda pilih.
-                Opsional, kosongkan untuk langsung membuka penggunaan kode kupon.
+              <p className="text-[11px] text-slate-400 mt-1">
+                Pilih rentang tanggal kupon berlaku. Kosongkan jika ingin kupon langsung aktif mulai sekarang dan berlaku selamanya.
               </p>
             </div>
 
-            {/* Tanggal Kadaluarsa */}
-            <div className="space-y-1">
-              <Label htmlFor="tanggal_kadaluarsa">Tanggal Kadaluarsa</Label>
-              <Input
-                id="tanggal_kadaluarsa"
-                type="datetime-local"
-                value={form.tanggal_kadaluarsa}
-                onChange={(e) => setForm({ ...form, tanggal_kadaluarsa: e.target.value })}
-              />
-              <p className="text-xs text-gray-500">
-                Pilih tanggal atau kosongkan. Kosongkan jika kode kupon ingin aktif selamanya.
-              </p>
-            </div>
-
-            <DialogFooter className="mt-6 pt-4 border-t">
+            <DialogFooter className="mt-6 pt-4 border-t flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpenDialog(false)}
+                onClick={() => {
+                  setOpenDialog(false);
+                  resetForm();
+                  setDateRange(undefined);
+                }}
                 disabled={isSubmitting}
+                className="rounded-xl"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
               >
                 {isSubmitting ? "Menyimpan..." : "Simpan Diskon"}
               </Button>

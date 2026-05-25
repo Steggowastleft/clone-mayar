@@ -22,28 +22,11 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DateTimePicker } from "./components/DatePickers";
-
-// Leaflet
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import { MapPicker } from "@/components/ui/mappicker";
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type GeoResult = {
-  display_name: string;
-  lat: string;
-  lon: string;
-};
-
 export type Sesi = {
   id: number;
   judul: string;
@@ -51,8 +34,7 @@ export type Sesi = {
   is_online: boolean;
   link_sesi?: string;
   lokasi?: string;
-  lat?: number;
-  lng?: number;
+  lokasi_map?: string;
   nama_pemateri?: string;
   profil_pemateri?: string;
   waktu_mulai?: string;
@@ -60,30 +42,11 @@ export type Sesi = {
 };
 
 // ─────────────────────────────────────────────
-// FlyTo helper
-// ─────────────────────────────────────────────
-function FlyTo({ position }: { position: [number, number] }) {
-  const map = useMap();
-  useEffect(() => { map.flyTo(position, 16, { duration: 1.2 }); }, [position]);
-  return null;
-}
-
-function MapClickMarker({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
-  const map = useMap() as any;
-  useEffect(() => {
-    const handler = (e: L.LeafletMouseEvent) => onSelect(e.latlng.lat, e.latlng.lng);
-    map.on("click", handler);
-    return () => map.off("click", handler);
-  }, [map, onSelect]);
-  return null;
-}
-
-// ─────────────────────────────────────────────
 // Form kosong default
 // ─────────────────────────────────────────────
 const emptyForm = {
   judul: "", deskripsi: "", linkSesi: "",
-  lokasi: "", namaPemateri: "", profilPemateri: "",
+  lokasi: "", lokasiMap: "", namaPemateri: "", profilPemateri: "",
 };
 const emptyWaktu = { date: undefined as Date | undefined, time: "" };
 
@@ -225,18 +188,6 @@ export default function TabSesiMeeting({
   const [waktuMulai,   setWaktuMulai]   = useState(emptyWaktu);
   const [waktuSelesai, setWaktuSelesai] = useState(emptyWaktu);
 
-  // Peta & geocoding
-  const [markerPos,    setMarkerPos]    = useState<[number, number] | null>(null);
-  const [flyTarget,    setFlyTarget]    = useState<[number, number] | null>(null);
-  const [searchQuery,  setSearchQuery]  = useState("");
-  const [suggestions,  setSuggestions]  = useState<GeoResult[]>([]);
-  const [isSearching,  setIsSearching]  = useState(false);
-  const [searchError,  setSearchError]  = useState("");
-  const [foundAddress, setFoundAddress] = useState("");
-  const [savedLat,     setSavedLat]     = useState<number | null>(null);
-  const [savedLng,     setSavedLng]     = useState<number | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // ── Sync sesiList dari props jika reload ──
   const page = usePage<{ sesiList?: Sesi[] }>();
   useEffect(() => {
@@ -252,18 +203,10 @@ export default function TabSesiMeeting({
       deskripsi:     sesi.deskripsi       || "",
       linkSesi:      sesi.link_sesi       || "",
       lokasi:        sesi.lokasi          || "",
+      lokasiMap:     sesi.lokasi_map      || "",
       namaPemateri:  sesi.nama_pemateri   || "",
       profilPemateri:sesi.profil_pemateri || "",
     });
-    if (sesi.lat && sesi.lng) {
-      const pos: [number, number] = [sesi.lat, sesi.lng];
-      setMarkerPos(pos);
-      setFlyTarget(pos);
-      setSavedLat(sesi.lat);
-      setSavedLng(sesi.lng);
-      setFoundAddress(sesi.lokasi || "");
-      setSearchQuery(sesi.lokasi || "");
-    }
     setCreateOpen(true);
   };
 
@@ -273,14 +216,6 @@ export default function TabSesiMeeting({
     setSesiForm(emptyForm);
     setWaktuMulai(emptyWaktu);
     setWaktuSelesai(emptyWaktu);
-    setMarkerPos(null);
-    setFlyTarget(null);
-    setSearchQuery("");
-    setSuggestions([]);
-    setFoundAddress("");
-    setSearchError("");
-    setSavedLat(null);
-    setSavedLng(null);
     setErrors({});
     setIsOnline(false);
   };
@@ -312,8 +247,7 @@ export default function TabSesiMeeting({
       is_online:       isOnline ? 1 : 0,
       link_sesi:       isOnline ? sesiForm.linkSesi : "",
       lokasi:          !isOnline ? sesiForm.lokasi : "",
-      lat:             !isOnline && savedLat ? savedLat : "",
-      lng:             !isOnline && savedLng ? savedLng : "",
+      lokasi_map:      !isOnline ? sesiForm.lokasiMap : "",
       nama_pemateri:   sesiForm.namaPemateri,
       profil_pemateri: sesiForm.profilPemateri,
       waktu_mulai:     formatDT(waktuMulai),
@@ -349,75 +283,6 @@ export default function TabSesiMeeting({
     }
   };
 
-  // ── Geocoding ──
-  useEffect(() => {
-    if (searchQuery.trim().length < 3) { setSuggestions([]); return; }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(searchQuery), 500);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [searchQuery]);
-
-  const fetchSuggestions = async (q: string) => {
-    setIsSearching(true);
-    setSearchError("");
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&countrycodes=id`,
-        { headers: { "Accept-Language": "id" } }
-      );
-      const data: GeoResult[] = await res.json();
-      setSuggestions(data);
-      if (data.length === 0) setSearchError("Alamat tidak ditemukan.");
-    } catch { setSearchError("Gagal mencari alamat."); }
-    finally { setIsSearching(false); }
-  };
-
-  const handleSelectSuggestion = (result: GeoResult) => {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    const pos: [number, number] = [lat, lng];
-    setMarkerPos(pos);
-    setFlyTarget(pos);
-    setSavedLat(lat);
-    setSavedLng(lng);
-    setFoundAddress(result.display_name);
-    setSesiForm((p) => ({ ...p, lokasi: result.display_name }));
-    setSearchQuery(result.display_name);
-    setSuggestions([]);
-  };
-
-  const handleMapClick = (lat: number, lng: number) => {
-    const pos: [number, number] = [lat, lng];
-    setMarkerPos(pos);
-    setFlyTarget(null);
-    setSavedLat(lat);
-    setSavedLng(lng);
-    reverseGeocode(lat, lng);
-  };
-
-  const reverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-        { headers: { "Accept-Language": "id" } }
-      );
-      const data = await res.json();
-      const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      setFoundAddress(address);
-      setSesiForm((p) => ({ ...p, lokasi: address }));
-      setSearchQuery(address);
-    } catch {
-      const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      setFoundAddress(coords);
-      setSesiForm((p) => ({ ...p, lokasi: coords }));
-    }
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery(""); setSuggestions([]); setMarkerPos(null);
-    setFoundAddress(""); setSearchError(""); setSavedLat(null); setSavedLng(null);
-    setSesiForm((p) => ({ ...p, lokasi: "" }));
-  };
 
   // ─────────────────────────────────────────────
   // Render
@@ -518,82 +383,13 @@ export default function TabSesiMeeting({
               </div>
             ) : (
               /* Offline */
-              <div className="space-y-3">
-                {/* Search geocoding */}
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Cari Alamat / Nama Tempat <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <Input
-                      className={cn("pl-9 pr-8", errors.lokasi ? "border-red-400" : "")}
-                      placeholder="Contoh: Universitas Brawijaya Malang..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {isSearching && <Loader2 className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 animate-spin" />}
-                    {!isSearching && searchQuery && (
-                      <button className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600" onClick={handleClearSearch}>
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                    {suggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-[500] max-h-52 overflow-y-auto">
-                        {suggestions.map((s, i) => (
-                          <button
-                            key={i}
-                            className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 border-b border-gray-50 last:border-0 flex items-start gap-2"
-                            onClick={() => handleSelectSuggestion(s)}
-                          >
-                            <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-gray-400" />
-                            <span className="line-clamp-2">{s.display_name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {errors.lokasi  && <p className="text-xs text-red-500">{errors.lokasi}</p>}
-                  {searchError    && <p className="text-xs text-red-500">{searchError}</p>}
-                  <p className="text-xs text-gray-400">Ketik alamat → pilih saran → pin muncul di peta. Atau klik langsung di peta.</p>
-                </div>
-
-                {/* Peta */}
-                <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: 240 }}>
-                  <MapContainer
-                    center={markerPos ?? [-7.9666, 112.6326]}
-                    zoom={13}
-                    style={{ height: "100%", width: "100%" }}
-                    scrollWheelZoom={false}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <MapClickMarker onSelect={handleMapClick} />
-                    {flyTarget && <FlyTo position={flyTarget} />}
-                    {markerPos && (
-                      <Marker position={markerPos}>
-                        <Popup className="text-xs">{foundAddress || "Lokasi dipilih"}</Popup>
-                      </Marker>
-                    )}
-                  </MapContainer>
-                </div>
-
-                {markerPos ? (
-                  <div className="flex items-start justify-between bg-green-50 border border-green-200 rounded-md px-3 py-2">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
-                      <p className="text-xs text-green-700 leading-relaxed">{foundAddress}</p>
-                    </div>
-                    <button className="text-gray-400 hover:text-red-500 ml-2 shrink-0" onClick={handleClearSearch}>
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center">Belum ada pin. Cari alamat atau klik peta.</p>
-                )}
-              </div>
+              <MapPicker
+                address={sesiForm.lokasi}
+                mapUrl={sesiForm.lokasiMap}
+                onAddressChange={(address) => setSesiForm({ ...sesiForm, lokasi: address })}
+                onMapUrlChange={(url) => setSesiForm({ ...sesiForm, lokasiMap: url })}
+                label="Lokasi / Alamat Venue *"
+              />
             )}
 
             {/* Waktu */}

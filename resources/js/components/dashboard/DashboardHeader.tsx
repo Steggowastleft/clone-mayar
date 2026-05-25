@@ -11,11 +11,12 @@ interface Transaction {
 
 interface DashboardHeaderProps {
   userName: string;
+  userRole?: string;
   onMenuClick?: () => void;
   transactions?: Transaction[];
 }
 
-export function DashboardHeader({ userName, transactions = [] }: DashboardHeaderProps) {
+export function DashboardHeader({ userName, userRole = 'Creator', transactions = [] }: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -123,7 +124,7 @@ export function DashboardHeader({ userName, transactions = [] }: DashboardHeader
             </div>
             <div className="hidden sm:block">
               <p className="text-xs font-semibold text-slate-800 leading-none">{userName}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Creator</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{userRole}</p>
             </div>
           </div>
 

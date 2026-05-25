@@ -226,6 +226,37 @@ class EventController extends Controller
         return back()->with('success', 'Berhasil daftar event');
     }
 
+    public function publicShow(Event $event): Response
+    {
+        if ($event->status !== 'published') {
+            abort(404);
+        }
+
+        return Inertia::render('event/public', [
+            'event' => [
+                'id'       => $event->id,
+                'name'     => $event->nama,
+                'status'   => $event->status,
+                'date'     => $event->created_at->format('d M Y'),
+                'tipe'     => $event->tipe,
+                'lokasi'   => $event->lokasi,
+                'lokasi_map' => $event->lokasi_map,
+                'deskripsi' => $event->deskripsi,
+                'instruksi' => $event->instruksi,
+                'syarat_ketentuan' => $event->syarat_ketentuan,
+                'cover_url' => $event->cover_url,
+                'waktu_mulai' => optional($event->waktu_mulai)->format('d M Y H:i'),
+                'waktu_selesai' => optional($event->waktu_selesai)->format('d M Y H:i'),
+                'waktu_mulai_jual' => optional($event->waktu_mulai_jual)->format('d M Y H:i'),
+                'tanggal_tutup_daftar' => optional($event->tanggal_tutup_daftar)->format('d M Y'),
+                'harga' => $event->harga ?? 0,
+                'redirect_url' => $event->redirect_url,
+            ],
+            'tiketList' => $event->tiket,
+            'pembicaraList' => $event->pembicaras,
+        ]);
+    }
+
     public function catalog()
     {
         $userId = Auth::id();

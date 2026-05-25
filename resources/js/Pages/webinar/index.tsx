@@ -146,7 +146,6 @@ const defaultForm = {
   max_peserta: "",
   redirect_url: "",
   timezone: "Asia/Jakarta",
-  affiliate_enabled: false,
 };
 
 const timezoneOptions = [
@@ -234,7 +233,6 @@ export default function Index({ webinars = [] }: IndexProps) {
     payload.append("max_peserta", formData.max_peserta);
     payload.append("redirect_url", formData.redirect_url);
     payload.append("timezone", formData.timezone);
-    payload.append("affiliate_enabled", formData.affiliate_enabled ? "1" : "0");
 
     if (tanggalMulai) payload.append("tanggal_mulai", format(tanggalMulai, "yyyy-MM-dd HH:mm:ss"));
     if (tanggalSelesai) payload.append("tanggal_selesai", format(tanggalSelesai, "yyyy-MM-dd HH:mm:ss"));
@@ -244,7 +242,11 @@ export default function Index({ webinars = [] }: IndexProps) {
 
     router.post("/webinars", payload, {
       forceFormData: true,
-      onSuccess: () => { setCreateOpen(false); setIsSubmitting(false); },
+      onSuccess: () => {
+        setCreateOpen(false);
+        setIsSubmitting(false);
+        router.reload();
+      },
       onError: () => { setIsSubmitting(false); },
     });
   };
@@ -685,18 +687,6 @@ export default function Index({ webinars = [] }: IndexProps) {
               <p className="text-xs text-gray-400">
                 Pelanggan akan dibawa ke halaman ini setelah membayar.
               </p>
-            </div>
-
-            {/* Affiliate Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Produk Bisa Diaffiliate</Label>
-                <p className="text-xs text-gray-400">Izinkan affiliate untuk mempromosikan webinar ini</p>
-              </div>
-              <Switch
-                checked={formData.affiliate_enabled}
-                onCheckedChange={(v) => setFormData({ ...formData, affiliate_enabled: v })}
-              />
             </div>
 
             {/* Buttons */}

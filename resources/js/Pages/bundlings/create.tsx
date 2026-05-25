@@ -56,6 +56,7 @@ export default function Create({ products }: CreateProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [searchProduk, setSearchProduk] = useState("");
+  const [filterType, setFilterType] = useState("semua");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,9 +92,13 @@ export default function Create({ products }: CreateProps) {
     );
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.nama.toLowerCase().includes(searchProduk.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchSearch = p.nama.toLowerCase().includes(searchProduk.toLowerCase());
+    const matchType = filterType === "semua" || p.type === filterType;
+    return matchSearch && matchType;
+  });
+
+  const uniqueTypes = Array.from(new Set(products.map((p) => p.type)));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,7 +139,7 @@ export default function Create({ products }: CreateProps) {
       formData.append("cover", data.cover);
     }
 
-    post("/bundling", {
+    post("/bundling/", {
       forceFormData: true,
     } as any);
   };
@@ -147,7 +152,7 @@ export default function Create({ products }: CreateProps) {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.visit("/bundling")}
+            onClick={() => router.visit("/bundling/")}
             className="text-blue-600 mb-4"
           >
             ← Kembali
@@ -180,15 +185,35 @@ export default function Create({ products }: CreateProps) {
             <Label className="text-sm font-semibold text-gray-700 mb-2 block">
               Pilih Produk Bundling *
             </Label>
+            <div className="flex gap-3 mb-3">
+              <div className="w-1/3">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="Semua Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Kategori</SelectItem>
+                    {uniqueTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Ketik Nama Produk..."
+                  value={searchProduk}
+                  onChange={(e) => setSearchProduk(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            
             <div className="relative mb-3">
-              <Input
-                placeholder="Ketik Nama Produk..."
-                value={searchProduk}
-                onChange={(e) => setSearchProduk(e.target.value)}
-                className="w-full"
-              />
-              {searchProduk && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+              {(searchProduk || filterType !== "semua") && (
+                <div className="absolute top-0 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((p) => (
                       <button
@@ -424,7 +449,7 @@ export default function Create({ products }: CreateProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.visit("/bundling")}
+              onClick={() => router.visit("/bundling/")}
             >
               Batal
             </Button>

@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProdukDigitalRequest;
+use App\Http\Requests\UpdateProdukDigitalRequest;
 use App\Models\ProdukDigital;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class ProdukDigitalController extends Controller
 {
@@ -30,8 +32,25 @@ class ProdukDigitalController extends Controller
                 'created_at'      => $p->created_at?->format('d M Y'),
             ]);
 
+        // Get list of previously uploaded files for file_lama option
+        $oldFiles = ProdukDigital::where('user_id', Auth::id())
+            ->whereNotNull('file_path')
+            ->where('sumber_file', 'upload')
+            ->select('id', 'file_path', 'file_url', 'nama')
+            ->latest()
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->file_path,
+                'label' => $p->nama . ' (' . basename($p->file_path) . ')',
+                'file_path' => $p->file_path,
+                'file_url' => $p->file_url,
+            ])
+            ->unique('id')
+            ->values();
+
         return Inertia::render('produk-digital/index', [
             'produkList' => $produkList,
+            'oldFiles' => $oldFiles,
         ]);
     }
     public function edit($id)
@@ -45,55 +64,62 @@ class ProdukDigitalController extends Controller
     ]);
 }
 
-    public function store(Request $request)
+    public function store(StoreProdukDigitalRequest $request)
     {
-        $request->validate([
-            'nama'              => 'required|string|max:200',
-            'deskripsi'         => 'required|string',
-            'kategori'          => 'nullable|in:e-book,novel,komik,template,tulisan,video',
-            'tipe_pembayaran'   => 'required|in:berbayar,gratis',
-            'harga'             => 'required_if:tipe_pembayaran,berbayar|numeric|min:0',
-            'harga_coret'       => 'nullable|numeric|gt:harga',
-            'sumber_file'       => 'required|in:upload,file_lama,link',
-            'file'              => 'nullable|file|max:1048576',
-            'redirect_url'      => 'nullable|url',
-            'cover'             => 'nullable|file|mimes:jpg,jpeg,png,webp,mp4|max:10240',
-            'waktu_mulai_jual'  => 'nullable|date',
-            'tanggal_kadaluarsa'=> 'nullable|date',
-            'catatan'           => 'nullable|string|max:1000',
-            'max_pembayaran'    => 'nullable|integer|min:1',
-            'bisa_affiliate'    => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
-        $slug = $this->generateUniqueSlug($request->nama);
+        $slug = $this->generateUniqueSlug($validated['nama']);
 
         $data = [
             'user_id'           => Auth::id(),
-            'nama'              => $request->nama,
+            'nama'              => $validated['nama'],
             'slug'              => $slug,
-            'deskripsi'         => $request->deskripsi,
-            'kategori'          => $request->kategori,
-            'tipe_pembayaran'   => $request->tipe_pembayaran,
-            'harga'             => $request->tipe_pembayaran === 'gratis' ? 0 : (int) $request->harga,
-            'harga_coret'       => $request->harga_coret ? (int) $request->harga_coret : null,
-            'sumber_file'       => $request->sumber_file,
-            'redirect_url'      => $request->redirect_url,
-            'waktu_mulai_jual'  => $request->waktu_mulai_jual,
-            'tanggal_kadaluarsa'=> $request->tanggal_kadaluarsa,
-            'catatan'           => $request->catatan,
-            'max_pembayaran'    => $request->max_pembayaran,
-            'bisa_affiliate'    => (bool) $request->bisa_affiliate,
+            'deskripsi'         => $validated['deskripsi'],
+            'kategori'          => $validated['kategori'] ?? null,
+            'tipe_pembayaran'   => $validated['tipe_pembayaran'],
+            'harga'             => $validated['harga'],
+            'harga_coret'       => $validated['harga_coret'] ?? null,
+            'sumber_file'       => $validated['sumber_file'],
+            'redirect_url'      => $validated['redirect_url'] ?? null,
+            'waktu_mulai_jual'  => $validated['waktu_mulai_jual'] ?? null,
+            'tanggal_kadaluarsa'=> $validated['tanggal_kadaluarsa'] ?? null,
+            'catatan'           => $validated['catatan'] ?? null,
+            'max_pembayaran'    => $validated['max_pembayaran'] ?? null,
+            'bisa_affiliate'    => $validated['bisa_affiliate'] ?? false,
             'status'            => 'unpublished',
+            
+            // Specific Fields
+            'author'            => $validated['author'] ?? null,
+            'isbn'              => $validated['isbn'] ?? null,
+            'format'            => $validated['format'] ?? null,
+            'bahasa'            => $validated['bahasa'] ?? null,
+            'jumlah_halaman'    => $validated['jumlah_halaman'] ?? null,
+            'tanggal_publish'   => $validated['tanggal_publish'] ?? null,
+            'bisa_didownload'   => $validated['bisa_didownload'] ?? true,
+            'tipe_tulisan'      => $validated['tipe_tulisan'] ?? null,
+            'mekanisme_bayar'   => $validated['mekanisme_bayar'] ?? null,
+            'genre'             => $validated['genre'] ?? null,
+            'transkrip'         => $validated['transkrip'] ?? null,
+            'pembicara'         => $validated['pembicara'] ?? null,
+            'durasi'            => $validated['durasi'] ?? null,
+            'artis'             => $validated['artis'] ?? null,
+            'kategori_produk'   => $validated['kategori_produk'] ?? null,
+            'tipe_pembaca'      => $validated['tipe_pembaca'] ?? null,
         ];
 
-        // file
+        // Handle file lama reference
+        if ($validated['sumber_file'] === 'file_lama' && ($validated['file_lama_id'] ?? null)) {
+            $data['file_lama_id'] = $validated['file_lama_id'];
+        }
+
+        // Handle file upload
         if ($request->hasFile('file')) {
             $path = $request->file('file')->store('produk-digital/files', 'public');
             $data['file_path'] = $path;
             $data['file_url']  = Storage::url($path);
         }
 
-        // cover
+        // Handle cover upload
         if ($request->hasFile('cover')) {
             $path = $request->file('cover')->store('produk-digital/covers', 'public');
             $data['cover']     = $path;
@@ -112,41 +138,97 @@ class ProdukDigitalController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
+        $oldFiles = ProdukDigital::where('user_id', Auth::id())
+            ->whereNotNull('file_path')
+            ->where('sumber_file', 'upload')
+            ->select('id', 'file_path', 'file_url', 'nama')
+            ->latest()
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->file_path,
+                'label' => $p->nama . ' (' . basename($p->file_path) . ')',
+                'file_path' => $p->file_path,
+                'file_url' => $p->file_url,
+            ])
+            ->unique('id')
+            ->values();
+
         return Inertia::render('produk-digital/Show', [
             'produk' => $this->formatProdukDetail($produk),
+            'oldFiles' => $oldFiles,
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateProdukDigitalRequest $request, $id)
     {
         $produk = ProdukDigital::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $request->validate([
-            'nama'     => 'required|string|max:200',
-            'kategori' => 'nullable|in:e-book,novel,komik,template,tulisan,video',
-        ]);
+        $validated = $request->validated();
 
-        $data = $request->only([
-            'nama',
-            'deskripsi',
-            'kategori',
-            'harga',
-            'harga_coret',
-            'redirect_url',
-            'catatan',
-            'max_pembayaran',
-            'bisa_affiliate',
-        ]);
+        $data = [
+            'nama'              => $validated['nama'],
+            'deskripsi'         => $validated['deskripsi'] ?? $produk->deskripsi,
+            'kategori'          => $validated['kategori'] ?? $produk->kategori,
+            'tipe_pembayaran'   => $validated['tipe_pembayaran'] ?? $produk->tipe_pembayaran,
+            'harga'             => $validated['harga'] !== null ? $validated['harga'] : $produk->harga,
+            'harga_coret'       => $validated['harga_coret'] ?? $produk->harga_coret,
+            'sumber_file'       => $validated['sumber_file'] ?? $produk->sumber_file,
+            'redirect_url'      => $validated['redirect_url'] ?? $produk->redirect_url,
+            'waktu_mulai_jual'  => $validated['waktu_mulai_jual'] ?? $produk->waktu_mulai_jual,
+            'tanggal_kadaluarsa'=> $validated['tanggal_kadaluarsa'] ?? $produk->tanggal_kadaluarsa,
+            'catatan'           => $validated['catatan'] ?? $produk->catatan,
+            'max_pembayaran'    => $validated['max_pembayaran'] ?? $produk->max_pembayaran,
+            'bisa_affiliate'    => $validated['bisa_affiliate'] !== null ? $validated['bisa_affiliate'] : $produk->bisa_affiliate,
+            
+            // Specific Fields
+            'author'            => $validated['author'] ?? $produk->author,
+            'isbn'              => $validated['isbn'] ?? $produk->isbn,
+            'format'            => $validated['format'] ?? $produk->format,
+            'bahasa'            => $validated['bahasa'] ?? $produk->bahasa,
+            'jumlah_halaman'    => $validated['jumlah_halaman'] ?? $produk->jumlah_halaman,
+            'tanggal_publish'   => $validated['tanggal_publish'] ?? $produk->tanggal_publish,
+            'bisa_didownload'   => $validated['bisa_didownload'] ?? $produk->bisa_didownload,
+            'tipe_tulisan'      => $validated['tipe_tulisan'] ?? $produk->tipe_tulisan,
+            'mekanisme_bayar'   => $validated['mekanisme_bayar'] ?? $produk->mekanisme_bayar,
+            'genre'             => $validated['genre'] ?? $produk->genre,
+            'transkrip'         => $validated['transkrip'] ?? $produk->transkrip,
+            'pembicara'         => $validated['pembicara'] ?? $produk->pembicara,
+            'durasi'            => $validated['durasi'] ?? $produk->durasi,
+            'artis'             => $validated['artis'] ?? $produk->artis,
+            'kategori_produk'   => $validated['kategori_produk'] ?? $produk->kategori_produk,
+            'tipe_pembaca'      => $validated['tipe_pembaca'] ?? $produk->tipe_pembaca,
+        ];
 
-        // update slug kalau nama berubah
-        if ($request->nama !== $produk->nama) {
-            $data['slug'] = $this->generateUniqueSlug($request->nama);
+        // Update slug if nama changed
+        if ($validated['nama'] !== $produk->nama) {
+            $data['slug'] = $this->generateUniqueSlug($validated['nama']);
         }
 
-        // replace file
+        // Handle sumber_file changes
+        if (($validated['sumber_file'] ?? null) && $validated['sumber_file'] !== $produk->sumber_file) {
+            // If changing source, clear related fields appropriately
+            if ($validated['sumber_file'] === 'link') {
+                $data['file_path'] = null;
+                $data['file_url'] = null;
+                $data['file_lama_id'] = null;
+            } elseif ($validated['sumber_file'] === 'file_lama') {
+                $data['file_path'] = null;
+                $data['file_url'] = null;
+                $data['redirect_url'] = null;
+                if ($validated['file_lama_id'] ?? null) {
+                    $data['file_lama_id'] = $validated['file_lama_id'];
+                }
+            } elseif ($validated['sumber_file'] === 'upload') {
+                $data['file_lama_id'] = null;
+                $data['redirect_url'] = null;
+            }
+        }
+
+        // Handle file upload/replacement
         if ($request->hasFile('file')) {
+            // Delete old file if exists
             if ($produk->file_path) {
                 Storage::disk('public')->delete($produk->file_path);
             }
@@ -156,8 +238,9 @@ class ProdukDigitalController extends Controller
             $data['file_url']  = Storage::url($path);
         }
 
-        // replace cover
+        // Handle cover upload/replacement
         if ($request->hasFile('cover')) {
+            // Delete old cover if exists
             if ($produk->cover) {
                 Storage::disk('public')->delete($produk->cover);
             }
@@ -252,20 +335,60 @@ class ProdukDigitalController extends Controller
             'kategori'           => $p->kategori,
             'sumber_file'        => $p->sumber_file,
             'file_url'           => $p->file_url,
+            'file_lama_id'       => $p->file_lama_id,
             'redirect_url'       => $p->redirect_url,
             'cover_url'          => $p->cover_url,
             'waktu_mulai_jual'   => $p->waktu_mulai_jual
                 ? Carbon::parse($p->waktu_mulai_jual)->format('d M Y H:i')
                 : null,
+            'waktu_mulai_jual_raw' => $p->waktu_mulai_jual
+                ? Carbon::parse($p->waktu_mulai_jual)->toIso8601String()
+                : null,
             'tanggal_kadaluarsa' => $p->tanggal_kadaluarsa
                 ? Carbon::parse($p->tanggal_kadaluarsa)->format('d M Y')
+                : null,
+            'tanggal_kadaluarsa_raw' => $p->tanggal_kadaluarsa
+                ? Carbon::parse($p->tanggal_kadaluarsa)->toDateString()
                 : null,
             'catatan'            => $p->catatan,
             'max_pembayaran'     => $p->max_pembayaran,
             'bisa_affiliate'     => (bool) $p->bisa_affiliate,
             'total_penjualan'    => $p->total_penjualan,
             'created_at'         => $p->created_at?->format('d M Y'),
+            
+            // Specific Fields
+            'author'             => $p->author,
+            'isbn'               => $p->isbn,
+            'format'             => $p->format,
+            'bahasa'             => $p->bahasa,
+            'jumlah_halaman'     => $p->jumlah_halaman,
+            'tanggal_publish'    => $p->tanggal_publish ? Carbon::parse($p->tanggal_publish)->format('d M Y') : null,
+            'tanggal_publish_raw' => $p->tanggal_publish ? Carbon::parse($p->tanggal_publish)->toDateString() : null,
+            'bisa_didownload'    => (bool) $p->bisa_didownload,
+            'tipe_tulisan'       => $p->tipe_tulisan,
+            'mekanisme_bayar'    => $p->mekanisme_bayar,
+            'genre'              => $p->genre,
+            'transkrip'          => $p->transkrip,
+            'pembicara'          => $p->pembicara,
+            'durasi'             => $p->durasi,
+            'artis'              => $p->artis,
+            'kategori_produk'    => $p->kategori_produk,
+            'tipe_pembaca'       => $p->tipe_pembaca,
         ];
+    }
+
+    private function getKategoriLabel(?string $kategori): string
+    {
+        $labels = [
+            'e-book' => 'E-Book',
+            'novel' => 'Novel',
+            'komik' => 'Komik',
+            'template' => 'Template',
+            'tulisan' => 'Tulisan / Artikel',
+            'video' => 'Video',
+        ];
+
+        return $labels[$kategori] ?? 'Produk Digital';
     }
 
     public function catalog()
@@ -284,11 +407,21 @@ class ProdukDigitalController extends Controller
                 'status' => $p->status,
                 'tanggal' => $p->created_at->format('d M Y H:i'),
                 'terjual' => $p->total_penjualan ?? 0,
-                'kategori' => 'Produk Digital',
+                'kategori' => $p->kategori ?? 'Produk Digital',
+                'kategori_display' => $this->getKategoriLabel($p->kategori),
+                'cover_url' => $p->cover_url,
             ]);
 
         return Inertia::render('produk-digital/catalog', [
             'produk' => $produk,
+            'categories' => [
+                'e-book' => 'E-Book',
+                'novel' => 'Novel',
+                'komik' => 'Komik',
+                'template' => 'Template',
+                'tulisan' => 'Tulisan / Artikel',
+                'video' => 'Video',
+            ],
         ]);
     }
 

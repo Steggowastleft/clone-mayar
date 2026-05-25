@@ -42,10 +42,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'assignments/*/soal/*',
         ]);
 
-        // Alias middleware peserta
+        // Alias middleware peserta & Spatie Permission
         $middleware->alias([
             'auth.peserta'  => \App\Http\Middleware\PesertaAuth::class,
             'guest.peserta' => \App\Http\Middleware\PesertaGuest::class,
+            'role'          => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'    => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

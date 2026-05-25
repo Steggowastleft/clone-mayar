@@ -1,4 +1,5 @@
-import { ArrowUpRight, Star, MessageCircle, ArrowRight, Wallet } from "lucide-react";
+import { ArrowUpRight, Star, MessageCircle, ArrowRight, Wallet, Package } from "lucide-react";
+import { router } from "@inertiajs/react";
 
 interface Transaction {
   id: string | number;
@@ -6,6 +7,7 @@ interface Transaction {
   title: string;
   amount: string | number;
   date: string;
+  penjual?: string;
 }
 
 interface Review {
@@ -17,13 +19,27 @@ interface Review {
   date: string;
 }
 
+interface Product {
+  id: string;
+  product_id: number;
+  type: string;
+  nama: string;
+  kategori: string;
+  harga: number;
+  status: string;
+  terjual: number;
+  tanggal: string;
+}
+
 interface SideCardProps {
   transactionTitle?: string;
   transactions?: Transaction[];
   reviewTitle?: string;
   reviews?: Review[];
+  products?: Product[];
   isLoadingTransactions?: boolean;
   isLoadingReviews?: boolean;
+  isLoadingProducts?: boolean;
 }
 
 const typeConfig = {
@@ -37,8 +53,10 @@ export function SideCard({
   transactions = [],
   reviewTitle = "Ulasan Terbaru",
   reviews = [],
+  products = [],
   isLoadingTransactions = false,
   isLoadingReviews = false,
+  isLoadingProducts = false,
 }: SideCardProps) {
   return (
     <div className="space-y-5">
@@ -79,7 +97,9 @@ export function SideCard({
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-800 truncate">{trx.title}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{trx.date}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {trx.date} &bull; <span className="text-slate-500 font-medium">{trx.penjual ?? "Admin"}</span>
+                      </p>
                     </div>
                     {/* Amount */}
                     <div className={`text-xs font-bold ${cfg.text} flex-shrink-0`}>
@@ -141,6 +161,63 @@ export function SideCard({
                     <p className="text-[11px] text-slate-500 line-clamp-2 italic">"{rv.comment}"</p>
                   )}
                   <p className="text-[10px] text-slate-300 mt-1.5">{rv.date}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Semua Produk Card ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">Semua Produk</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">{products.length} produk tersedia</p>
+          </div>
+          <button
+            onClick={() => router.visit("/semua-produk")}
+            className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 hover:underline"
+          >
+            Lihat semua <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="p-3">
+          {isLoadingProducts ? (
+            <div className="space-y-2 p-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Package className="h-8 w-8 text-slate-200 mb-2" />
+              <p className="text-xs font-medium text-slate-400">Belum ada produk</p>
+            </div>
+          ) : (
+            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+              {products.map((prod) => (
+                <div
+                  key={prod.id}
+                  onClick={() => router.visit(`/semua-produk/${prod.id}`)}
+                  className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  {/* Category initials badge */}
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold text-[10px] uppercase">
+                    {prod.kategori ? prod.kategori.substring(0, 2) : "PR"}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-800 truncate">{prod.nama}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {prod.kategori} &bull; {prod.terjual ?? 0} terjual
+                    </p>
+                  </div>
+                  {/* Price */}
+                  <div className="text-xs font-bold text-slate-600 flex-shrink-0">
+                    {prod.harga > 0 ? `Rp ${prod.harga.toLocaleString("id-ID")}` : "Gratis"}
+                  </div>
                 </div>
               ))}
             </div>

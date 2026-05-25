@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -20,6 +21,9 @@ use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\AffiliasiController;
 use App\Http\Controllers\AnalitikController;
 use App\Http\Controllers\PengaturanController;
+use App\Http\Controllers\AccountVerificationController;
+use App\Http\Controllers\Admin\AccountVerificationController as AdminAccountVerificationController;
+use App\Http\Controllers\AccountSettingsController;
 use App\Http\Controllers\BerlanggananController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermintaanBayarController;
@@ -67,6 +71,8 @@ use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\WebinarCatalogController;
 use App\Http\Controllers\WebinarPaymentController;
 use App\Http\Controllers\Admin\WithdrawalController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\AccountVerificationController as AdminAccountVerificationController_new;
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIK — tidak perlu login apapun
@@ -95,6 +101,9 @@ Route::get('/bootcamps/{bootcamp}/kustom-form', [PendaftaranController::class, '
 
 // Upload bukti transfer (publik — peserta belum punya akun)
 Route::post('/pembayaran/upload-bukti', [PembayaranController::class, 'uploadBukti']);
+
+// Cek / validasi kupon diskon (publik)
+Route::post('/diskon/validate-coupon', [DiskonController::class, 'validateCoupon'])->name('diskon.validate-coupon');
 
 // Verifikasi sertifikat bootcamp (publik)
 Route::get('/sertifikat/verify/{token}', [SertifikatController::class, 'verify'])
@@ -151,6 +160,10 @@ Route::get('/penggalangan-dana/{penggalanganDana}/p', [PenggalanganDanaControlle
 Route::get('/event/catalog', [EventController::class, 'catalog'])->name('event.catalog');
 Route::get('/event/katalog', [EventController::class, 'catalog']);
 Route::get('/event/{event}/p', [EventController::class, 'publicShow'])->name('event.public');
+
+Route::get('/bundling/catalog', [BundlingController::class, 'catalog'])->name('bundling.catalog');
+Route::get('/bundling/katalog', [BundlingController::class, 'catalog']);
+Route::get('/p/{bundling}/bundling', [BundlingController::class, 'publicShow'])->name('bundlings.public');
 
 Route::get('/webinar/{webinar}', [WebinarCatalogController::class, 'show'])->name('webinar.show');
 Route::get('/p/{webinar}/webinar', [WebinarCatalogController::class, 'show'])->name('webinar.public');
@@ -264,6 +277,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/transaksi', [TransaksiController::class, 'index'])->name('transaksi.index');
 
     // ----------------------------------------------------------
     // BOOTCAMP
@@ -383,6 +397,81 @@ Route::middleware('auth')->group(function () {
 
     // ── Pengaturan ────────────────────────────────────────────
     Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
+
+    Route::get('/pengaturan/akun', function () {
+        $user = Auth::user();
+        $verification = \App\Models\AccountVerification::with('documents')
+            ->where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        return Inertia::render('pengaturan/akun', [
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'business_name' => $user->business_name,
+                'website' => $user->website,
+                'business_email' => $user->business_email,
+                'phone' => $user->phone,
+                'address' => $user->address,
+                'country' => $user->country,
+                'province' => $user->province,
+                'city' => $user->city,
+                'district' => $user->district,
+                'currency' => $user->currency,
+                'bank_provider' => $user->bank_provider,
+                'bank_account_number' => $user->bank_account_number,
+                'bank_account_name' => $user->bank_account_name,
+            ],
+            'verification' => $verification,
+        ]);
+    })->name('pengaturan.akun');
+
+    // Admin-specific pages (role:admin)
+    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+        Route::get('/verifikasi', [AdminAccountVerificationController_new::class, 'index'])->name('verifications.index');
+        Route::post('/verifikasi/{verification}/approve', [AdminAccountVerificationController_new::class, 'approve'])->name('verifications.approve');
+        Route::post('/verifikasi/{verification}/reject', [AdminAccountVerificationController_new::class, 'reject'])->name('verifications.reject');
+        Route::get('/users', [\App\Http\Controllers\Admin\AdminManagementController::class, 'usersIndex'])->name('users.index');
+        Route::get('/products', [\App\Http\Controllers\Admin\AdminManagementController::class, 'productsIndex'])->name('products.index');
+        Route::get('/products/{type}/{id}', [\App\Http\Controllers\Admin\AdminManagementController::class, 'productDetail'])->name('products.detail');
+        Route::delete('/products/{type}/{id}', [\App\Http\Controllers\Admin\AdminManagementController::class, 'deleteProduct'])->name('products.delete');
+    });
+
+
+    // Save business and bank
+    Route::post('/account/business', [AccountSettingsController::class, 'updateBusiness'])->name('account.business');
+    Route::post('/account/bank', [AccountSettingsController::class, 'updateBank'])->name('account.bank');
+
+    // Account verification (creator)
+    Route::get('/account/verification', [AccountVerificationController::class, 'show'])->name('account.verification.show');
+    Route::get('/account/verification/status', [AccountVerificationController::class, 'status'])->name('account.verification.status');
+    Route::post('/account/verification', [AccountVerificationController::class, 'store'])->name('account.verification.store');
+    Route::get('/account/verification/documents/{document}', [AccountVerificationController::class, 'downloadDocument'])->name('account.verification.document');
+
+    // Admin UI pages (Inertia)
+    Route::get('/admin/verifications/manage', function () {
+        return Inertia::render('admin/verifications/Index');
+    })->name('admin.verifications.ui');
+
+    Route::get('/admin/verifications/{id}/manage', function ($id) {
+        return Inertia::render('admin/verifications/Show', ['id' => $id]);
+    })->name('admin.verifications.ui.show');
+
+    // Admin landing
+    Route::get('/admin', function () {
+        return Inertia::render('admin/Index');
+    })->name('admin.index');
+
+    // Admin verification management
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/verifications', [AdminAccountVerificationController::class, 'index'])->name('verifications.index');
+        Route::get('/verifications/{id}', [AdminAccountVerificationController::class, 'show'])->name('verifications.show');
+        Route::post('/verifications/{id}/approve', [AdminAccountVerificationController::class, 'approve'])->name('verifications.approve');
+        Route::post('/verifications/{id}/decline', [AdminAccountVerificationController::class, 'decline'])->name('verifications.decline');
+    });
 
     // ─────────────────────────────────────────────────────────
     // ── Berlangganan ──────────────────────────────────────────

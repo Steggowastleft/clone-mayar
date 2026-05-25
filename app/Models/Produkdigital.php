@@ -36,6 +36,24 @@ class ProdukDigital extends Model
         'bisa_affiliate',
         'status',
         'total_penjualan',
+        
+        // Specific Fields
+        'author',
+        'isbn',
+        'format',
+        'bahasa',
+        'jumlah_halaman',
+        'tanggal_publish',
+        'bisa_didownload',
+        'tipe_tulisan',
+        'mekanisme_bayar',
+        'genre',
+        'transkrip',
+        'pembicara',
+        'durasi',
+        'artis',
+        'kategori_produk',
+        'tipe_pembaca',
     ];
 
     protected $casts = [

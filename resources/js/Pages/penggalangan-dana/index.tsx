@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ───
 type Produk = {
   id: number;
-  tipe: "donasi" | "qurban" | "wakaf";
+  tipe: "donasi" | "wakaf";
   nama: string;
   status: "published" | "unpublished" | "unlisted";
   tanggal_mulai_jual: string | null;
@@ -148,11 +148,8 @@ const defaultForm = {
   nama: "",
   deskripsi: "",
   kategori: "",
-  jenis_hewan: "",
   harga: "",
-  harga_coret: "",
   minimal_donasi: "",
-  stok: "",
   tujuan: "",
   penerima_manfaat: "",
   rincian_penggunaan: "",
@@ -160,7 +157,6 @@ const defaultForm = {
   redirect_url: "",
   tampilkan_target: true,
   tampilkan_pencairan: false,
-  affiliate_enabled: false,
 };
 
 const kategoriBentukDonasi = [
@@ -171,8 +167,6 @@ const kategoriBentukDonasi = [
   "Agama",
   "Lainnya",
 ];
-
-const jenisHewanQurban = ["Sapi", "Kambing", "Domba", "Ayam"];
 
 // ─── Main ───
 export default function Index({ produk = [] }: IndexProps) {
@@ -221,7 +215,6 @@ export default function Index({ produk = [] }: IndexProps) {
   const tipeBadge = (tipe: string) => {
     const badges: Record<string, { label: string; color: string }> = {
       donasi: { label: "Donasi", color: "bg-blue-500" },
-      qurban: { label: "Qurban", color: "bg-purple-500" },
       wakaf: { label: "Wakaf", color: "bg-green-600" },
     };
     const config = badges[tipe] || badges["donasi"];
@@ -253,8 +246,6 @@ export default function Index({ produk = [] }: IndexProps) {
     // Validasi tipe-spesifik
     if (formData.tipe === "donasi" && !formData.kategori)
       return alert("Kategori donasi harus dipilih");
-    if (formData.tipe === "qurban" && !formData.jenis_hewan)
-      return alert("Jenis hewan harus dipilih");
 
     setIsSubmitting(true);
 
@@ -264,7 +255,6 @@ export default function Index({ produk = [] }: IndexProps) {
     payload.append("deskripsi", formData.deskripsi);
     payload.append("redirect_url", formData.redirect_url);
     payload.append("catatan", formData.catatan);
-    payload.append("affiliate_enabled", formData.affiliate_enabled ? "1" : "0");
 
     if (tanggalMulaiJual)
       payload.append(
@@ -287,11 +277,6 @@ export default function Index({ produk = [] }: IndexProps) {
         "tampilkan_pencairan",
         formData.tampilkan_pencairan ? "1" : "0"
       );
-    } else if (formData.tipe === "qurban") {
-      payload.append("jenis_hewan", formData.jenis_hewan);
-      payload.append("harga", formData.harga);
-      payload.append("harga_coret", formData.harga_coret);
-      payload.append("stok", formData.stok);
     } else if (formData.tipe === "wakaf") {
       payload.append("harga", formData.harga);
       payload.append("tujuan", formData.tujuan);
@@ -457,7 +442,6 @@ export default function Index({ produk = [] }: IndexProps) {
               <SelectContent className="z-[200]">
                 <SelectItem value="all">Semua Tipe</SelectItem>
                 <SelectItem value="donasi">Donasi</SelectItem>
-                <SelectItem value="qurban">Qurban</SelectItem>
                 <SelectItem value="wakaf">Wakaf</SelectItem>
               </SelectContent>
             </Select>
@@ -493,7 +477,7 @@ export default function Index({ produk = [] }: IndexProps) {
               </DialogTitle>
             </div>
             <p className="text-blue-100 text-sm leading-relaxed">
-              Buat penggalangan dana (Donasi, Qurban, atau Wakaf) dengan mudah
+              Buat penggalangan dana (Donasi atau Wakaf) dengan mudah
             </p>
           </div>
 
@@ -508,7 +492,7 @@ export default function Index({ produk = [] }: IndexProps) {
                 onValueChange={(v) =>
                   setFormData({
                     ...formData,
-                    tipe: v as "donasi" | "qurban" | "wakaf",
+                    tipe: v as "donasi" | "wakaf",
                   })
                 }
               >
@@ -517,7 +501,6 @@ export default function Index({ produk = [] }: IndexProps) {
                 </SelectTrigger>
                 <SelectContent className="z-[200]">
                   <SelectItem value="donasi">Donasi</SelectItem>
-                  <SelectItem value="qurban">Qurban</SelectItem>
                   <SelectItem value="wakaf">Wakaf</SelectItem>
                 </SelectContent>
               </Select>
@@ -550,46 +533,16 @@ export default function Index({ produk = [] }: IndexProps) {
               </div>
             )}
 
-            {/* Jenis Hewan (untuk Qurban) */}
-            {formData.tipe === "qurban" && (
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
-                  Jenis Hewan Qurban{" "}
-                  <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.jenis_hewan}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, jenis_hewan: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih jenis hewan..." />
-                  </SelectTrigger>
-                  <SelectContent className="z-[200]">
-                    {jenisHewanQurban.map((j) => (
-                      <SelectItem key={j} value={j}>
-                        {j}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             {/* Nama */}
             <div className="space-y-1">
               <Label className="text-sm font-medium text-gray-700">
-                Judul{" "}
-                {formData.tipe === "qurban" ? "Qurban" : "Penggalangan Dana"}
+                Judul Penggalangan Dana
                 <span className="text-red-500">*</span>
               </Label>
               <Input
                 placeholder={
                   formData.tipe === "donasi"
                     ? "Contoh: Bantu Warga Pengungsi Bencana Alam"
-                    : formData.tipe === "qurban"
-                    ? "Contoh: Jual Sapi Limosin"
                     : "Contoh: Wakaf Pembangunan Masjid"
                 }
                 value={formData.nama}
@@ -615,8 +568,7 @@ export default function Index({ produk = [] }: IndexProps) {
             {/* Harga / Target */}
             <div className="space-y-1">
               <Label className="text-sm font-medium text-gray-700">
-                {formData.tipe === "qurban" ? "Harga 1 Ekor" : "Target"}{" "}
-                <span className="text-red-500">*</span>
+                Target <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-sm text-gray-600 font-medium">
@@ -633,41 +585,11 @@ export default function Index({ produk = [] }: IndexProps) {
                 />
               </div>
               <p className="text-xs text-gray-400">
-                {formData.tipe === "qurban"
-                  ? "Harga menggunakan mata uang IDR (Rp)"
-                  : formData.tipe === "donasi"
+                {formData.tipe === "donasi"
                   ? "Donasi menggunakan mata uang IDR(Rp)"
                   : "Wakaf menggunakan mata uang IDR(Rp)"}
               </p>
             </div>
-
-            {/* Harga Coret (untuk Qurban) */}
-            {formData.tipe === "qurban" && (
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
-                  Harga Sebelum Diskon{" "}
-                  <span className="text-gray-400 font-normal">(Opsional)</span>
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-600 font-medium">
-                    Rp
-                  </span>
-                  <Input
-                    className="pl-10"
-                    type="number"
-                    placeholder="Contoh: 30000000"
-                    value={formData.harga_coret}
-                    onChange={(e) =>
-                      setFormData({ ...formData, harga_coret: e.target.value })
-                    }
-                  />
-                </div>
-                <p className="text-xs text-gray-400">
-                  Isi jika ingin menampilkan promo / harga coret di halaman
-                  pembayaran
-                </p>
-              </div>
-            )}
 
             {/* Minimal Donasi (untuk Donasi) */}
             {formData.tipe === "donasi" && (
@@ -757,17 +679,13 @@ export default function Index({ produk = [] }: IndexProps) {
             {/* Cerita / Deskripsi */}
             <div className="space-y-1">
               <Label className="text-sm font-medium text-gray-700">
-                {formData.tipe === "qurban"
-                  ? "Deskripsi Qurban"
-                  : "Cerita / Deskripsi"}
+                Cerita / Deskripsi
                 <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 placeholder={
                   formData.tipe === "donasi"
                     ? "Ceritakan mengenai tujuan penggalangan dana, rencana penggunaan dana, dll (Lihat Contoh)"
-                    : formData.tipe === "qurban"
-                    ? "Deskripsi lengkap tentang hewan qurban, kualitas, asal, dll"
                     : "Ceritakan mengenai tujuan wakaf, rencana penggunaan dana, dll"
                 }
                 value={formData.deskripsi}
@@ -932,18 +850,6 @@ export default function Index({ produk = [] }: IndexProps) {
               </div>
             )}
 
-            {/* Affiliate */}
-            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <label className="text-sm font-medium text-gray-700">
-                Produk bisa diaffiliate
-              </label>
-              <Switch
-                checked={formData.affiliate_enabled}
-                onCheckedChange={(v) =>
-                  setFormData({ ...formData, affiliate_enabled: v })
-                }
-              />
-            </div>
           </div>
 
           {/* Footer */}

@@ -1,7 +1,6 @@
 import { Head } from "@inertiajs/react";
 import { 
   PenLine, 
-  Share2, 
   ShoppingBag, 
   CheckCircle2, 
   FileText, 
@@ -9,9 +8,10 @@ import {
   Clock,
   BookOpen,
   Eye,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import PublicProductLayout from "@/components/public/PublicProductLayout";
 
 type Tulisan = {
   id: number;
@@ -24,190 +24,152 @@ type Tulisan = {
   genre: string | null;
   bahasa: string | null;
   created_at: string;
+  redirect_url?: string | null;
 };
 
 type Props = {
   tulisan: Tulisan;
 };
 
-const formatHarga = (n: number) => {
-  if (n === 0) return "Gratis";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(n);
-};
-
 export default function TulisanPublic({ tulisan }: Props) {
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <Head title={tulisan.nama} />
-
-      {/* NAVIGATION */}
-      <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center">
-              <PenLine className="text-white h-5 w-5" />
+    <PublicProductLayout
+      productId={`tulisan:${tulisan.id}`}
+      title={tulisan.nama}
+      harga={tulisan.harga}
+      hargaCoret={null}
+      redirectUrl={tulisan.redirect_url}
+      themeColorClass="bg-amber-600 hover:bg-amber-700"
+      textColorClass="text-amber-600"
+      badgeText="Tulisan"
+      navTitle="Mayar Tulisan"
+      navIcon={<PenLine className="text-white h-5 w-5" />}
+    >
+      <div className="space-y-8">
+        
+        {/* Cover and Top Info */}
+        <div className="grid md:grid-cols-12 gap-8 items-start">
+          <div className="md:col-span-5">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-amber-600 to-yellow-600 rounded-3xl blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative aspect-[3/4] bg-slate-100 rounded-2xl overflow-hidden shadow-xl border border-slate-200/60">
+                {tulisan.cover ? (
+                  <img 
+                    src={tulisan.cover.startsWith('http') ? tulisan.cover : `/storage/${tulisan.cover}`} 
+                    alt={tulisan.nama} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50">
+                    <PenLine size={64} className="stroke-1 text-slate-300 mb-2" />
+                    <p className="font-medium italic text-sm">Cover Tidak Tersedia</p>
+                  </div>
+                )}
+                
+                {/* Format Badge */}
+                <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-slate-700">
+                  {tulisan.tipe_tulisan === 'one_shot' ? 'Short Story' : 'Series'}
+                </div>
+              </div>
             </div>
-            <span className="font-bold text-lg text-gray-900 tracking-tight">Karya Tulisan</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg px-6">
-              Baca Sekarang
-            </Button>
-          </div>
-        </div>
-      </nav>
 
-      <main className="max-w-5xl mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-12 gap-12">
-          
-          {/* LEFT: INFO */}
-          <div className="lg:col-span-8 space-y-10">
-            
-            {/* HERO SECTION */}
-            <div className="space-y-6">
+          <div className="md:col-span-7 space-y-6">
+            <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded">
-                  {tulisan.tipe_tulisan === 'one_shot' ? 'Short Story' : 'Series / Chapter'}
+                <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
+                  {tulisan.tipe_tulisan === 'one_shot' ? 'Short Story' : 'Chapter Series'}
                 </span>
-                <span className="bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded">
+                <span className="bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
                   {tulisan.genre || 'General'}
                 </span>
               </div>
               
-              <h1 className="text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                 {tulisan.nama}
               </h1>
 
-              <div className="flex flex-wrap items-center gap-6 py-2 border-y border-gray-100">
+              <div className="flex flex-wrap items-center gap-6 py-3 border-y border-slate-100 text-slate-500 text-xs font-semibold">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-500" />
+                  <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                    <User className="h-4 w-4 text-slate-500" />
                   </div>
-                  <span className="text-sm font-bold text-gray-700">{tulisan.author || 'Anonim'}</span>
+                  <span className="font-bold text-slate-800">{tulisan.author || 'Anonim'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Clock size={16} />
+                <div className="flex items-center gap-1.5">
+                  <Clock size={15} className="text-amber-500" />
                   <span>{new Date(tulisan.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Eye size={16} />
-                  <span>1.2k views</span>
+                <div className="flex items-center gap-1.5">
+                  <Eye size={15} className="text-blue-500" />
+                  <span>1.2k pembaca</span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* CONTENT PREVIEW / DESKRIPSI */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 space-y-6">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <FileText className="text-amber-500" /> Sinopsis & Deskripsi
-              </h2>
-              <div className="prose prose-amber max-w-none text-gray-700 leading-relaxed text-lg italic font-serif">
-                {tulisan.deskripsi ? (
-                   <p className="whitespace-pre-line">{tulisan.deskripsi}</p>
-                ) : (
-                  <p className="italic text-gray-400">Belum ada deskripsi untuk karya ini.</p>
-                )}
-              </div>
-              
-              {/* Fake Chapter List for visual premium feel */}
-              {tulisan.tipe_tulisan === 'chapter' && (
-                <div className="pt-8 border-t border-gray-50 space-y-4">
-                  <h3 className="font-bold text-gray-800">Daftar Bab:</h3>
-                  <div className="space-y-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 opacity-60">
-                        <span className="text-sm font-medium">Bab {i}: Judul Bab Menyusul...</span>
-                        <ShoppingBag size={14} className="text-gray-400" />
-                      </div>
-                    ))}
-                    <p className="text-center text-xs text-gray-400 py-2">Beli akses penuh untuk melihat semua bab</p>
+        {/* Sinopsis & Deskripsi */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4 font-serif">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 font-sans">
+            <FileText className="text-amber-500" /> Sinopsis & Deskripsi
+          </h3>
+          <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-base italic whitespace-pre-wrap">
+            {tulisan.deskripsi || <p className="italic text-slate-400">Belum ada deskripsi untuk karya ini.</p>}
+          </div>
+
+          {/* Fake Chapter List */}
+          {tulisan.tipe_tulisan === 'chapter' && (
+            <div className="pt-6 border-t border-slate-100 space-y-4 font-sans">
+              <h4 className="font-bold text-slate-800 text-sm">Daftar Chapter:</h4>
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FFFBFB] border border-slate-100 opacity-60">
+                    <span className="text-xs font-semibold text-slate-700">Chapter {i}: Judul Chapter Menyusul...</span>
+                    <ShoppingBag size={14} className="text-slate-400" />
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* INFO GRID */}
-            <div className="grid sm:grid-cols-3 gap-6">
-               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
-                 <BookOpen className="mx-auto text-amber-500 mb-3" size={24} />
-                 <p className="text-xs text-gray-400 font-bold uppercase mb-1">Format</p>
-                 <p className="font-bold text-gray-800">Online Reader</p>
-               </div>
-               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
-                 <Globe className="mx-auto text-blue-500 mb-3" size={24} />
-                 <p className="text-xs text-gray-400 font-bold uppercase mb-1">Bahasa</p>
-                 <p className="font-bold text-gray-800">{tulisan.bahasa || 'Indonesia'}</p>
-               </div>
-               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
-                 <MessageSquare className="mx-auto text-purple-500 mb-3" size={24} />
-                 <p className="text-xs text-gray-400 font-bold uppercase mb-1">Diskusi</p>
-                 <p className="font-bold text-gray-800">Aktif</p>
-               </div>
-            </div>
-          </div>
-
-          {/* RIGHT: PURCHASE CARD */}
-          <div className="lg:col-span-4">
-            <div className="bg-white rounded-3xl p-6 shadow-xl shadow-gray-200/50 border border-gray-100 sticky top-28 space-y-6">
-              <div className="aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-inner border border-gray-100">
-                 {tulisan.cover ? (
-                   <img src={tulisan.cover.startsWith('http') ? tulisan.cover : `/storage/${tulisan.cover}`} className="w-full h-full object-cover" />
-                 ) : (
-                   <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
-                     <PenLine size={64} strokeWidth={1} />
-                     <p className="text-sm font-bold mt-2">NO COVER</p>
-                   </div>
-                 )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-500 font-medium mb-1">Mulai membaca hanya dengan</p>
-                  <p className="text-4xl font-black text-amber-600">{formatHarga(tulisan.harga)}</p>
-                </div>
-
-                <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-7 text-lg rounded-2xl shadow-lg hover:scale-[1.02] transition-all">
-                  BELI AKSES SEKARANG
-                </Button>
-
-                <div className="space-y-3 pt-2">
-                  {[
-                    "Baca kapanpun & dimanapun",
-                    "Dukung langsung penulis",
-                    "Akses selamanya",
-                    "Tanpa iklan yang mengganggu"
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-gray-600">
-                      <CheckCircle2 size={14} className="text-green-500" />
-                      {item}
-                    </div>
-                  ))}
-                </div>
+                ))}
+                <p className="text-center text-[10px] font-bold text-amber-600 py-1 uppercase tracking-wider">Beli akses untuk membaca semua chapter</p>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid sm:grid-cols-3 gap-4">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center space-y-1">
+            <BookOpen className="mx-auto text-amber-500" size={20} />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Format</p>
+            <p className="text-xs font-extrabold text-slate-800">Online Reader</p>
           </div>
-
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center space-y-1">
+            <Globe className="mx-auto text-blue-500" size={20} />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bahasa</p>
+            <p className="text-xs font-extrabold text-slate-800">{tulisan.bahasa || 'Indonesia'}</p>
+          </div>
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center space-y-1">
+            <MessageSquare className="mx-auto text-purple-500" size={20} />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Komunitas</p>
+            <p className="text-xs font-extrabold text-slate-800">Aktif</p>
+          </div>
         </div>
-      </main>
 
-      <footer className="border-t py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col items-center gap-6">
-           <div className="flex items-center gap-2 opacity-50">
-             <PenLine className="h-5 w-5" />
-             <span className="font-bold uppercase tracking-widest text-xs">Karya Tulisan &copy; 2026</span>
-           </div>
-           <p className="text-center text-sm text-gray-400 max-w-md">
-             Platform publishing digital untuk penulis kreatif. Bagikan ceritamu, raih pembacamu.
-           </p>
+        {/* Benefits List */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            "Baca kapanpun & dimanapun",
+            "Dukung langsung karya penulis",
+            "Akses membaca selamanya",
+            "Tanpa iklan yang mengganggu"
+          ].map((benefit, idx) => (
+            <div key={idx} className="flex items-center gap-3 p-4 border border-slate-100 rounded-2xl bg-white shadow-sm">
+              <CheckCircle2 className="text-amber-500 h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-semibold text-slate-700">{benefit}</span>
+            </div>
+          ))}
         </div>
-      </footer>
-    </div>
+
+      </div>
+    </PublicProductLayout>
   );
 }

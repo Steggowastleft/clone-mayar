@@ -45,6 +45,11 @@ class KelasOnline extends Model
     // ----------------------------------------------------------------
     // RELATIONS
     // ----------------------------------------------------------------
+    public function pendaftaran()
+    {
+        return $this->morphMany(\App\Models\Pendaftaran::class, 'registrable');
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');

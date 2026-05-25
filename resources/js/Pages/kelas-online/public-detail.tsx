@@ -3,9 +3,10 @@ import { useState } from "react";
 import {
   ChevronDown, ChevronUp, CheckCircle2,
   Users, Calendar, Play, ArrowRight, Award,
-  Clock, BookOpen,
+  Clock, BookOpen, GraduationCap
 } from "lucide-react";
 import { KelasOnlineCheckoutDialog } from "./components/checkout-dialog";
+import PublicProductLayout from "@/components/public/PublicProductLayout";
 
 // ─────────────────────────────────────────────
 // Types
@@ -39,49 +40,15 @@ type Props = {
 };
 
 // ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
-function formatHarga(harga: number, isGratis: boolean) {
-  if (isGratis || harga === 0) return "Gratis";
-  return `Rp ${Number(harga).toLocaleString("id-ID")}`;
-}
-
-// ─────────────────────────────────────────────
 // Content Card
 // ─────────────────────────────────────────────
 function ContentCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-100">
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+    <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+      <div className="px-6 py-4 border-b border-slate-50">
+        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{title}</h3>
       </div>
-      <div className="px-5 py-4">{children}</div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// FAQ Item
-// ─────────────────────────────────────────────
-function FaqItem({ item }: { item: { pertanyaan: string; jawaban: string } }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border border-gray-200 rounded-md overflow-hidden mb-2">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition"
-      >
-        <span className="text-sm font-medium text-gray-800">{item.pertanyaan}</span>
-        {open
-          ? <ChevronUp className="h-4 w-4 text-gray-500 shrink-0" />
-          : <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />
-        }
-      </button>
-      {open && (
-        <div className="px-4 pb-3 text-sm text-gray-600 leading-relaxed bg-white border-t border-gray-100">
-          {item.jawaban}
-        </div>
-      )}
+      <div className="px-6 py-5">{children}</div>
     </div>
   );
 }
@@ -100,258 +67,137 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
   ].filter(Boolean) as { href: string; label: string }[];
 
   return (
-    <>
-      <Head title={kelas.nama} />
-      <div className="min-h-screen bg-white">
-
-        {/* ════════════════════════════════════════
-            HERO
-        ════════════════════════════════════════ */}
-        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-900 text-white">
-          <div className="max-w-5xl mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-5 gap-10 items-center">
-            <div className="lg:col-span-3 space-y-5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                  kelas.status === "published"
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                    : "bg-white/10 text-white/60 border-white/20"
-                }`}>
-                  {kelas.status.toUpperCase()}
-                </span>
-              </div>
-
-              <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight">
-                {kelas.nama}
-              </h1>
-
-              {kelas.deskripsi && (
-                <p className="text-slate-300 text-sm leading-relaxed line-clamp-3">
-                  {kelas.deskripsi}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-4 text-sm text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-indigo-400" />
-                  {kelas.peserta_terdaftar_count} Peserta
-                </span>
-                {kelas.tanggal_mulai && (
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-indigo-400" />
-                    Mulai: {kelas.tanggal_mulai}
-                  </span>
+    <PublicProductLayout
+      productId={`kelas-online:${kelas.id}`}
+      title={kelas.nama}
+      harga={kelas.harga ?? 0}
+      hargaCoret={null}
+      redirectUrl={null}
+      themeColorClass="bg-indigo-600 hover:bg-indigo-700"
+      textColorClass="text-indigo-600"
+      badgeText="Kelas Online"
+      navTitle="Mayar Kelas Online"
+      navIcon={<GraduationCap className="text-white h-5 w-5" />}
+      onCheckout={() => setCheckoutOpen(true)}
+    >
+      <div className="space-y-8">
+        
+        {/* Cover and Quick Details */}
+        <div className="grid md:grid-cols-12 gap-8 items-start">
+          <div className="md:col-span-5">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative aspect-[4/3] bg-slate-100 rounded-2xl overflow-hidden shadow-xl border border-slate-200/60">
+                {kelas.thumbnail ? (
+                  <img src={kelas.thumbnail} alt={kelas.nama} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex flex-col items-center justify-center p-8 text-center text-white">
+                    <Play size={64} className="opacity-80 mb-2" />
+                    <p className="font-bold text-sm">Kelas Online</p>
+                  </div>
                 )}
-                <span className="flex items-center gap-1.5">
-                  <BookOpen className="h-4 w-4 text-indigo-400" />
-                  oleh {kelas.owner.name}
-                </span>
               </div>
             </div>
+          </div>
 
-            {/* CTA Card */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                {kelas.thumbnail ? (
-                  <img src={kelas.thumbnail} alt={kelas.nama} className="w-full h-44 object-cover" />
-                ) : (
-                  <div className="w-full h-44 bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                    <Play className="h-14 w-14 text-white opacity-80" />
-                  </div>
-                )}
-
-                <div className="p-5 space-y-3">
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-extrabold text-gray-900">
-                      {formatHarga(kelas.harga, kelas.is_gratis)}
-                    </span>
-                  </div>
-
-                  {kelas.tanggal_mulai && (
-                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                      Mulai: {kelas.tanggal_mulai}
-                    </p>
-                  )}
-                  {kelas.tanggal_selesai && (
-                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-indigo-500" />
-                      Selesai: {kelas.tanggal_selesai}
-                    </p>
-                  )}
-
-                  <button
-                    onClick={() => setCheckoutOpen(true)}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"
-                  >
-                    Daftar Sekarang <ArrowRight className="h-4 w-4" />
-                  </button>
-
-                  <p className="text-xs text-gray-400 text-center">
-                    🔒 Pendaftaran aman & terlindungi
-                  </p>
-                </div>
+          <div className="md:col-span-7 space-y-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
+                Kelas Online
               </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
+                {kelas.nama}
+              </h1>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Peserta</p>
+                <p className="text-base font-extrabold text-slate-800">{kelas.peserta_terdaftar_count}</p>
+              </div>
+              {kelas.tanggal_mulai && (
+                <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Mulai</p>
+                  <p className="text-xs font-extrabold text-slate-800 truncate">{kelas.tanggal_mulai}</p>
+                </div>
+              )}
+              {kelas.tanggal_selesai && (
+                <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Selesai</p>
+                  <p className="text-xs font-extrabold text-slate-800 truncate">{kelas.tanggal_selesai}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <BookOpen className="h-4 w-4 text-indigo-500" />
+              <span>Diselenggarakan oleh: {kelas.owner.name}</span>
             </div>
           </div>
         </div>
 
-        {/* ════════════════════════════════════════
-            STICKY NAV
-        ════════════════════════════════════════ */}
+        {/* Sticky Nav inside left column for smooth navigation */}
         {navItems.length > 0 && (
-          <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
-            <div className="max-w-5xl mx-auto px-4">
-              <div className="flex gap-6 overflow-x-auto py-3 text-sm font-medium text-gray-500">
-                {navItems.map((item) => (
-                  <a key={item.href} href={item.href} className="whitespace-nowrap hover:text-indigo-600 transition">
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-            </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-2 flex gap-4 overflow-x-auto text-xs font-bold text-slate-500 scrollbar-none shadow-sm">
+            {navItems.map((item) => (
+              <a key={item.href} href={item.href} className="whitespace-nowrap px-4 py-2 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition">
+                {item.label}
+              </a>
+            ))}
           </div>
         )}
 
-        {/* ════════════════════════════════════════
-            KONTEN — 2 kolom
-        ════════════════════════════════════════ */}
-        <div className="max-w-5xl mx-auto px-4 py-6 flex gap-6 items-start">
-
-          {/* ── KIRI ── */}
-          <div className="flex-1 min-w-0">
-
-            {/* Tentang Kelas */}
-            {kelas.deskripsi && (
-              <div id="tentang">
-                <ContentCard title="Tentang Kelas">
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                    {kelas.deskripsi}
-                  </p>
-                </ContentCard>
-              </div>
-            )}
-
-            {/* Syarat Sertifikat */}
-            {kelas.require_quiz_sertifikat && (
-              <div id="sertifikat">
-                <ContentCard title="📜 Syarat Mendapat Sertifikat">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 border border-gray-100 rounded-md px-3 py-2.5">
-                      <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
-                      <p className="text-sm text-gray-700">Hadir di semua sesi presensi (awal, tengah, akhir)</p>
-                    </div>
-                    {kelas.nilai_minimum_quiz && (
-                      <div className="flex items-center gap-3 border border-gray-100 rounded-md px-3 py-2.5">
-                        <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
-                        <p className="text-sm text-gray-700">
-                          Nilai quiz minimum: <strong>{kelas.nilai_minimum_quiz}</strong>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </ContentCard>
-              </div>
-            )}
-
-            {/* Penyelenggara */}
-            <div id="penyelenggara">
-              <ContentCard title="Penyelenggara">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0">
-                    <span className="text-white text-sm font-bold">
-                      {kelas.owner.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{kelas.owner.name}</p>
-                    <p className="text-xs text-gray-400">Penyelenggara Kelas</p>
-                  </div>
-                </div>
-              </ContentCard>
-            </div>
+        {/* Tentang Kelas */}
+        {kelas.deskripsi && (
+          <div id="tentang">
+            <ContentCard title="Tentang Kelas">
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                {kelas.deskripsi}
+              </p>
+            </ContentCard>
           </div>
+        )}
 
-          {/* ── KANAN (Sidebar) ── */}
-          <div className="w-60 shrink-0 space-y-4">
-
-            {/* Card Detail */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail</p>
-              </div>
-              <div className="px-4 py-4 space-y-3">
-                <div>
-                  <p className="text-xs text-gray-500">Harga</p>
-                  <p className="text-xl font-extrabold text-gray-900 mt-0.5">
-                    {formatHarga(kelas.harga, kelas.is_gratis)}
-                  </p>
+        {/* Syarat Sertifikat */}
+        {kelas.require_quiz_sertifikat && (
+          <div id="sertifikat">
+            <ContentCard title="Syarat Mendapat Sertifikat">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 border border-slate-50 rounded-2xl p-4 bg-slate-50/20">
+                  <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-slate-700 leading-relaxed">Hadir di semua sesi presensi (awal, tengah, akhir)</p>
                 </div>
-
-                <div>
-                  <p className="text-xs text-gray-500">Peserta Terdaftar</p>
-                  <p className="text-sm font-medium text-gray-800 flex items-center gap-1 mt-0.5">
-                    <Users className="h-3.5 w-3.5 text-indigo-500" />
-                    {kelas.peserta_terdaftar_count} orang
-                  </p>
-                </div>
-
-                {kelas.tanggal_mulai && (
-                  <div>
-                    <p className="text-xs text-gray-500">Mulai Pembelajaran</p>
-                    <p className="text-sm font-medium text-gray-800">{kelas.tanggal_mulai}</p>
+                {kelas.nilai_minimum_quiz && (
+                  <div className="flex items-center gap-3 border border-slate-50 rounded-2xl p-4 bg-slate-50/20">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      Nilai quiz minimum: <strong>{kelas.nilai_minimum_quiz}</strong>
+                    </p>
                   </div>
                 )}
+              </div>
+            </ContentCard>
+          </div>
+        )}
 
-                {kelas.tanggal_selesai && (
-                  <div>
-                    <p className="text-xs text-gray-500">Selesai Pembelajaran</p>
-                    <p className="text-sm font-medium text-gray-800">{kelas.tanggal_selesai}</p>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setCheckoutOpen(true)}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition uppercase tracking-wide mt-1"
-                >
-                  Daftar Sekarang
-                </button>
+        {/* Penyelenggara */}
+        <div id="penyelenggara">
+          <ContentCard title="Penyelenggara">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0">
+                <span className="text-white text-sm font-bold">
+                  {kelas.owner.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">{kelas.owner.name}</p>
+                <p className="text-xs text-gray-400">Penyelenggara Kelas</p>
               </div>
             </div>
-          </div>
+          </ContentCard>
         </div>
 
-        {/* ════════════════════════════════════════
-            FOOTER CTA
-        ════════════════════════════════════════ */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-700 py-14">
-          <div className="max-w-2xl mx-auto px-4 text-center space-y-4">
-            <Award className="h-10 w-10 text-indigo-200 mx-auto" />
-            <h2 className="text-2xl font-extrabold text-white">{kelas.nama}</h2>
-            <p className="text-indigo-100 text-sm">Mulai perjalanan belajarmu sekarang</p>
-            <div className="flex items-center justify-center">
-              <span className="text-2xl font-extrabold text-white">
-                {formatHarga(kelas.harga, kelas.is_gratis)}
-              </span>
-            </div>
-            <button
-              onClick={() => setCheckoutOpen(true)}
-              className="bg-white text-indigo-700 font-bold px-8 py-3 rounded-xl hover:bg-indigo-50 transition text-sm inline-flex items-center gap-2"
-            >
-              Daftar Sekarang <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-gray-200 bg-white py-5">
-          <div className="max-w-5xl mx-auto px-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex gap-5 text-xs text-gray-400">
-              <a href="#" className="hover:text-gray-600 transition">Kebijakan Layanan</a>
-              <a href="#" className="hover:text-gray-600 transition">Kebijakan Privasi</a>
-            </div>
-          </div>
-          <div className="text-center mt-3 text-xs text-gray-300">🔒 POWERED BY MAYAR.ID</div>
-        </div>
       </div>
 
       {/* Checkout Dialog */}
@@ -360,6 +206,7 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
         onOpenChange={setCheckoutOpen}
         kelas={kelas}
       />
-    </>
+    </PublicProductLayout>
   );
 }
+

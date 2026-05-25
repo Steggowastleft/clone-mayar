@@ -19,6 +19,7 @@ use App\Models\Pembayaran;
 use App\Models\Pendaftaran;
 use App\Models\Rating;
 use App\Models\Peserta;
+use App\Models\KelasOnline;
 
 class DashboardController extends Controller
 {
@@ -75,22 +76,23 @@ class DashboardController extends Controller
         $topProducts = $this->getTopProducts();
 
         // ── Transaksi Terbaru (Pembayaran terbaru, 5 data) ───────────────
-        $recentTransaksi = Pembayaran::with('bootcamp')
+        $recentTransaksi = Pembayaran::with('bootcamp.user')
             ->latest()
             ->limit(10)
             ->get()
             ->map(function ($p) {
                 return [
-                    'id'    => $p->id,
-                    'type'  => $p->status === 'rejected' ? 'refund' : 'income',
-                    'title' => $p->bootcamp ? 'Penjualan ' . $p->bootcamp->name : 'Pembayaran #' . $p->order_id,
-                    'amount' => (float) $p->jumlah,
-                    'date'  => $p->created_at->locale('id')->diffForHumans(),
+                    'id'      => $p->id,
+                    'type'    => $p->status === 'rejected' ? 'refund' : 'income',
+                    'title'   => $p->bootcamp ? 'Penjualan ' . $p->bootcamp->name : 'Pembayaran #' . $p->order_id,
+                    'amount'  => (float) $p->jumlah,
+                    'date'    => $p->created_at->locale('id')->diffForHumans(),
+                    'penjual' => $p->bootcamp?->user?->name ?? 'Admin',
                 ];
             });
 
         // Tambahkan dari Pendaftaran (non-bootcamp) jika ada harga_bayar > 0
-        $recentPendaftaran = Pendaftaran::with('registrable')
+        $recentPendaftaran = Pendaftaran::with('registrable.user')
             ->where('harga_bayar', '>', 0)
             ->whereNotIn('registrable_type', ['App\\Models\\Bootcamp']) // Bootcamp sudah dari Pembayaran
             ->latest()
@@ -98,17 +100,20 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($p) {
                 $productName = 'Produk';
+                $penjual = 'Admin';
                 if ($p->registrable) {
                     $productName = $p->registrable->nama
                         ?? $p->registrable->name
                         ?? class_basename($p->registrable_type);
+                    $penjual = $p->registrable->user?->name ?? 'Admin';
                 }
                 return [
-                    'id'    => 'p_' . $p->id,
-                    'type'  => 'income',
-                    'title' => 'Penjualan ' . $productName,
-                    'amount' => (float) $p->harga_bayar,
-                    'date'  => $p->created_at->locale('id')->diffForHumans(),
+                    'id'      => 'p_' . $p->id,
+                    'type'    => 'income',
+                    'title'   => 'Penjualan ' . $productName,
+                    'amount'  => (float) $p->harga_bayar,
+                    'date'    => $p->created_at->locale('id')->diffForHumans(),
+                    'penjual' => $penjual,
                 ];
             });
 
@@ -135,6 +140,15 @@ class DashboardController extends Controller
                 ];
             });
 
+        $user = auth()->user();
+        $verificationStatus = 'unverified';
+        if ($user) {
+            $verification = \App\Models\AccountVerification::where('user_id', $user->id)
+                ->orderByDesc('created_at')
+                ->first();
+            $verificationStatus = $verification ? $verification->status : 'unverified';
+        }
+
         return Inertia::render('dashboard/index', [
             'dashboardData' => [
                 'balance'           => (float) $totalBalance,
@@ -145,11 +159,14 @@ class DashboardController extends Controller
                 'transaksiTrend'    => $transaksiTrend,
                 'chartData'         => $chartData,
                 'products'          => $topProducts,
+                'allProducts'       => $this->getAllProducts(),
                 'transactions'      => $allTransaksi->values()->toArray(),
                 'reviews'           => $recentReviews->toArray(),
             ],
             'user' => [
-                'name' => auth()->user()?->name ?? 'Pengguna',
+                'name' => $user?->name ?? 'Pengguna',
+                'role' => $user?->role ?? 'Creator',
+                'verificationStatus' => $verificationStatus,
             ],
         ]);
     }
@@ -208,7 +225,8 @@ class DashboardController extends Controller
         $products = [];
 
         // Bootcamp: hitung dari Pendaftaran
-        $bootcamps = Bootcamp::withCount([
+        $bootcamps = Bootcamp::with('user')
+            ->withCount([
                 'pendaftaran as total_terjual' => function ($q) {
                     $q->where('status', 'aktif');
                 }
@@ -231,11 +249,13 @@ class DashboardController extends Controller
                 'revenue' => (float) $revenue,
                 'rating'  => round((float) ($b->ratings_avg_bintang ?? 0), 1),
                 'image'   => $b->cover_url,
+                'penjual' => $b->user?->name ?? 'Admin',
             ];
         }
 
         // Ebook: hitung dari field terjual
-        $ebooks = Ebook::where('terjual', '>', 0)
+        $ebooks = Ebook::with('user')
+            ->where('terjual', '>', 0)
             ->orderByDesc('terjual')
             ->limit(3)
             ->get();
@@ -248,11 +268,13 @@ class DashboardController extends Controller
                 'revenue' => (float) (($e->terjual ?? 0) * ($e->harga ?? 0)),
                 'rating'  => 0,
                 'image'   => null,
+                'penjual' => $e->user?->name ?? 'Admin',
             ];
         }
 
         // ProdukDigital: hitung dari field total_penjualan
-        $produkDigitals = ProdukDigital::where('total_penjualan', '>', 0)
+        $produkDigitals = ProdukDigital::with('user')
+            ->where('total_penjualan', '>', 0)
             ->orderByDesc('total_penjualan')
             ->limit(3)
             ->get();
@@ -265,6 +287,7 @@ class DashboardController extends Controller
                 'revenue' => (float) (($pd->total_penjualan ?? 0) * ($pd->harga ?? 0)),
                 'rating'  => 0,
                 'image'   => null,
+                'penjual' => $pd->user?->name ?? 'Admin',
             ];
         }
 
@@ -272,5 +295,172 @@ class DashboardController extends Controller
         usort($products, fn($a, $b) => $b['sold'] - $a['sold']);
 
         return array_slice($products, 0, 10);
+    }
+
+    // ── Ambil semua produk untuk sidebar ───────────────────────────────────
+    private function getAllProducts()
+    {
+        $userId = auth()->id();
+        $products = [];
+
+        // Fetch Webinar
+        $webinars = Webinar::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($w) => [
+                'id' => "webinar:{$w->id}",
+                'product_id' => $w->id,
+                'type' => 'webinar',
+                'nama' => $w->nama,
+                'harga' => $w->harga ?? 0,
+                'status' => $w->status,
+                'tanggal' => $w->created_at->format('d M Y H:i'),
+                'terjual' => $w->peserta ?? 0,
+                'kategori' => 'Webinar',
+            ])->toArray();
+        $products = array_merge($products, $webinars);
+
+        // Fetch Event
+        $events = Event::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($e) => [
+                'id' => "event:{$e->id}",
+                'product_id' => $e->id,
+                'type' => 'event',
+                'nama' => $e->nama,
+                'harga' => $e->harga ?? 0,
+                'status' => $e->status,
+                'tanggal' => $e->created_at->format('d M Y H:i'),
+                'terjual' => $e->pendaftaran()->count(),
+                'kategori' => 'Event',
+            ])->toArray();
+        $products = array_merge($products, $events);
+
+        // Fetch Produk Digital
+        $produkDigital = ProdukDigital::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($p) => [
+                'id' => "produk_digital:{$p->id}",
+                'product_id' => $p->id,
+                'type' => 'produk-digital',
+                'nama' => $p->nama,
+                'harga' => $p->harga ?? 0,
+                'status' => $p->status,
+                'tanggal' => $p->created_at->format('d M Y H:i'),
+                'terjual' => $p->total_penjualan ?? 0,
+                'kategori' => 'Produk Digital',
+            ])->toArray();
+        $products = array_merge($products, $produkDigital);
+
+        // Fetch Payment Link
+        $paymentLink = PaymentLink::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($l) => [
+                'id' => "payment_link:{$l->id}",
+                'product_id' => $l->id,
+                'type' => 'payment-link',
+                'nama' => $l->nama,
+                'harga' => $l->harga ?? 0,
+                'status' => $l->status,
+                'tanggal' => $l->created_at->format('d M Y H:i'),
+                'terjual' => 0,
+                'kategori' => 'Link Pembayaran',
+            ])->toArray();
+        $products = array_merge($products, $paymentLink);
+
+        // Fetch Bootcamp
+        $bootcamp = Bootcamp::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($b) => [
+                'id' => "bootcamp:{$b->id}",
+                'product_id' => $b->id,
+                'type' => 'bootcamp',
+                'nama' => $b->name,
+                'harga' => $b->harga ?? 0,
+                'status' => $b->status,
+                'tanggal' => $b->created_at->format('d M Y H:i'),
+                'terjual' => $b->pendaftaran()->count(),
+                'kategori' => 'Bootcamp',
+            ])->toArray();
+        $products = array_merge($products, $bootcamp);
+
+        // Fetch Coaching Mentoring
+        $coachings = CoachingMentoring::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($c) => [
+                'id' => "coaching_mentoring:{$c->id}",
+                'product_id' => $c->id,
+                'type' => 'coaching-mentoring',
+                'nama' => $c->nama,
+                'harga' => $c->harga ?? 0,
+                'status' => $c->status,
+                'tanggal' => $c->created_at->format('d M Y H:i'),
+                'terjual' => $c->total_penjualan ?? 0,
+                'kategori' => 'Coaching / Mentoring',
+            ])->toArray();
+        $products = array_merge($products, $coachings);
+
+        // Fetch Penggalangan Dana
+        $penggalanganDana = PenggalanganDana::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($p) => [
+                'id' => "penggalangan_dana:{$p->id}",
+                'product_id' => $p->id,
+                'type' => 'penggalangan-dana',
+                'nama' => $p->nama,
+                'harga' => $p->harga ?? 0,
+                'status' => $p->status,
+                'tanggal' => $p->created_at->format('d M Y H:i'),
+                'terjual' => $p->pembeli ?? 0,
+                'kategori' => 'Penggalangan Dana',
+            ])->toArray();
+        $products = array_merge($products, $penggalanganDana);
+
+        // Fetch Tulisan
+        $tulisan = Tulisan::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($t) => [
+                'id' => "tulisan:{$t->id}",
+                'product_id' => $t->id,
+                'type' => 'tulisan',
+                'nama' => $t->nama,
+                'harga' => $t->harga ?? 0,
+                'status' => $t->status,
+                'tanggal' => $t->created_at->format('d M Y H:i'),
+                'terjual' => $t->terjual ?? 0,
+                'kategori' => 'Tulisan',
+            ])->toArray();
+        $products = array_merge($products, $tulisan);
+
+        // Fetch Kelas Online
+        $kelasOnline = KelasOnline::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($k) => [
+                'id' => "kelas_online:{$k->id}",
+                'product_id' => $k->id,
+                'type' => 'kelas-online',
+                'nama' => $k->nama,
+                'harga' => $k->harga ?? 0,
+                'status' => $k->status,
+                'tanggal' => $k->created_at->format('d M Y H:i'),
+                'terjual' => $k->pesertaTerdaftar()->count(),
+                'kategori' => 'Kelas Online',
+            ])->toArray();
+        $products = array_merge($products, $kelasOnline);
+
+        // Sort by created_at descending
+        usort($products, function ($a, $b) {
+            return strcmp($b['tanggal'], $a['tanggal']);
+        });
+
+        return $products;
     }
 }

@@ -3,9 +3,9 @@ import { SummaryCard } from "./SummaryCard";
 import { ChartCard } from "./ChartCard";
 import { TableCard } from "./TableCard";
 import { SideCard } from "./SideCard";
-import { AlertCircle, Plus, FileText, CreditCard, TrendingUp, ShoppingBag, Clock } from "lucide-react";
+import { AlertCircle, Plus, FileText, CreditCard, TrendingUp, ShoppingBag, Clock, XCircle } from "lucide-react";
 import { formatCurrency } from "@/hooks/useDashboard";
-import { router } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 
 interface ChartDataPoint {
   date: string;
@@ -48,12 +48,15 @@ interface ServerDashboardData {
   transaksiTrend?: number | null;
   chartData: ChartDataPoint[];
   products: Product[];
+  allProducts: any[];
   transactions: Transaction[];
   reviews: Review[];
 }
 
 interface AdminDashboardProps {
   userName?: string;
+  userRole?: string;
+  verificationStatus?: 'unverified' | 'pending' | 'approved' | 'rejected';
   onMenuClick?: () => void;
   serverData: ServerDashboardData;
 }
@@ -72,6 +75,8 @@ function formatCount(val: number | null | undefined): string | number {
 
 export function AdminDashboard({
   userName = "Pengguna",
+  userRole = "Creator",
+  verificationStatus = "unverified",
   onMenuClick,
   serverData,
 }: AdminDashboardProps) {
@@ -82,6 +87,7 @@ export function AdminDashboard({
       {/* ── Header ── */}
       <DashboardHeader
         userName={userName}
+        userRole={userRole}
         onMenuClick={onMenuClick}
         transactions={d.transactions}
       />
@@ -97,6 +103,17 @@ export function AdminDashboard({
             </p>
           </div>
           <div className="flex gap-2">
+            <a
+              href="https://wa.me/6281234567890?text=Halo%20Admin%20AksaCart,%20saya%20ingin%20berkoordinasi%20mengenai%20layanan%20saya."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
+            >
+              <svg className="h-4 w-4 fill-current shrink-0" viewBox="0 0 24 24">
+                <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.993L2 22l5.233-1.371a9.947 9.947 0 0 0 4.773 1.226h.004c5.505 0 9.99-4.477 9.99-9.985C22 6.478 17.518 2 12.012 2zm5.72 13.06c-.313.882-1.802 1.626-2.484 1.706-.682.08-1.547.288-4.52-.942-3.802-1.57-6.248-5.44-6.438-5.69-.19-.25-1.488-1.982-1.488-3.78 0-1.8 1.012-2.684 1.373-3.045.362-.361.793-.451 1.053-.451.26 0 .52.003.744.013.23.01.536-.04.832.67.313.751 1.073 2.624 1.163 2.805.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.381.47-.541.63-.18.18-.36.38-.15.74.21.36.93 1.53 1.985 2.47 1.35 1.21 2.49 1.58 2.85 1.76.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.085 1.02 2.445 1.2.36.18.6.27.69.42.09.15.09.87-.22 1.76z"/>
+              </svg>
+              Hubungi Admin
+            </a>
             <button
               onClick={() => router.visit("/transaksi")}
               className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
@@ -105,7 +122,7 @@ export function AdminDashboard({
               Faktur
             </button>
             <button
-              onClick={() => router.visit("/semua-produk")}
+              onClick={() => router.visit("/semua-produk/create")}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
             >
               <Plus className="h-4 w-4" />
@@ -115,18 +132,59 @@ export function AdminDashboard({
         </div>
 
         {/* ── Alert verifikasi ── */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center gap-3">
-          <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-800">Akun belum terverifikasi</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Verifikasi untuk membuka fitur penuh dan meningkatkan kepercayaan pelanggan.
-            </p>
+        {verificationStatus !== 'approved' && (
+          <div className={`border rounded-2xl px-5 py-3.5 flex items-center gap-3 ${
+            verificationStatus === 'pending'
+              ? 'bg-amber-50 border-amber-200'
+              : verificationStatus === 'rejected'
+              ? 'bg-rose-50 border-rose-200'
+              : 'bg-amber-50 border-amber-200'
+          }`}>
+            {verificationStatus === 'pending' ? (
+              <Clock className="h-4 w-4 text-amber-500 flex-shrink-0 animate-pulse" />
+            ) : verificationStatus === 'rejected' ? (
+              <XCircle className="h-4 w-4 text-rose-500 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            )}
+
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold ${
+                verificationStatus === 'rejected' ? 'text-rose-800' : 'text-amber-800'
+              }`}>
+                {verificationStatus === 'pending'
+                  ? 'Verifikasi sedang ditinjau'
+                  : verificationStatus === 'rejected'
+                  ? 'Verifikasi ditolak'
+                  : 'Akun belum terverifikasi'}
+              </p>
+              <p className={`text-xs mt-0.5 ${
+                verificationStatus === 'rejected' ? 'text-rose-600' : 'text-amber-600'
+              }`}>
+                {verificationStatus === 'pending'
+                  ? 'Dokumen dan data Anda sedang dalam proses peninjauan oleh tim admin.'
+                  : verificationStatus === 'rejected'
+                  ? 'Pengajuan verifikasi akun Anda ditolak. Silakan periksa detail penolakan dan perbaiki data Anda.'
+                  : 'Verifikasi untuk membuka fitur penuh dan meningkatkan kepercayaan pelanggan.'}
+              </p>
+            </div>
+
+            <Link
+              href="/pengaturan/akun"
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors ${
+                verificationStatus === 'rejected'
+                  ? 'text-rose-700 bg-rose-100 hover:bg-rose-200'
+                  : 'text-amber-700 bg-amber-100 hover:bg-amber-200'
+              }`}
+            >
+              {verificationStatus === 'pending'
+                ? 'Lihat Status'
+                : verificationStatus === 'rejected'
+                ? 'Perbaiki'
+                : 'Verifikasi'}
+            </Link>
           </div>
-          <button className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors">
-            Verifikasi
-          </button>
-        </div>
+        )}
 
         {/* ── Summary Cards ── */}
         <div className="grid grid-cols-2 lg:grid/* - */cols-4 gap-4">
@@ -179,6 +237,7 @@ export function AdminDashboard({
               transactions={d.transactions}
               reviewTitle="Ulasan Terbaru"
               reviews={d.reviews}
+              products={d.allProducts}
             />
           </div>
         </div>

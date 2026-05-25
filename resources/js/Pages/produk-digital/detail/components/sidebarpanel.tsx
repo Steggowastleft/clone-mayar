@@ -65,7 +65,7 @@ function ConfirmDialog({
 
 // ─── SidebarPanel ────────────────────────────────────────────────────
 
-export function SidebarPanel({ produk }: { produk: ProdukDigitalData }) {
+export function SidebarPanel({ produk, oldFiles }: { produk: ProdukDigitalData; oldFiles: any[] }) {
   const [statusOpen, setStatusOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   const [hapusOpen, setHapusOpen] = useState(false);
@@ -218,6 +218,7 @@ export function SidebarPanel({ produk }: { produk: ProdukDigitalData }) {
         open={editOpen}
         onOpenChange={setEditOpen}
         produk={produk}
+        oldFiles={oldFiles}
       />
     </>
   );

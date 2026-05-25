@@ -8,10 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('bundling_registrations');
         Schema::create('bundling_registrations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('bundling_id')->constrained('bundlings')->cascadeOnDelete();
-            $table->foreignUuid('peserta_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('bundling_id');
+            $table->foreign('bundling_id')
+                ->references('id')
+                ->on('bundlings')
+                ->cascadeOnDelete();+
+            $table->uuid('peserta_id');
+            $table->foreign('peserta_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnDelete();
             $table->string('nama');
             $table->string('email');
             $table->string('no_wa')->nullable();

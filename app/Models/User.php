@@ -5,17 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Str;
+use App\Models\AccountVerification;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     protected $keyType = 'string';
     public $incrementing = false;
 
     protected $fillable = [
-        'name', 'email', 'password',
+        'name', 'email', 'password', 'phone',
     ];
 
     protected $hidden = [
@@ -34,5 +36,10 @@ class User extends Authenticatable
                 $model->id = (string) Str::uuid();
             }
         });
+    }
+
+    public function accountVerification()
+    {
+        return $this->hasOne(AccountVerification::class, 'user_id', 'id');
     }
 }

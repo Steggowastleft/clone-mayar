@@ -97,6 +97,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
         setThumbnailFile(null);
         setThumbnailPreview(null);
         setRangeTanggal(undefined);
+        router.reload();
       },
       onError: (errs) => {
         setErrors(errs);

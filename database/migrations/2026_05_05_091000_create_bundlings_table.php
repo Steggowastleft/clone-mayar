@@ -10,7 +10,11 @@ return new class extends Migration
     {
         Schema::create('bundlings', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->uuid('user_id');
+            $table->foreign('user_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnDelete();
             $table->string('nama');
             $table->decimal('harga', 15, 2);
             $table->decimal('harga_coret', 15, 2)->nullable(); // harga strikethrough

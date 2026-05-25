@@ -10,23 +10,18 @@ use Inertia\Inertia;
 
 class WithdrawalController extends Controller
 {
-    /**
-     * Menampilkan daftar permohonan withdrawal
-     */
     public function index()
     {
         $withdrawals = Withdrawal::with('user')
             ->latest('tanggal_permohonan')
-            ->paginate(15);
+            ->limit(15)
+            ->get();
 
-        return Inertia::render('admin/withdrawal/index', [
+        return Inertia::render('adminpanel/Withdrawals', [
             'withdrawals' => $withdrawals,
         ]);
     }
 
-    /**
-     * Menampilkan detail withdrawal untuk approval
-     */
     public function show(Withdrawal $withdrawal)
     {
         return Inertia::render('admin/withdrawal/detail', [
@@ -34,97 +29,53 @@ class WithdrawalController extends Controller
         ]);
     }
 
-    /**
-     * Approve permohonan withdrawal
-     */
     public function approve(Request $request, Withdrawal $withdrawal)
     {
         if ($withdrawal->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Status withdrawal tidak valid untuk di-approve'
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Status invalid'], 422);
         }
 
-        $validated = $request->validate([
-            'admin_notes' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validate(['admin_notes' => 'nullable|string|max:500']);
 
         $withdrawal->update([
-            'status'           => 'approved',
-            'admin_notes'      => $validated['admin_notes'] ?? null,
+            'status' => 'approved',
+            'admin_notes' => $validated['admin_notes'] ?? null,
             'tanggal_approval' => now(),
-            'approved_by'      => Auth::id(),
+            'approved_by' => Auth::id(),
         ]);
 
-        // TODO: Send notification email to user
-        // TODO: Auto transfer or mark for manual processing
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Withdrawal berhasil di-approve'
-        ]);
+        return response()->json(['success' => true]);
     }
 
-    /**
-     * Reject permohonan withdrawal
-     */
     public function reject(Request $request, Withdrawal $withdrawal)
     {
         if ($withdrawal->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Status withdrawal tidak valid untuk di-reject'
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Status invalid'], 422);
         }
 
-        $validated = $request->validate([
-            'admin_notes' => 'required|string|max:500',
-        ]);
+        $validated = $request->validate(['admin_notes' => 'required|string|max:500']);
 
         $withdrawal->update([
-            'status'           => 'rejected',
-            'admin_notes'      => $validated['admin_notes'],
+            'status' => 'rejected',
+            'admin_notes' => $validated['admin_notes'],
             'tanggal_approval' => now(),
-            'approved_by'      => Auth::id(),
+            'approved_by' => Auth::id(),
         ]);
 
-        // TODO: Send rejection notification email to user
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Withdrawal berhasil di-reject'
-        ]);
+        return response()->json(['success' => true]);
     }
 
-    /**
-     * Mark as completed
-     */
     public function markCompleted(Request $request, Withdrawal $withdrawal)
     {
         if ($withdrawal->status !== 'approved') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Hanya withdrawal yang approved yang bisa di-mark completed'
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Status invalid'], 422);
         }
 
-        $withdrawal->update([
-            'status'           => 'completed',
-            'tanggal_selesai'  => now(),
-        ]);
+        $withdrawal->update(['status' => 'completed', 'tanggal_selesai' => now()]);
 
-        // TODO: Send completion notification email
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Withdrawal berhasil ditandai selesai'
-        ]);
+        return response()->json(['success' => true]);
     }
 
-    /**
-     * Statistik withdrawal
-     */
     public function stats()
     {
         $stats = [

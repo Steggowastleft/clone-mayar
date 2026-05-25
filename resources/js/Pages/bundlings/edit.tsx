@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -72,6 +79,7 @@ export default function Edit({ bundling, products }: EditProps) {
       : undefined
   );
   const [searchProduk, setSearchProduk] = useState("");
+  const [filterType, setFilterType] = useState("semua");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,9 +115,13 @@ export default function Edit({ bundling, products }: EditProps) {
     );
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.nama.toLowerCase().includes(searchProduk.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchSearch = p.nama.toLowerCase().includes(searchProduk.toLowerCase());
+    const matchType = filterType === "semua" || p.type === filterType;
+    return matchSearch && matchType;
+  });
+
+  const uniqueTypes = Array.from(new Set(products.map((p) => p.type)));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,30 +141,15 @@ export default function Edit({ bundling, products }: EditProps) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("nama", data.nama);
-    formData.append("harga", data.harga.toString());
-    formData.append("hargaCoret", data.hargaCoret || "");
-    formData.append("deskripsi", data.deskripsi);
-    formData.append("tipePembayaran", data.tipePembayaran);
-    formData.append("tanggalKadaluarsa", data.tanggalKadaluarsa);
-    formData.append("pesanSetelahBayar", data.pesanSetelahBayar);
-    formData.append("maksimalPembayaran", data.maksimalPembayaran);
-    formData.append("redirectUrl", data.redirectUrl);
-    formData.append("bisaAffiliate", data.bisaAffiliate ? "1" : "0");
+    const payload = {
+      ...data,
+      produkIds: data.produkIds.map((p) => p.id),
+      bisaAffiliate: data.bisaAffiliate ? 1 : 0,
+    };
 
-    // Add selected products
-    data.produkIds.forEach((p) => {
-      formData.append("produkIds[]", p.id);
-    });
-
-    if (data.cover) {
-      formData.append("cover", data.cover);
-    }
-
-    post(`/bundling/${bundling.id}`, {
+    router.post(`/bundling/${bundling.id}/`, payload, {
       forceFormData: true,
-    } as any);
+    });
   };
 
   return (
@@ -163,7 +160,7 @@ export default function Edit({ bundling, products }: EditProps) {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.visit("/bundling")}
+            onClick={() => router.visit("/bundling/")}
             className="text-blue-600 mb-4"
           >
             ← Kembali
@@ -196,15 +193,35 @@ export default function Edit({ bundling, products }: EditProps) {
             <Label className="text-sm font-semibold text-gray-700 mb-2 block">
               Pilih Produk Bundling *
             </Label>
+            <div className="flex gap-3 mb-3">
+              <div className="w-1/3">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="Semua Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="semua">Semua Kategori</SelectItem>
+                    {uniqueTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Ketik Nama Produk..."
+                  value={searchProduk}
+                  onChange={(e) => setSearchProduk(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            
             <div className="relative mb-3">
-              <Input
-                placeholder="Ketik Nama Produk..."
-                value={searchProduk}
-                onChange={(e) => setSearchProduk(e.target.value)}
-                className="w-full"
-              />
-              {searchProduk && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+              {(searchProduk || filterType !== "semua") && (
+                <div className="absolute top-0 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((p) => (
                       <button
@@ -440,7 +457,7 @@ export default function Edit({ bundling, products }: EditProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.visit("/bundling")}
+              onClick={() => router.visit("/bundling/")}
             >
               Batal
             </Button>

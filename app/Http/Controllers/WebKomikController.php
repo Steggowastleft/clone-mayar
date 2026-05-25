@@ -17,7 +17,9 @@ class WebKomikController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('web-komik/index');
+        return Inertia::render('web-komik/index', [
+            'createOpen' => true
+        ]);
     }
 
     public function store(Request $request)

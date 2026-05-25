@@ -14,11 +14,14 @@ export default function PenjualLogin() {
     setLoading(true);
 
     router.post("/login", form, {
-      onSuccess: () => {
-        console.log("SUCCESS LOGIN");
-
-        // 🔥 PAKSA PINDAH
-        window.location.replace("/dashboard");
+      onSuccess: (page: any) => {
+        console.log("SUCCESS LOGIN", page);
+        const role = page.props.auth?.user?.role;
+        if (role === "admin") {
+          window.location.replace("/admin/dashboard");
+        } else {
+          window.location.replace("/dashboard");
+        }
       },
       onError: (err) => {
         console.log("ERROR", err);

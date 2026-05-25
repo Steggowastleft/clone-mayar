@@ -10,7 +10,7 @@ import Dashboard from "../dashboard";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 
 type Transaksi = {
-  id: number;
+  id: number | string;
   kode: string;
   nama_pembeli: string;
   email: string;
@@ -19,6 +19,7 @@ type Transaksi = {
   jumlah: number;
   status: "sukses" | "pending" | "gagal" | "refund";
   tanggal: string;
+  penjual: string;
 };
 
 type Props = { transaksi: Transaksi[] };
@@ -89,10 +90,11 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
             </div>
 
             {/* Table header */}
-            <div className="px-5 py-2 border-b border-gray-100 grid grid-cols-6 gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="px-5 py-2 border-b border-gray-100 grid grid-cols-7 gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <div>Kode</div>
               <div>Pembeli</div>
               <div>Produk</div>
+              <div>Penjual</div>
               <div>Jumlah</div>
               <div>Tanggal</div>
               <div>Status</div>
@@ -103,15 +105,20 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
                 <p className="text-center text-gray-400 py-12 text-sm">Tidak ada transaksi ditemukan</p>
               ) : (
                 filtered.map((t) => (
-                  <div key={t.id} className="px-5 py-3 grid grid-cols-6 gap-4 items-center hover:bg-gray-50 transition">
+                  <div key={t.id} className="px-5 py-3 grid grid-cols-7 gap-4 items-center hover:bg-gray-50 transition">
                     <div className="text-xs font-mono text-gray-500">{t.kode}</div>
                     <div>
                       <p className="text-sm font-medium text-gray-800">{t.nama_pembeli}</p>
                       <p className="text-xs text-gray-400">{t.email}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-700">{t.produk}</p>
+                      <p className="text-sm text-gray-700 line-clamp-1">{t.produk}</p>
                       <p className="text-xs text-gray-400">{t.jenis_produk}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        {t.penjual}
+                      </span>
                     </div>
                     <div className="text-sm font-semibold text-gray-700">
                       Rp {t.jumlah.toLocaleString("id-ID")}
