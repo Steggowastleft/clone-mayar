@@ -1,0 +1,445 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use App\Models\Pendaftaran;
+use App\Models\KelasOnlinePeserta;
+use App\Models\Bootcamp;
+use App\Models\Webinar;
+use App\Models\Event;
+use App\Models\KelasOnline;
+use App\Models\Ebook;
+use App\Models\Produkdigital;
+use App\Models\CoachingMentoring;
+use App\Models\Tulisan;
+use App\Models\Bundling;
+use App\Models\Pembayaran;
+use App\Models\PaymentLink;
+use App\Models\PenggalanganDana;
+use Inertia\Inertia;
+
+class CheckoutController extends Controller
+{
+    /**
+     * Set up Midtrans configuration
+     */
+    protected function initMidtrans()
+    {
+        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        \Midtrans\Config::$clientKey = env('MIDTRANS_CLIENT_KEY');
+        \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+        \Midtrans\Config::$isSanitized = true;
+        \Midtrans\Config::$is3ds = true;
+    }
+
+    /**
+     * Process checkout registration (Free direct claim / Paid Midtrans SNAP token)
+     */
+    public function processPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'product_type' => 'required|string',
+            'product_id'   => 'required',
+            'name'         => 'required|string|max:255',
+            'email'        => 'required|email|max:255',
+            'phone'        => 'required|string|max:20',
+            'amount'       => 'nullable|numeric|min:1000',
+        ]);
+
+        $peserta = Auth::guard('peserta')->user();
+        if (!$peserta) {
+            return response()->json([
+                'message' => 'Silakan login terlebih dahulu untuk melakukan pendaftaran.'
+            ], 401);
+        }
+
+        // Map product type to Model Class
+        $typeMapping = [
+            'bootcamp'           => Bootcamp::class,
+            'webinar'            => Webinar::class,
+            'event'              => Event::class,
+            'kelas-online'       => KelasOnline::class,
+            'ebook'              => Ebook::class,
+            'produk-digital'     => Produkdigital::class,
+            'coaching-mentoring' => CoachingMentoring::class,
+            'tulisan'            => Tulisan::class,
+            'bundling'           => Bundling::class,
+            'payment-link'       => PaymentLink::class,
+            'penggalangan-dana'  => PenggalanganDana::class,
+        ];
+
+        $productType = strtolower($validated['product_type']);
+        if (!array_key_exists($productType, $typeMapping)) {
+            return response()->json(['message' => 'Tipe produk tidak valid.'], 400);
+        }
+
+        $modelClass = $typeMapping[$productType];
+        $product = $modelClass::findOrFail($validated['product_id']);
+
+        // Extract name and price based on model structure
+        $productName = '';
+        $price = 0;
+
+        if ($productType === 'bootcamp') {
+            $productName = $product->name;
+            $price = (float) $product->harga;
+        } elseif ($productType === 'penggalangan-dana') {
+            $productName = $product->nama;
+            $price = $request->has('amount') ? (float) $request->input('amount') : (float) ($product->minimal_donasi ?: 1000);
+        } else {
+            $productName = $product->nama;
+            $price = (float) $product->harga;
+        }
+
+        // Check if already registered
+        if ($productType === 'kelas-online') {
+            $existing = KelasOnlinePeserta::where('kelas_online_id', $product->id)
+                ->where('peserta_id', $peserta->id)
+                ->first();
+        } else {
+            $existing = Pendaftaran::where('registrable_id', $product->id)
+                ->where('registrable_type', $modelClass)
+                ->where('peserta_id', $peserta->id)
+                ->first();
+        }
+
+        if ($existing && in_array($existing->status, ['aktif', 'active', 'completed'])) {
+            if ($productType !== 'payment-link' && $productType !== 'penggalangan-dana') {
+                return response()->json([
+                    'message'  => 'Anda sudah terdaftar/membeli produk ini.',
+                    'redirect' => '/peserta/dashboard'
+                ], 409);
+            }
+        }
+
+        // Case 1: FREE product - direct activation
+        if ($price <= 0) {
+            if ($productType === 'kelas-online') {
+                KelasOnlinePeserta::updateOrCreate(
+                    [
+                        'kelas_online_id' => $product->id,
+                        'peserta_id'      => $peserta->id,
+                    ],
+                    [
+                        'status'          => 'aktif',
+                        'mendaftar_pada'  => now(),
+                    ]
+                );
+            } else {
+                Pendaftaran::updateOrCreate(
+                    [
+                        'registrable_id'   => $product->id,
+                        'registrable_type' => $modelClass,
+                        'peserta_id'       => $peserta->id,
+                    ],
+                    [
+                        'status'           => 'active',
+                        'harga_bayar'      => 0,
+                        'tanggal_daftar'   => now(),
+                        'tanggal_aktif'    => now(),
+                    ]
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'is_free' => true,
+                'redirect' => '/peserta/dashboard',
+                'message'  => 'Pendaftaran berhasil!'
+            ]);
+        }
+
+        // Case 2: PAID product - Midtrans Snap Token Request
+        $prefixMapping = [
+            'bootcamp'           => 'BC',
+            'webinar'            => 'WBN',
+            'event'              => 'EV',
+            'kelas-online'       => 'KO',
+            'ebook'              => 'EB',
+            'produk-digital'     => 'PD',
+            'coaching-mentoring' => 'CM',
+            'tulisan'            => 'TL',
+            'bundling'           => 'BD',
+            'payment-link'       => 'PL',
+            'penggalangan-dana'  => 'GD',
+        ];
+
+        $prefix = $prefixMapping[$productType];
+        $orderId = $prefix . '-' . $product->id . '-' . time() . '-' . strtoupper(Str::random(4));
+
+        $this->initMidtrans();
+
+        $params = [
+            'transaction_details' => [
+                'order_id'     => $orderId,
+                'gross_amount' => (int) $price,
+            ],
+            'customer_details' => [
+                'first_name' => $validated['name'],
+                'email'      => $validated['email'],
+                'phone'      => $validated['phone'],
+            ],
+            'item_details' => [
+                [
+                    'id'       => $productType . '-' . $product->id,
+                    'price'    => (int) $price,
+                    'quantity' => 1,
+                    'name'     => substr($productName, 0, 50),
+                ]
+            ]
+        ];
+
+        try {
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+            // Record pending state in database
+            if ($productType === 'kelas-online') {
+                KelasOnlinePeserta::updateOrCreate(
+                    [
+                        'kelas_online_id' => $product->id,
+                        'peserta_id'      => $peserta->id,
+                    ],
+                    [
+                        'status'          => 'pending',
+                        'mendaftar_pada'  => now(),
+                        'order_id'        => $orderId,
+                        'snap_token'      => $snapToken,
+                    ]
+                );
+            } elseif ($productType === 'payment-link' || $productType === 'penggalangan-dana') {
+                Pendaftaran::create([
+                    'registrable_id'   => $product->id,
+                    'registrable_type' => $modelClass,
+                    'peserta_id'       => $peserta->id,
+                    'status'           => 'pending',
+                    'harga_bayar'      => $price,
+                    'tanggal_daftar'   => now(),
+                    'order_id'         => $orderId,
+                    'snap_token'       => $snapToken,
+                ]);
+            } else {
+                Pendaftaran::updateOrCreate(
+                    [
+                        'registrable_id'   => $product->id,
+                        'registrable_type' => $modelClass,
+                        'peserta_id'       => $peserta->id,
+                    ],
+                    [
+                        'status'           => 'pending',
+                        'harga_bayar'      => $price,
+                        'tanggal_daftar'   => now(),
+                        'order_id'         => $orderId,
+                        'snap_token'       => $snapToken,
+                    ]
+                );
+            }
+
+            // Record pending Pembayaran state so it shows up in seller balance/reports
+            Pembayaran::updateOrCreate(
+                ['order_id' => $orderId],
+                [
+                    'bootcamp_id'    => $productType === 'bootcamp' ? $product->id : null,
+                    'peserta_id'     => $peserta->id,
+                    'nama_pembeli'   => $validated['name'],
+                    'email_pembeli'  => $validated['email'],
+                    'no_hp_pembeli'  => $validated['phone'],
+                    'jumlah'         => $price,
+                    'status'         => 'pending',
+                ]
+            );
+
+            return response()->json([
+                'success'    => true,
+                'is_free'    => false,
+                'snap_token' => $snapToken,
+                'order_id'   => $orderId,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat token pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Webhook Notification from Midtrans
+     */
+    public function notification(Request $request)
+    {
+        $payload = $request->all();
+        
+        $this->initMidtrans();
+
+        try {
+            $orderId = $payload['order_id'];
+            $transaction = \Midtrans\Transaction::status($orderId);
+            $transactionStatus = $transaction->transaction_status;
+
+            // Search in KelasOnlinePeserta
+            $kelasEnroll = KelasOnlinePeserta::where('order_id', $orderId)->first();
+            
+            // Search in Pendaftaran
+            $pendaftaran = Pendaftaran::where('order_id', $orderId)->first();
+
+            if (!$kelasEnroll && !$pendaftaran) {
+                return response()->json(['message' => 'Order not found'], 404);
+            }
+
+            $isPaid = ($transactionStatus === 'capture' || $transactionStatus === 'settlement');
+            $isFailed = in_array($transactionStatus, ['deny', 'expire', 'cancel']);
+
+            if ($kelasEnroll) {
+                if ($isPaid) {
+                    $kelasEnroll->update([
+                        'status' => 'aktif',
+                    ]);
+                } elseif ($isFailed) {
+                    $kelasEnroll->update([
+                        'status' => 'failed',
+                    ]);
+                }
+            }
+
+            if ($pendaftaran) {
+                if ($isPaid) {
+                    if ($pendaftaran->status !== 'active') {
+                        $pendaftaran->update([
+                            'status'        => 'active',
+                            'tanggal_aktif' => now(),
+                        ]);
+
+                        // Sync PenggalanganDana totals if it is a donation
+                        if ($pendaftaran->registrable_type === \App\Models\PenggalanganDana::class) {
+                            $campaign = $pendaftaran->registrable;
+                            if ($campaign) {
+                                $campaign->increment('terkumpul', (float) $pendaftaran->harga_bayar);
+                                $campaign->increment('pembeli');
+                            }
+                        }
+                    }
+                } elseif ($isFailed) {
+                    $pendaftaran->update([
+                        'status' => 'failed',
+                    ]);
+                }
+            }
+
+            // Sync with Pembayaran table to increase Saldo
+            $pembayaran = Pembayaran::where('order_id', $orderId)->first();
+            if ($pembayaran) {
+                if ($isPaid) {
+                    $pembayaran->update([
+                        'status'       => 'confirmed',
+                        'confirmed_at' => now(),
+                    ]);
+                } elseif ($isFailed) {
+                    $pembayaran->update([
+                        'status' => 'rejected',
+                    ]);
+                }
+            }
+
+            return response()->json(['message' => 'OK']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Validate Order status for Confirmation screen
+     */
+    public function validatePayment(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required|string',
+        ]);
+
+        $orderId = $request->order_id;
+
+        $kelasEnroll = KelasOnlinePeserta::where('order_id', $orderId)->first();
+        $pendaftaran = Pendaftaran::where('order_id', $orderId)->first();
+
+        if (!$kelasEnroll && !$pendaftaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pembayaran tidak ditemukan'
+            ], 404);
+        }
+
+        // Auto-check status directly with Midtrans API (essential for local testing/development)
+        try {
+            $this->initMidtrans();
+            $transaction = \Midtrans\Transaction::status($orderId);
+            $transactionStatus = $transaction->transaction_status;
+
+            $isPaid = ($transactionStatus === 'capture' || $transactionStatus === 'settlement');
+            $isFailed = in_array($transactionStatus, ['deny', 'expire', 'cancel']);
+
+            if ($isPaid) {
+                if ($kelasEnroll && $kelasEnroll->status !== 'aktif') {
+                    $kelasEnroll->update(['status' => 'aktif']);
+                }
+                if ($pendaftaran && $pendaftaran->status !== 'active') {
+                    $pendaftaran->update(['status' => 'active', 'tanggal_aktif' => now()]);
+
+                    // Sync PenggalanganDana totals if it is a donation
+                    if ($pendaftaran->registrable_type === \App\Models\PenggalanganDana::class) {
+                        $campaign = $pendaftaran->registrable;
+                        if ($campaign) {
+                            $campaign->increment('terkumpul', (float) $pendaftaran->harga_bayar);
+                            $campaign->increment('pembeli');
+                        }
+                    }
+                }
+
+                $pembayaran = Pembayaran::where('order_id', $orderId)->first();
+                if ($pembayaran && $pembayaran->status !== 'confirmed') {
+                    $pembayaran->update([
+                        'status'       => 'confirmed',
+                        'confirmed_at' => now(),
+                    ]);
+                }
+            } elseif ($isFailed) {
+                if ($kelasEnroll && $kelasEnroll->status !== 'failed') {
+                    $kelasEnroll->update(['status' => 'failed']);
+                }
+                if ($pendaftaran && $pendaftaran->status !== 'failed') {
+                    $pendaftaran->update(['status' => 'failed']);
+                }
+
+                $pembayaran = Pembayaran::where('order_id', $orderId)->first();
+                if ($pembayaran && $pembayaran->status !== 'rejected') {
+                    $pembayaran->update(['status' => 'rejected']);
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignore API exceptions and fall back to local database status
+        }
+
+        // Re-read fresh state from database
+        if ($kelasEnroll) {
+            $kelasEnroll->refresh();
+        }
+        if ($pendaftaran) {
+            $pendaftaran->refresh();
+        }
+
+        $status = $kelasEnroll ? $kelasEnroll->status : $pendaftaran->status;
+        $amount = $kelasEnroll ? 0 : $pendaftaran->harga_bayar;
+
+        return response()->json([
+            'success' => true,
+            'payment' => [
+                'order_id' => $orderId,
+                'status'   => $status,
+                'amount'   => $amount,
+            ]
+        ]);
+    }
+}
