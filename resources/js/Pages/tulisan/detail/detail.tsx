@@ -95,7 +95,7 @@ export default function DetailTab({ tulisan }: Props) {
       value:
         tulisan.tipe_tulisan === "one_shot"
           ? tulisan.tipe_pembayaran === "berbayar" ? "Produk Berbayar" : tulisan.tipe_pembayaran === "gratis" ? "Gratis" : "Bayar Semaunya"
-          : tulisan.mekanisme_bayar === "per_chapter" ? "Per Chapter" : tulisan.mekanisme_bayar === "semua_chapter" ? "Semua Chapter" : "Sekali Bayar",
+          : tulisan.mekanisme_bayar === "per_chapter" ? "Per Chapter" : tulisan.mekanisme_bayar === "semua_chapter" ? "Semua Chapter" : "-",
     },
     {
       label: "Harga",
@@ -246,7 +246,6 @@ export default function DetailTab({ tulisan }: Props) {
                     <SelectContent>
                       <SelectItem value="per_chapter">Per Chapter</SelectItem>
                       <SelectItem value="semua_chapter">Semua Chapter</SelectItem>
-                      <SelectItem value="sekali_bayar">Sekali Bayar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

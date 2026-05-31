@@ -167,6 +167,26 @@ class CheckoutController extends Controller
             'penggalangan-dana'  => 'GD',
         ];
 
+        $finalPrice = $price;
+        $itemDetails = [
+            [
+                'id'       => $productType . '-' . $product->id,
+                'price'    => (int) $price,
+                'quantity' => 1,
+                'name'     => substr($productName, 0, 50),
+            ]
+        ];
+
+        if ($price > 0) {
+            $finalPrice = $price + 5000;
+            $itemDetails[] = [
+                'id'       => 'admin-fee',
+                'price'    => 5000,
+                'quantity' => 1,
+                'name'     => 'Biaya Penanganan Admin',
+            ];
+        }
+
         $prefix = $prefixMapping[$productType];
         $orderId = $prefix . '-' . $product->id . '-' . time() . '-' . strtoupper(Str::random(4));
 
@@ -175,21 +195,14 @@ class CheckoutController extends Controller
         $params = [
             'transaction_details' => [
                 'order_id'     => $orderId,
-                'gross_amount' => (int) $price,
+                'gross_amount' => (int) $finalPrice,
             ],
             'customer_details' => [
                 'first_name' => $validated['name'],
                 'email'      => $validated['email'],
                 'phone'      => $validated['phone'],
             ],
-            'item_details' => [
-                [
-                    'id'       => $productType . '-' . $product->id,
-                    'price'    => (int) $price,
-                    'quantity' => 1,
-                    'name'     => substr($productName, 0, 50),
-                ]
-            ]
+            'item_details' => $itemDetails
         ];
 
         try {
@@ -209,17 +222,6 @@ class CheckoutController extends Controller
                         'snap_token'      => $snapToken,
                     ]
                 );
-            } elseif ($productType === 'payment-link' || $productType === 'penggalangan-dana') {
-                Pendaftaran::create([
-                    'registrable_id'   => $product->id,
-                    'registrable_type' => $modelClass,
-                    'peserta_id'       => $peserta->id,
-                    'status'           => 'pending',
-                    'harga_bayar'      => $price,
-                    'tanggal_daftar'   => now(),
-                    'order_id'         => $orderId,
-                    'snap_token'       => $snapToken,
-                ]);
             } else {
                 Pendaftaran::updateOrCreate(
                     [
@@ -229,7 +231,7 @@ class CheckoutController extends Controller
                     ],
                     [
                         'status'           => 'pending',
-                        'harga_bayar'      => $price,
+                        'harga_bayar'      => $finalPrice,
                         'tanggal_daftar'   => now(),
                         'order_id'         => $orderId,
                         'snap_token'       => $snapToken,
@@ -246,7 +248,7 @@ class CheckoutController extends Controller
                     'nama_pembeli'   => $validated['name'],
                     'email_pembeli'  => $validated['email'],
                     'no_hp_pembeli'  => $validated['phone'],
-                    'jumlah'         => $price,
+                    'jumlah'         => $finalPrice,
                     'status'         => 'pending',
                 ]
             );
@@ -317,7 +319,11 @@ class CheckoutController extends Controller
                         if ($pendaftaran->registrable_type === \App\Models\PenggalanganDana::class) {
                             $campaign = $pendaftaran->registrable;
                             if ($campaign) {
-                                $campaign->increment('terkumpul', (float) $pendaftaran->harga_bayar);
+                                $donationAmount = (float) $pendaftaran->harga_bayar;
+                                if ($donationAmount > 5000) {
+                                    $donationAmount -= 5000;
+                                }
+                                $campaign->increment('terkumpul', $donationAmount);
                                 $campaign->increment('pembeli');
                             }
                         }
@@ -392,7 +398,11 @@ class CheckoutController extends Controller
                     if ($pendaftaran->registrable_type === \App\Models\PenggalanganDana::class) {
                         $campaign = $pendaftaran->registrable;
                         if ($campaign) {
-                            $campaign->increment('terkumpul', (float) $pendaftaran->harga_bayar);
+                            $donationAmount = (float) $pendaftaran->harga_bayar;
+                            if ($donationAmount > 5000) {
+                                    $donationAmount -= 5000;
+                            }
+                            $campaign->increment('terkumpul', $donationAmount);
                             $campaign->increment('pembeli');
                         }
                     }

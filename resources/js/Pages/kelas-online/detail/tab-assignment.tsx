@@ -50,6 +50,8 @@ export type Assignment = {
   is_tugas_akhir?: boolean;
   tipe?: "upload" | "quiz";
   soals?: Soal[];
+  submissions?: any[];
+  submission?: any;
 };
 
 const emptyForm = {
@@ -457,7 +459,7 @@ function AssignmentCard({
           <SoalEditor
             assignmentId={assignment.id}
             initialSoals={assignment.soals ?? []}
-            onReload={() => router.reload({ only: ["kelas"], preserveScroll: true })}
+            onReload={() => router.reload({ only: ["kelas"], preserveScroll: true } as any)}
           />
         </div>
       )}
@@ -789,7 +791,7 @@ export default function TabAssignment({
   const [existingFiles, setExistingFiles] = useState<AssignmentFile[]>([]);
 
   // Sync dari Inertia reload
-  const page = usePage<{ assignmentList?: Assignment[] }>();
+  const page = usePage<any>();
   useEffect(() => {
     if (page.props.assignmentList) setAssignmentList(page.props.assignmentList);
   }, [page.props.assignmentList]);

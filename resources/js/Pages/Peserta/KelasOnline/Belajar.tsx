@@ -1,5 +1,5 @@
 import { router, Head } from "@inertiajs/react";
-import PesertaLayout from "@/Layouts/PesertaLayout";
+import PesertaLayout from "@/layouts/PesertaLayout";
 import TabEngineKelasOnline from "@/Pages/kelas-online/detail/tab-engine";
 import { Button } from "@/components/ui/button";
 

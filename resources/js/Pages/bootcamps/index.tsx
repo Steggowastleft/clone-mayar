@@ -35,6 +35,7 @@ import {
   ExternalLink,
   Upload,
   GraduationCap,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
@@ -46,6 +47,11 @@ type Bootcamp = {
   status: "published" | "unpublished" | "unlisted";
   date: string;
   participants: number;
+  kategori?: string | null;
+  harga?: number;
+  tipe_pembayaran?: string | null;
+  cover_url?: string | null;
+  created_at?: string | null;
 };
 
 type IndexProps = {
@@ -122,6 +128,7 @@ const defaultForm = {
 // ─── Main ───
 export default function Index({ bootcamps }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [kategoriFilter, setKategoriFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dateOpen, setDateOpen] = useState(false);
@@ -147,25 +154,15 @@ export default function Index({ bootcamps }: IndexProps) {
 
   const filteredBootcamps = bootcamps.filter((b) => {
     const matchStatus = statusFilter === "all" || b.status === statusFilter;
+    const matchKategori = kategoriFilter === "all" || b.kategori === kategoriFilter;
     const matchSearch = b.name.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "published": return <Badge className="bg-green-500 text-white">Published</Badge>;
-      case "unpublished": return <Badge className="bg-yellow-500 text-white">Unpublished</Badge>;
-      case "unlisted": return <Badge className="bg-gray-500 text-white">Unlisted</Badge>;
-      default: return <Badge>Unknown</Badge>;
+    let matchDate = true;
+    if (dateFilter) {
+      const formattedFilterDate = format(dateFilter, "yyyy-MM-dd");
+      matchDate = b.created_at ? b.created_at.startsWith(formattedFilterDate) : (b.date ? b.date.startsWith(formattedFilterDate) : false);
     }
-  };
-
-  const filterButtons = [
-    { label: "SEMUA", value: "all" },
-    { label: "PUBLISHED", value: "published" },
-    { label: "UNPUBLISHED", value: "unpublished" },
-    { label: "UNLISTED", value: "unlisted" },
-  ];
+    return matchStatus && matchKategori && matchSearch && matchDate;
+  });
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -195,16 +192,16 @@ export default function Index({ bootcamps }: IndexProps) {
     payload.append("batasNilaiQuiz", formData.batasNilaiQuiz);
     payload.append("redirectUrl", formData.redirectUrl);
     if (rangePenjualan?.from)
-  payload.append("tanggalMulaiJual", format(rangePenjualan.from, "yyyy-MM-dd"));
+      payload.append("tanggalMulaiJual", format(rangePenjualan.from, "yyyy-MM-dd"));
 
     if (rangePenjualan?.to)
-  payload.append("tanggalTutupDaftar", format(rangePenjualan.to, "yyyy-MM-dd"));
+      payload.append("tanggalTutupDaftar", format(rangePenjualan.to, "yyyy-MM-dd"));
 
     if (rangePembelajaran?.from)
-  payload.append("tanggalMulaiPembelajaran", format(rangePembelajaran.from, "yyyy-MM-dd"));
+      payload.append("tanggalMulaiPembelajaran", format(rangePembelajaran.from, "yyyy-MM-dd"));
 
     if (rangePembelajaran?.to)
-  payload.append("tanggalBatasPembelajaran", format(rangePembelajaran.to, "yyyy-MM-dd"));
+      payload.append("tanggalBatasPembelajaran", format(rangePembelajaran.to, "yyyy-MM-dd"));
     if (coverFile) payload.append("cover", coverFile);
 
     router.post("/bootcamps", payload, {
@@ -226,126 +223,235 @@ export default function Index({ bootcamps }: IndexProps) {
     "Keuangan & Akuntansi", "Kesehatan & Kebugaran", "Pendidikan & Pengajaran", "Lainnya",
   ];
 
+  const totalBootcamps = bootcamps.length;
+  const publikCount = bootcamps.filter((b) => b.status === "published").length;
+  const tidakPublikCount = totalBootcamps - publikCount;
+
   return (
     <DashboardLayout title="Kelas Cohort / Bootcamp">
-
-      <div className="flex gap-0 min-h-screen">
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">PROJEK</p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Kelas Cohort / Bootcamp (Batch)</h1>
-            <div className="flex gap-2">
-              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/bootcamps/catalog",)}>
-                PRODUK
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openCreate}>
-                + BUAT
-              </Button>
+      <Head title="Kelas Cohort / Bootcamp" />
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kelas Cohort / Bootcamp (Batch)</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Bootcamp: <span className="font-bold text-slate-800">{totalBootcamps}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">Semua Kelas Cohort / Bootcamp</h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input placeholder="Filter Halaman" className="pl-8 w-48 text-sm"
-                    value={search} onChange={(e) => setSearch(e.target.value)} />
-                  <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600"><Printer className="h-5 w-5" /></button>
-                <button className="text-gray-400 hover:text-gray-600"><Download className="h-5 w-5" /></button>
-              </div>
-            </div>
-            <div className="p-6">
-              {filteredBootcamps.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">There are no records to display</p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredBootcamps.map((bootcamp) => (
-                    <div key={bootcamp.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
-                      <div>
-                        <p className="font-semibold text-gray-800">{bootcamp.name}</p>
-                        <p className="text-sm text-gray-500">{bootcamp.batch} · {bootcamp.date} · {bootcamp.participants} peserta</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {statusBadge(bootcamp.status)}
-                        <Button size="sm" onClick={() => router.visit(`/bootcamps/${bootcamp.id}`)}>Detail</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/bootcamps/katalog", "_blank")}
+            >
+              Katalog Publik
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={openCreate}
+            >
+              + Buat Bootcamp
+            </Button>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <Popover open={dateOpen} onOpenChange={setDateOpen}>
-            <PopoverTrigger asChild>
-              <button className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left text-gray-500 hover:border-gray-300 transition",
-                dateFilter && "text-gray-800"
-              )}>
-                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
-                {dateFilter ? format(dateFilter, "dd MMM yyyy") : "Filter Berdasarkan Tanggal..."}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar mode="single" selected={dateFilter}
-                onSelect={(date) => { setDateFilter(date); setDateOpen(false); }} initialFocus />
-              {dateFilter && (
-                <div className="p-2 border-t">
-                  <Button variant="ghost" size="sm" className="w-full text-xs text-gray-500"
-                    onClick={() => { setDateFilter(undefined); setDateOpen(false); }}>
-                    Reset Tanggal
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-
-          <Input placeholder="Cari Kelas Cohort / Bootcamp" className="bg-white text-sm"
-            value={search} onChange={(e) => setSearch(e.target.value)} />
-
-          <div className="space-y-2">
-            {filterButtons.map((btn) => (
-              <button key={btn.value} onClick={() => setStatusFilter(btn.value)}
-                className={cn("w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
-                )}>
-                {btn.label}
-              </button>
-            ))}
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <Input
+              placeholder="Cari Nama Bootcamp..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <button onClick={() => window.open("/bootcamps/katalog", "_blank")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2">
-            KATALOG KELAS COHORT / BOOTCAMP
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            Katalog Kelas adalah halaman katalog online dimana semua Kelas Cohort / Bootcamp anda yang aktif ditampilkan.
-          </p>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Kategori Select */}
+            <Select value={kategoriFilter} onValueChange={setKategoriFilter}>
+              <SelectTrigger className="w-48 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Kategori" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                {kategoriOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Dialog>
-            <button className="w-full px-4 py-2.5 border border-gray-200 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 transition bg-white">
-              INFO & TUTORIAL
-            </button>
-          </Dialog>
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <button onClick={openCreate}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition">
-            + Buat Bootcamp Baru
-          </button>
+            {/* Date Filter */}
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-350 transition text-slate-600",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-455 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Batch</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Bootcamp</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai Jual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredBootcamps.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBootcamps.map((b, index) => {
+                    const statusIsPublik = b.status === "published";
+                    const formattedDate = b.date ? format(new Date(b.date), "dd MMM yyyy", { locale: idLocale }) : "-";
+                    return (
+                      <tr key={b.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {b.cover_url ? (
+                            <img
+                              src={b.cover_url}
+                              alt={b.name}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-slate-655 whitespace-nowrap">
+                          {b.batch || "Batch 1"}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[200px] truncate">
+                          {b.name}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold select-all max-w-[150px] truncate">
+                          {b.kategori || "-"}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-bold whitespace-nowrap">
+                          {b.harga && b.harga > 0 ? `Rp ${new Intl.NumberFormat("id-ID").format(b.harga)}` : "Gratis"}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{b.participants || 0}</td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-755 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-450 font-semibold whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => router.visit(`/bootcamps/${b.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

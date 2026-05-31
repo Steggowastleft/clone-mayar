@@ -114,32 +114,41 @@ export default function TabDetail({ webinar }: { webinar: Webinar }) {
   return (
     <>
       {/* SHARE */}
-      <div className="bg-white border rounded-lg p-5 mb-5">
-        <h3 className="font-semibold mb-4">Share Link</h3>
+      <div className="bg-white border border-blue-100 rounded-xl shadow-sm p-6 mb-5 space-y-4">
+        <h3 className="text-base font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+          Bagi Tautan untuk Menerima Order
+        </h3>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              label: "COPY LINK",
+              label: "Tautan Pembayaran (Checkout)",
               url: `${baseUrl}/p/${webinar.id}/webinar`,
             },
             {
-              label: "OPEN",
+              label: "Halaman Detail Webinar",
               url: `${baseUrl}/webinar/${webinar.id}`,
             },
           ].map((item) => (
-            <div key={item.label}>
-              <div className="px-3 py-2 bg-gray-50 border text-xs truncate">
-                {item.url}
+            <div key={item.label} className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={item.url}
+                  className="bg-slate-50/50 border-slate-200 text-xs font-semibold text-slate-600 select-all h-9"
+                />
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.url);
+                    toast.success(`${item.label} berhasil disalin!`);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 h-9"
+                  size="sm"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
               </div>
-
-              <button
-                onClick={() => navigator.clipboard.writeText(item.url)}
-                className="w-full py-2 border text-xs flex items-center justify-center gap-2"
-              >
-                <Copy className="h-3 w-3" />
-                {item.label}
-              </button>
             </div>
           ))}
         </div>
@@ -186,19 +195,32 @@ export default function TabDetail({ webinar }: { webinar: Webinar }) {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white border rounded-lg">
-        <table className="w-full">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className="border-b">
-                <td className="px-5 py-3 text-sm text-gray-500 w-56">
-                  {row.label}
-                </td>
-                <td className="px-5 py-3 text-sm">{row.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6">
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <tbody className="divide-y divide-slate-200">
+              {rows.map((row, i) => (
+                <tr key={i} className="hover:bg-slate-50/20 transition">
+                  <td className="px-5 py-4 text-xs font-bold text-slate-550 w-56 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap">
+                    {row.label}
+                  </td>
+                  <td className="px-5 py-4 text-xs font-medium text-slate-700">{row.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Centered Created At */}
+        <div className="text-center py-3 border border-blue-150 rounded-lg text-blue-650 font-bold bg-white mt-5 text-xs">
+          Dibuat pada {webinar.created_at ? new Date(webinar.created_at).toLocaleDateString("id-ID", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+          }) : "-"}
+        </div>
       </div>
 
       {/* MODAL */}

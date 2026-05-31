@@ -14,9 +14,9 @@ interface Sesi {
 
 interface AttendanceRecord {
   status: "pending" | "approved" | "rejected";
-  uploaded_at: string;
-  keterangan: string | null;
-  is_late: boolean;
+  uploaded_at?: string;
+  keterangan?: string | null;
+  is_late?: boolean;
 }
 
 interface AttendanceSummary {
@@ -188,7 +188,7 @@ function AttendanceCard({
             </div>
           )}
 
-          {record && (
+          {record && record.uploaded_at && (
             <p className="text-xs text-gray-400 mb-3">
               Dikirim: {new Date(record.uploaded_at).toLocaleString("id-ID")}
             </p>
@@ -244,10 +244,10 @@ export default function AttendancePage({ sesi, kelas, attendance: initialAttenda
         router.reload({ 
             only: ['attendance'], 
             preserveScroll: true,
-            onSuccess: (page) => {
+            onSuccess: (page: any) => {
                 setAttendance(page.props.attendance as any);
             }
-        });
+        } as any);
     }, 15000);
     return () => clearInterval(interval);
   }, []);

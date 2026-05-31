@@ -137,7 +137,6 @@ console.log("TAB ENGINE PROPS:", {
       case "email":
         return (
     <TabEmail
-      bootcampId={bootcamp.id}
       pesertaList={pesertaList}
     />
   );
@@ -145,56 +144,53 @@ console.log("TAB ENGINE PROPS:", {
   };
 
   return (
-  <div className="space-y-5">
-    {/* TAB NAV */}
-    <div className="border-b overflow-x-auto">
-      <div className="flex min-w-max">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-1.5 whitespace-nowrap transition",
-              activeTab === tab.id
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            )}
+    <div className="space-y-6">
+      {/* TAB NAVIGATION */}
+      <div className="flex mb-6 overflow-x-auto">
+        <div className="flex border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-8 py-2.5 text-xs font-bold tracking-wider transition whitespace-nowrap flex items-center gap-1.5",
+                  isActive
+                    ? "bg-blue-50 text-blue-600 font-extrabold border-r border-blue-200 last:border-0"
+                    : "text-blue-505 hover:bg-slate-50 border-r border-blue-150 last:border-0"
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CONTENT + SIDEBAR */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* KONTEN */}
+        <div className="flex-1 min-w-0">
+          <Suspense
+            fallback={
+              <div className="p-10 text-center text-gray-500">
+                Memuat tab...
+              </div>
+            }
           >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* CONTENT */}
-    <div className={cn(
-      activeTab === "detail"
-        ? "w-full"
-        : "flex gap-5"
-    )}>
-      {/* KONTEN */}
-      <div className="flex-1 min-w-0">
-        <Suspense
-          fallback={
-            <div className="p-10 text-center text-gray-500">
-              Memuat tab...
+            <div className="min-h-[200px]">
+              {renderTab()}
             </div>
-          }
-        >
-          <div className="min-h-[200px]">
-            {renderTab()}
-          </div>
-        </Suspense>
-      </div>
+          </Suspense>
+        </div>
 
-      {/* SIDEBAR hanya selain detail */}
-      {activeTab !== "detail" && (
-        <div className="w-64 shrink-0">
+        {/* SIDEBAR */}
+        <div className="w-full lg:w-80 shrink-0">
           <SidebarPanel bootcamp={bootcamp} />
         </div>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
 }

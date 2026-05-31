@@ -363,7 +363,7 @@ function AssignmentCard({
         
       },
       onError: () => toast.error("Gagal menghapus tugas."),
-    });
+    } as any);
   };
 
   return (
@@ -456,7 +456,7 @@ function AssignmentCard({
           <SoalEditor
             assignmentId={assignment.id}
             initialSoals={assignment.soals ?? []}
-            onReload={() => router.reload({ only: ["assignmentList"], preserveScroll: true })}
+            onReload={() => router.reload({ only: ["assignmentList"], preserveScroll: true } as any)}
           />
         </div>
       )}
@@ -575,7 +575,7 @@ export default function TabAssignment({
   const [existingFiles, setExistingFiles] = useState<AssignmentFile[]>([]);
 
   // Sync dari Inertia reload
-  const page = usePage<{ assignmentList?: Assignment[] }>();
+  const page = usePage() as any;
   useEffect(() => {
     if (page.props.assignmentList) setAssignmentList(page.props.assignmentList);
   }, [page.props.assignmentList]);
@@ -651,13 +651,13 @@ export default function TabAssignment({
     existingFiles.forEach((f, i) => { if (f.id) fd.append(`existing_files[${i}]`, String(f.id)); });
 
     const routerOptions = {
-      preserveScroll: true as const,
-      forceFormData: true as const,
+      preserveScroll: true as any,
+      forceFormData: true as any,
       onSuccess: () => {
         setIsSubmitting(false);
         toast.success(isEdit ? "Tugas berhasil diperbarui!" : "Tugas berhasil dibuat!");
         handleClose();
-        router.reload({ only: ["assignmentList"] });
+        router.reload({ only: ["assignmentList"] } as any);
       },
       onError: (e: Record<string, string>) => {
         setIsSubmitting(false);
@@ -666,7 +666,7 @@ export default function TabAssignment({
       },
     };
 
-    router.post(url, fd, routerOptions);
+    router.post(url, fd, routerOptions as any);
   };
 
   // ─────────────────────────────────────────────

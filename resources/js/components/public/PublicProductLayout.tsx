@@ -19,6 +19,7 @@ interface PublicProductLayoutProps {
   children: React.ReactNode; // left side content (details, specs, description)
   hideCoupon?: boolean;
   onCheckout?: () => void;
+  creatorId?: number | null;
 }
 
 export default function PublicProductLayout({
@@ -34,7 +35,8 @@ export default function PublicProductLayout({
   navIcon,
   children,
   hideCoupon = false,
-  onCheckout
+  onCheckout,
+  creatorId
 }: PublicProductLayoutProps) {
   const [copied, setCopied] = useState(false);
 
@@ -58,9 +60,18 @@ export default function PublicProductLayout({
       <nav className="border-b border-slate-100 bg-white/75 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/catalog" className="inline-flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <button 
+              onClick={() => {
+                if (document.referrer && document.referrer.includes('/catalog')) {
+                  window.history.back();
+                } else {
+                  window.location.href = creatorId ? `/catalog?user_id=${creatorId}` : "/catalog";
+                }
+              }}
+              className="inline-flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
               <ArrowLeft className="h-5 w-5" />
-            </a>
+            </button>
             <div className="flex items-center gap-2">
               <div className={`w-9 h-9 ${themeColorClass} rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20`}>
                 {navIcon}

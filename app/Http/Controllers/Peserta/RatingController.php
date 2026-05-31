@@ -24,7 +24,8 @@ class RatingController extends Controller
         $peserta = Auth::guard('peserta')->user();
 
         // Pastikan peserta terdaftar di bootcamp ini
-        $terdaftar = Pendaftaran::where('bootcamp_id', $bootcamp->id)
+        $terdaftar = Pendaftaran::where('registrable_id', $bootcamp->id)
+            ->where('registrable_type', Bootcamp::class)
             ->where('peserta_id', $peserta->id)
             ->exists();
 

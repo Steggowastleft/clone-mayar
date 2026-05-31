@@ -1,4 +1,6 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   Link, 
   CheckCircle2, 
@@ -20,6 +22,7 @@ type PaymentLink = {
   redirect_url: string | null;
   pesan_setelah_bayar: string | null;
   status: string;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -27,21 +30,26 @@ type Props = {
 };
 
 export default function PaymentLinkPublic({ link }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   return (
-    <PublicProductLayout
-      productId={`payment-link:${link.id}`}
-      title={link.nama}
-      harga={link.harga}
-      hargaCoret={link.harga_coret}
-      redirectUrl={link.redirect_url}
-      themeColorClass="bg-sky-600 hover:bg-sky-700"
-      textColorClass="text-sky-600"
-      badgeText="Payment Link"
-      navTitle="Mayar Payment"
-      navIcon={<Link className="text-white h-5 w-5" />}
-      hideCoupon={true}
-    >
-      <div className="space-y-8">
+    <>
+      <PublicProductLayout
+        productId={`payment-link:${link.id}`}
+        title={link.nama}
+        harga={link.harga}
+        hargaCoret={link.harga_coret}
+        redirectUrl={link.redirect_url}
+        themeColorClass="bg-sky-600 hover:bg-sky-700"
+        textColorClass="text-sky-600"
+        badgeText="Payment Link"
+        navTitle="Mayar Payment"
+        navIcon={<Link className="text-white h-5 w-5" />}
+        hideCoupon={true}
+        onCheckout={() => setCheckoutOpen(true)}
+        creatorId={link.user_id}
+      >
+        <div className="space-y-8">
         
         {/* Cover and Info */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
@@ -162,5 +170,14 @@ export default function PaymentLinkPublic({ link }: Props) {
 
       </div>
     </PublicProductLayout>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="payment-link"
+        productId={link.id}
+        productName={link.nama}
+        harga={link.harga}
+      />
+    </>
   );
 }

@@ -13,8 +13,7 @@ import {
 
 import TabTransaksi from "./detail/transaksi";
 import TabDetail from "./detail/detail";
-import TabPeserta from "./detail/peserta";
-import TabRating from "./detail/rating";
+import TabAnalisis from "./detail/analisis";
 
 import { SidebarPanel } from "./detail/components/sidebarpanel";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
@@ -52,6 +51,8 @@ type Props = {
   produk: PenggalanganDana;
   pesertaList?: any[];
   ratings?: any[];
+  analisis?: any;
+  transaksi?: any[];
 };
 
 function TabPlaceholder({ label }: { label: string }) {
@@ -66,31 +67,25 @@ export default function PenggalanganDanaDetail({
   produk,
   pesertaList = [],
   ratings = [],
+  analisis,
+  transaksi = [],
 }: Props) {
   const [activeTab, setActiveTab] = useState("detail");
 
-  const pembeliLabel =
-    produk.tipe === "qurban" ? "PEMESAN" : "DONATUR";
-
   const tabs = [
-    { id: "transaksi", label: "TRANSAKSI", icon: <BarChart3 className="h-3 w-3" /> },
     { id: "detail", label: "DETAIL", icon: <BookOpen className="h-3 w-3" /> },
-    { id: "peserta", label: pembeliLabel, icon: <Users2 className="h-3 w-3" /> },
-    { id: "rating", label: "RATING", icon: <Star className="h-3 w-3" /> },
-    { id: "email", label: "EMAIL", icon: <Mail className="h-3 w-3" /> },
-    { id: "pengaturan", label: "SETTING", icon: <Settings className="h-3 w-3" /> },
+    { id: "transaksi", label: "TRANSAKSI", icon: <BarChart3 className="h-3 w-3" /> },
+    { id: "analisis", label: "ANALISIS", icon: <BarChart3 className="h-3 w-3" /> },
   ];
 
   const renderTab = () => {
     switch (activeTab) {
-      case "transaksi":
-        return <TabTransaksi />;
       case "detail":
         return <TabDetail produk={produk} />;
-      case "peserta":
-        return <TabPeserta produkId={produk.id} pesertaList={pesertaList} />;
-      case "rating":
-        return <TabRating ratings={ratings} />;
+      case "transaksi":
+        return <TabTransaksi transaksi={transaksi} />;
+      case "analisis":
+        return <TabAnalisis produk={produk} analisis={analisis} />;
       default:
         return <TabPlaceholder label={activeTab} />;
     }
@@ -108,55 +103,72 @@ export default function PenggalanganDanaDetail({
     <DashboardLayout>
       <Head title={produk.nama} />
 
-      <div className="p-6">
-        <div className="flex justify-between mb-5">
+      <div className="p-6 bg-slate-50/20 min-h-screen">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-450 font-semibold mb-1">
               PROJEK ·{" "}
               <button
                 onClick={() => router.visit("/penggalangan-dana")}
-                className="hover:text-blue-600"
+                className="hover:text-blue-600 transition"
               >
                 Penggalangan Dana
               </button>
             </p>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
               {produk.nama}{" "}
-              <span className="text-sm text-gray-400 font-normal">
+              <span className="text-sm text-slate-400 font-normal">
                 ({getTipeLabel()})
               </span>
             </h1>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}>PRODUK</Button>
-            <Button>+ BUAT</Button>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-xs font-bold"
+            >
+              PRODUK
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+              onClick={() => router.visit("/semua-produk/create")}
+            >
+              + BUAT
+            </Button>
           </div>
         </div>
 
-        <div className="border-b mb-5">
-          <div className="flex">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-4 py-2 text-xs border-b-2 flex gap-1 items-center",
-                  activeTab === tab.id
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500"
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
+        {/* TAB NAVIGATION */}
+        <div className="flex mb-6 overflow-x-auto">
+          <div className="flex border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "px-8 py-2.5 text-xs font-bold tracking-wider transition whitespace-nowrap flex items-center gap-1.5",
+                    isActive
+                      ? "bg-blue-50 text-blue-600 font-extrabold border-r border-blue-200 last:border-0"
+                      : "text-blue-505 hover:bg-slate-50 border-r border-blue-150 last:border-0"
+                  )}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex gap-5">
-          <div className="flex-1">{renderTab()}</div>
-          <div className="w-64">
+        {/* CONTENT + SIDEBAR */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0">{renderTab()}</div>
+          <div className="w-full lg:w-80 shrink-0">
             <SidebarPanel produk={produk} />
           </div>
         </div>
@@ -164,3 +176,4 @@ export default function PenggalanganDanaDetail({
     </DashboardLayout>
   );
 }
+

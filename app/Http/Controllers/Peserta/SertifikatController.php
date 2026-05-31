@@ -20,7 +20,8 @@ class SertifikatController extends Controller
         $peserta = Auth::guard('peserta')->user();
 
         // Cek apakah kelas sudah selesai
-        $pendaftaran = Pendaftaran::where('bootcamp_id', $bootcamp->id)
+        $pendaftaran = Pendaftaran::where('registrable_id', $bootcamp->id)
+            ->where('registrable_type', Bootcamp::class)
             ->where('peserta_id', $peserta->id)
             ->whereIn('status', ['completed'])
             ->firstOrFail();

@@ -1,76 +1,79 @@
 import React from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Info } from "lucide-react";
 
 interface SummaryCardProps {
   title: string;
   value: string | number;
-  icon?: React.ReactNode;
-  trend?: number;
+  trendText?: string;
+  trendType?: "success" | "danger" | "info" | "warning";
   isLoading?: boolean;
-  color?: "blue" | "green" | "amber" | "purple";
+  isHighlight?: boolean;
+  icon?: React.ReactNode;
+  color?: string;
 }
-
-const colorMap = {
-  blue:   { bg: "bg-blue-50",   text: "text-blue-600",   ring: "ring-blue-100" },
-  green:  { bg: "bg-emerald-50", text: "text-emerald-600", ring: "ring-emerald-100" },
-  amber:  { bg: "bg-amber-50",  text: "text-amber-600",  ring: "ring-amber-100" },
-  purple: { bg: "bg-violet-50", text: "text-violet-600", ring: "ring-violet-100" },
-};
 
 export function SummaryCard({
   title,
   value,
-  icon,
-  trend,
+  trendText,
+  trendType = "info",
   isLoading = false,
-  color = "blue",
+  isHighlight = false,
 }: SummaryCardProps) {
-  const c = colorMap[color];
-
-  const TrendIcon =
-    trend === undefined || trend === null
-      ? null
-      : trend > 0
-      ? TrendingUp
-      : trend < 0
-      ? TrendingDown
-      : Minus;
-
-  const trendColor =
-    trend === undefined || trend === null
-      ? ""
-      : trend > 0
-      ? "text-emerald-600 bg-emerald-50"
-      : trend < 0
-      ? "text-red-500 bg-red-50"
-      : "text-slate-500 bg-slate-100";
+  const trendStyles = {
+    success: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    danger: "text-red-500 bg-red-50 border-red-100",
+    info: "text-blue-600 bg-blue-50 border-blue-100",
+    warning: "text-amber-600 bg-amber-50 border-amber-100",
+  };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-all duration-200 group">
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{title}</p>
-        {icon && (
-          <div className={`p-2 rounded-xl ring-4 ${c.bg} ${c.text} ${c.ring} group-hover:scale-110 transition-transform duration-200`}>
-            {icon}
-          </div>
-        )}
+    <div
+      className={`border rounded-2xl p-5 transition-all duration-200 flex flex-col justify-between h-[125px] ${
+        isHighlight
+          ? "bg-blue-50/70 border-blue-200"
+          : "bg-white border-slate-200"
+      }`}
+    >
+      {/* Top row: Title and Info Icon */}
+      <div className="flex items-center justify-between">
+        <span
+          className={`text-sm font-medium ${
+            isHighlight ? "text-slate-600" : "text-slate-500"
+          }`}
+        >
+          {title}
+        </span>
+        <Info
+          className={`h-4 w-4 cursor-pointer shrink-0 ${
+            isHighlight ? "text-blue-500" : "text-slate-300 hover:text-slate-400"
+          }`}
+        />
       </div>
 
       {/* Value */}
-      {isLoading ? (
-        <div className="h-7 w-28 bg-slate-100 rounded-lg animate-pulse mb-3" />
-      ) : (
-        <p className="text-2xl font-bold text-slate-900 tracking-tight mb-3">
-          {value || "—"}
-        </p>
-      )}
+      <div className="flex-1 flex flex-col justify-end mt-1">
+        {isLoading ? (
+          <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+        ) : (
+          <p
+            className={`text-2xl font-bold tracking-tight ${
+              isHighlight ? "text-slate-800" : "text-slate-900"
+            }`}
+          >
+            {value}
+          </p>
+        )}
+      </div>
 
-      {/* Trend */}
-      {trend !== undefined && trend !== null && TrendIcon && (
-        <div className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${trendColor}`}>
-          <TrendIcon className="h-3 w-3" />
-          {Math.abs(trend)}% dari periode lalu
+      {/* Trend Badge */}
+      {!isLoading && trendText && (
+        <div className="mt-1.5 flex">
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${trendStyles[trendType]}`}
+          >
+            {trendText}
+          </span>
         </div>
       )}
     </div>

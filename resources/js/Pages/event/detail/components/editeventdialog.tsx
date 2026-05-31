@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 
 type Event = {
   id: number;
-  nama: string;
+  nama?: string;
+  name?: string;
   deskripsi?: string;
   lokasi?: string;
 };
@@ -25,7 +26,7 @@ export function EditEventDialog({
 }) {
 
   const [form, setForm] = useState({
-    nama: event.nama || "",
+    nama: event.nama || event.name || "",
     deskripsi: event.deskripsi || "",
     lokasi: event.lokasi || "",
   });

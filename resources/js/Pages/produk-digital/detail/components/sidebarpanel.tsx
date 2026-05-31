@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router } from "@inertiajs/react";
-import { Edit, Trash2, Copy, ChevronDown } from "lucide-react";
+import { Edit, Trash2, Copy, ChevronDown, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { type ProdukDigitalData } from "../../show";
@@ -119,84 +119,110 @@ export function SidebarPanel({ produk, oldFiles }: { produk: ProdukDigitalData; 
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="bg-white border rounded-lg p-3 space-y-2">
+      <div className="space-y-4">
+        {/* Cover Image Section */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          {produk.cover_url ? (
+            <img
+              src={produk.cover_url}
+              alt={produk.nama}
+              className="w-full h-auto object-cover aspect-[3/4]"
+            />
+          ) : (
+            <div className="w-full aspect-[3/4] bg-slate-100 flex flex-col items-center justify-center text-slate-400 border-b p-4">
+              <Package className="h-10 w-10 text-slate-300 mb-2 animate-pulse" />
+              <span className="text-[11px] font-semibold">Belum Ada Cover</span>
+            </div>
+          )}
+        </div>
+
+        {/* Edit & Kustom Card Panel */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
+            Edit & Kustom
+          </h3>
+          
           {/* Status Dropdown */}
           <div className="relative">
             <button
               onClick={() => setStatusOpen((v) => !v)}
-              className={cn(
-                "w-full py-2.5 text-white font-bold rounded-md flex items-center justify-center gap-2",
-                produk.status && statusBgMap[produk.status] || "bg-gray-500"
-              )}
+              className="w-full py-2 bg-white border border-blue-500 text-blue-600 font-extrabold text-xs tracking-wider rounded-lg flex items-center justify-center gap-1.5 uppercase hover:bg-blue-50 transition"
             >
-              {produk.status?.toUpperCase() || "UNKNOWN"}
-              <ChevronDown
-                className={cn("h-4 w-4 transition", statusOpen && "rotate-180")}
-              />
+              {produk.status === "published" ? "PUBLIK" : "TIDAK PUBLIK"}
+              <span className="text-[10px] text-blue-500 font-bold">↕</span>
             </button>
 
             {statusOpen && (
-              <div className="absolute w-full bg-white border mt-1 rounded shadow z-20">
-                {statusOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleStatusChange(opt.value)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="absolute w-full bg-white border border-slate-200 mt-1 rounded-lg shadow-lg z-30 overflow-hidden divide-y divide-slate-100">
+                <button
+                  onClick={() => handleStatusChange("published")}
+                  className="w-full text-center px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  PUBLIK
+                </button>
+                <button
+                  onClick={() => handleStatusChange("unpublished")}
+                  className="w-full text-center px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  TIDAK PUBLIK (UNPUBLISHED)
+                </button>
+                <button
+                  onClick={() => handleStatusChange("unlisted")}
+                  className="w-full text-center px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  ARSIP (UNLISTED)
+                </button>
               </div>
             )}
           </div>
 
+          {/* EDIT Button */}
           <button
-            className={btnClass}
             onClick={() => setEditOpen(true)}
+            className="w-full py-2 bg-white border border-blue-500 text-blue-600 font-extrabold text-xs tracking-wider rounded-lg hover:bg-blue-50 transition uppercase"
           >
-            <Edit className="h-4 w-4" /> EDIT
+            EDIT
           </button>
 
-          <button className={btnClass} onClick={() => setDupOpen(true)}>
-            <Copy className="h-4 w-4" /> DUPLICATE
-          </button>
-
+          {/* DUPLIKAT PRODUK Button */}
           <button
-            className={cn(btnClass, "text-red-600 hover:bg-red-50")}
-            onClick={() => setHapusOpen(true)}
+            onClick={() => setDupOpen(true)}
+            className="w-full py-2 bg-white border border-slate-800 text-slate-800 font-extrabold text-xs tracking-wider rounded-lg hover:bg-slate-50 transition uppercase"
           >
-            <Trash2 className="h-4 w-4" /> HAPUS
+            DUPLIKAT PRODUK
           </button>
-        </div>
 
-        {/* Info Panel */}
-        <div className="bg-white border rounded-lg p-3 space-y-2 text-xs text-gray-500">
-          <div className="flex justify-between">
-            <span>Total Penjualan</span>
-            <span className="font-semibold text-gray-800">
-              {produk.total_penjualan}
-            </span>
-          </div>
-          {produk.max_pembayaran && (
-            <div className="flex justify-between">
-              <span>Kuota</span>
-              <span className="font-semibold text-gray-800">
-                {produk.max_pembayaran}
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span>Affiliate</span>
-            <span
-              className={cn(
-                "font-semibold",
-                produk.bisa_affiliate ? "text-green-600" : "text-gray-400"
-              )}
-            >
-              {produk.bisa_affiliate ? "Aktif" : "Nonaktif"}
-            </span>
-          </div>
+          {/* KUSTOM FORM Button */}
+          <button
+            onClick={() => toast.info("Fitur Kustom Form untuk Produk Digital akan segera hadir!")}
+            className="w-full py-2 bg-white border border-slate-800 text-slate-800 font-extrabold text-xs tracking-wider rounded-lg hover:bg-slate-50 transition uppercase"
+          >
+            KUSTOM FORM
+          </button>
+
+          {/* ARSIP Button */}
+          <button
+            onClick={() => handleStatusChange("unlisted")}
+            className="w-full py-2 bg-white border border-slate-800 text-slate-800 font-extrabold text-xs tracking-wider rounded-lg hover:bg-slate-50 transition uppercase"
+          >
+            ARSIP
+          </button>
+
+          {/* TUTUP Button */}
+          <button
+            onClick={() => handleStatusChange("unpublished")}
+            className="w-full py-2 bg-white border border-red-500 text-red-600 font-extrabold text-xs tracking-wider rounded-lg hover:bg-red-50 transition uppercase"
+          >
+            TUTUP
+          </button>
+
+          {/* HAPUS Button */}
+          <button
+            onClick={() => setHapusOpen(true)}
+            className="w-full py-2 bg-white border border-red-500 text-red-600 font-extrabold text-xs tracking-wider rounded-lg hover:bg-red-50 transition uppercase"
+          >
+            HAPUS
+          </button>
         </div>
       </div>
 

@@ -38,6 +38,7 @@ class KelasOnlinePublicController extends Controller
                 'owner'                   => [
                     'name' => $kelas->owner->name,
                 ],
+                'user_id'                 => $kelas->user_id,
             ],
 
             'peserta' => $peserta ? [

@@ -1,4 +1,6 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   BookOpen, 
   Download, 
@@ -24,6 +26,7 @@ type Ebook = {
   tanggal_publish: string | null;
   sumber_file: string;
   redirect_url?: string | null;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -31,20 +34,25 @@ type Props = {
 };
 
 export default function EbookPublic({ ebook }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   return (
-    <PublicProductLayout
-      productId={`ebook:${ebook.id}`}
-      title={ebook.nama}
-      harga={ebook.harga}
-      hargaCoret={ebook.harga_coret}
-      redirectUrl={ebook.redirect_url}
-      themeColorClass="bg-emerald-600 hover:bg-emerald-700"
-      textColorClass="text-emerald-600"
-      badgeText="E-Book"
-      navTitle="Mayar Ebook"
-      navIcon={<BookOpen className="text-white h-5 w-5" />}
-    >
-      <div className="space-y-8">
+    <>
+      <PublicProductLayout
+        productId={`ebook:${ebook.id}`}
+        title={ebook.nama}
+        harga={ebook.harga}
+        hargaCoret={ebook.harga_coret}
+        redirectUrl={ebook.redirect_url}
+        themeColorClass="bg-emerald-600 hover:bg-emerald-700"
+        textColorClass="text-emerald-600"
+        badgeText="E-Book"
+        navTitle="Mayar Ebook"
+        navIcon={<BookOpen className="text-white h-5 w-5" />}
+        onCheckout={() => setCheckoutOpen(true)}
+        creatorId={ebook.user_id}
+      >
+        <div className="space-y-8">
         
         {/* Cover and Quick Stats */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
@@ -158,5 +166,14 @@ export default function EbookPublic({ ebook }: Props) {
 
       </div>
     </PublicProductLayout>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="ebook"
+        productId={ebook.id}
+        productName={ebook.nama}
+        harga={ebook.harga}
+      />
+    </>
   );
 }

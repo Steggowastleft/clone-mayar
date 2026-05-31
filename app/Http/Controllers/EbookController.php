@@ -111,6 +111,10 @@ class EbookController extends Controller
 
     public function edit(Ebook $ebook): Response
     {
+        if ($ebook->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         return Inertia::render('ebook/detail', [
             'ebook' => $ebook,
             'isEdit' => true

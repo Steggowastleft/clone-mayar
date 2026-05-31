@@ -1,5 +1,5 @@
 import AppLayout from "@/layouts/app-layout";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -90,7 +90,7 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
             </div>
 
             {/* Table header */}
-            <div className="px-5 py-2 border-b border-gray-100 grid grid-cols-7 gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="px-5 py-2 border-b border-gray-100 grid grid-cols-8 gap-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <div>Kode</div>
               <div>Pembeli</div>
               <div>Produk</div>
@@ -98,6 +98,7 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
               <div>Jumlah</div>
               <div>Tanggal</div>
               <div>Status</div>
+              <div className="text-right">Aksi</div>
             </div>
 
             <div className="divide-y divide-gray-50">
@@ -105,7 +106,7 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
                 <p className="text-center text-gray-400 py-12 text-sm">Tidak ada transaksi ditemukan</p>
               ) : (
                 filtered.map((t) => (
-                  <div key={t.id} className="px-5 py-3 grid grid-cols-7 gap-4 items-center hover:bg-gray-50 transition">
+                  <div key={t.id} className="px-5 py-3 grid grid-cols-8 gap-4 items-center hover:bg-gray-50 transition">
                     <div className="text-xs font-mono text-gray-500">{t.kode}</div>
                     <div>
                       <p className="text-sm font-medium text-gray-800">{t.nama_pembeli}</p>
@@ -125,6 +126,14 @@ export default function TransaksiIndex({ transaksi = [] }: Props) {
                     </div>
                     <div className="text-xs text-gray-500">{t.tanggal}</div>
                     <div>{statusBadge(t.status)}</div>
+                    <div className="text-right">
+                      <Link
+                        href={`/transaksi/${t.id}`}
+                        className="inline-flex items-center justify-center rounded-md text-sm font-semibold h-9 px-3 border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 transition"
+                      >
+                        Lihat
+                      </Link>
+                    </div>
                   </div>
                 ))
               )}

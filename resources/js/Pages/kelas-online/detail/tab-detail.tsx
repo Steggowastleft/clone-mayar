@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface KelasOnline {
   id: number;
@@ -15,6 +19,7 @@ interface KelasOnline {
   nilai_minimum_quiz: number | null;
   has_assignment: boolean;
   thumbnail: string | null;
+  created_at?: string;
 }
 
 interface Props {
@@ -23,93 +28,118 @@ interface Props {
 }
 
 export default function TabDetail({ kelas, isOwner }: Props) {
-  const [copied, setCopied] = useState(false);
-  const shareLink = `${window.location.origin}/p/${kelas.id}/kelas-online`;
+  const baseUrl = window.location.origin;
+  const shareLink = `${baseUrl}/p/${kelas.id}/kelas-online`;
+
+  const rows = [
+    {
+      label: "Status",
+      value: (
+        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border
+          ${kelas.status === "published"   ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+            kelas.status === "unpublished" ? "bg-yellow-50 text-yellow-750 border-yellow-200" :
+            "bg-blue-50 text-blue-700 border-blue-200"}`}>
+          {kelas.status.toUpperCase()}
+        </span>
+      )
+    },
+    { label: "Nama Kelas", value: <span className="font-bold text-slate-800">{kelas.nama}</span> },
+    {
+      label: "Harga",
+      value: (
+        <span className="font-extrabold text-blue-600 text-sm">
+          {kelas.is_gratis ? "Gratis" : `Rp ${Number(kelas.harga).toLocaleString("id-ID")}`}
+        </span>
+      )
+    },
+    ...(kelas.tanggal_mulai ? [{
+      label: "Tanggal Mulai",
+      value: (
+        <span className="font-semibold text-slate-700">
+          {new Date(kelas.tanggal_mulai).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+        </span>
+      )
+    }] : []),
+    ...(kelas.tanggal_selesai ? [{
+      label: "Tanggal Selesai",
+      value: (
+        <span className="font-semibold text-slate-700">
+          {new Date(kelas.tanggal_selesai).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+        </span>
+      )
+    }] : []),
+  ];
 
   return (
     <div className="space-y-6">
       {/* SHARE LINK */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-        <h3 className="text-sm font-bold text-gray-800 mb-4">
-          Share Link untuk Menerima Pendaftaran
+      <div className="bg-white border border-blue-100 rounded-xl shadow-sm p-6 space-y-4">
+        <h3 className="text-base font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+          Bagi Tautan untuk Menerima Pendaftaran
         </h3>
 
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(shareLink);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className="w-full flex items-center justify-between gap-3 bg-gray-50 hover:bg-gray-100 border rounded-xl px-4 py-3 text-left transition"
-          >
-            <span className="text-sm text-blue-600 break-all">
-              {shareLink}
-            </span>
-
-            <span className="shrink-0 text-gray-500">
-              {copied ? (
-                <Check className="h-4 w-4 text-green-600" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </span>
-          </button>
-
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Klik link di atas untuk menyalin otomatis. Bagikan ke WhatsApp,
-            Telegram, TikTok, landing page, email, atau channel lain.
-          </p>
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tautan Pendaftaran (Checkout)</span>
+          <div className="flex gap-2 max-w-xl">
+            <Input
+              readOnly
+              value={shareLink}
+              className="bg-slate-50/50 border-slate-200 text-xs font-semibold text-slate-600 select-all h-9"
+            />
+            <Button
+              onClick={() => {
+                navigator.clipboard.writeText(shareLink);
+                toast.success("Tautan pendaftaran berhasil disalin!");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 h-9"
+              size="sm"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Info Utama */}
-      <div className="lg:col-span-2 space-y-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="font-bold text-gray-900 mb-3">Informasi Kelas</h2>
+        {/* Info Utama */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6">
+            <h2 className="font-extrabold text-slate-800 text-sm mb-4">Informasi Kelas</h2>
 
-          {kelas.thumbnail && (
-            <img
-              src={`/storage/${kelas.thumbnail}`}
-              alt={kelas.nama}
-              className="w-full h-48 object-cover rounded-xl mb-4"
-            />
-          )}
+            {kelas.thumbnail && (
+              <img
+                src={`/storage/${kelas.thumbnail}`}
+                alt={kelas.nama}
+                className="w-full h-48 object-cover rounded-xl mb-6 border border-slate-100 shadow-sm"
+              />
+            )}
 
-          <div className="space-y-3 text-sm">
-            {[
-              { label: "Nama Kelas",    value: kelas.nama },
-              { label: "Status",        value: kelas.status, isStatus: true },
-              { label: "Harga",         value: kelas.is_gratis ? "Gratis" : `Rp ${Number(kelas.harga).toLocaleString("id-ID")}` },
-              kelas.tanggal_mulai
-                ? { label: "Tanggal Mulai",   value: new Date(kelas.tanggal_mulai).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) }
-                : null,
-              kelas.tanggal_selesai
-                ? { label: "Tanggal Selesai", value: new Date(kelas.tanggal_selesai).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) }
-                : null,
-            ].filter(Boolean).map(({ label, value, isStatus }: any, i, arr) => (
-              <div
-                key={label}
-                className={`flex justify-between items-center py-2 ${i < arr.length - 1 ? "border-b border-gray-100" : ""}`}
-              >
-                <span className="text-gray-500">{label}</span>
-                {isStatus ? (
-                  <span className={`font-semibold text-xs px-2.5 py-0.5 rounded-full
-                    ${value === "published"   ? "bg-emerald-100 text-emerald-700" :
-                      value === "unpublished" ? "bg-yellow-100 text-yellow-700" :
-                      value === "unlisted"    ? "bg-blue-100 text-blue-700" :
-                      "bg-gray-100 text-gray-600"}`}>
-                    {value}
-                  </span>
-                ) : (
-                  <span className="font-semibold text-gray-800">{value}</span>
-                )}
-              </div>
-            ))}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <tbody className="divide-y divide-slate-200">
+                  {rows.map((row, i) => (
+                    <tr key={i} className="hover:bg-slate-50/20 transition">
+                      <td className="px-5 py-4 text-xs font-bold text-slate-550 w-56 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap align-top">
+                        {row.label}
+                      </td>
+                      <td className="px-5 py-4 text-xs font-medium text-slate-700">
+                        {row.value}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bottom Created At */}
+            <div className="text-center py-3 border border-blue-150 rounded-lg text-blue-650 font-bold bg-white mt-5 text-xs">
+              Dibuat tanggal {kelas.created_at ? new Date(kelas.created_at).toLocaleDateString("id-ID", {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              }) : "-"}
+            </div>
           </div>
-        </div>
 
         {kelas.deskripsi && (
           <div className="bg-white rounded-2xl border border-gray-200 p-5">

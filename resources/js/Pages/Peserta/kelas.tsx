@@ -61,9 +61,10 @@ type Props = {
 };
 
 type SubmitForm = {
-  tipe: "url" | "teks";
+  tipe: "url" | "teks" | "file";
   url: string;
   teks: string;
+  file?: File;
 };
 
 // ─────────────────────────────────────────────

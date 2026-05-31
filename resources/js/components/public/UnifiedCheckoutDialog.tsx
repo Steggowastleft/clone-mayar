@@ -95,13 +95,6 @@ export default function UnifiedCheckoutDialog({
         setEmail(emailVal);
         setPhone(phoneVal);
         setStep("checkout_info");
-
-        // Immediately trigger checkout submit logic for logged-in user
-        handleCheckoutSubmit({
-          name: nameVal,
-          email: emailVal,
-          phone: phoneVal,
-        });
       } else {
         setStep("pilihan");
         setEmail(prefilledEmail || "");
@@ -155,13 +148,6 @@ export default function UnifiedCheckoutDialog({
         setEmail(data.peserta.email || "");
         setPhone(data.peserta.no_hp || "08123456789");
         setStep("checkout_info");
-        
-        // Auto trigger checkout on successful login!
-        await handleCheckoutSubmit({
-          name: data.peserta.nama || "",
-          email: data.peserta.email || "",
-          phone: data.peserta.no_hp || "08123456789",
-        });
       } else {
         setErrors({ password: data.message || "Password salah atau email tidak terdaftar." });
       }
@@ -205,13 +191,6 @@ export default function UnifiedCheckoutDialog({
         setEmail(data.peserta.email || "");
         setPhone("08123456789");
         setStep("checkout_info");
-
-        // Auto trigger checkout on successful registration!
-        await handleCheckoutSubmit({
-          name: data.peserta.nama || "",
-          email: data.peserta.email || "",
-          phone: "08123456789",
-        });
       } else if (res.status === 422) {
         const flatErrors: Record<string, string> = {};
         for (const [key, value] of Object.entries(data.errors || data)) {
@@ -262,7 +241,12 @@ export default function UnifiedCheckoutDialog({
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error("Respon server tidak valid. Silakan coba muat ulang halaman (refresh) atau masuk kembali.");
+      }
 
       if (res.status === 409) {
         toast.info("Anda sudah terdaftar untuk produk ini.");
@@ -375,7 +359,12 @@ export default function UnifiedCheckoutDialog({
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100/80 text-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Produk</p>
                 <p className="text-sm font-black text-slate-800 mt-1 line-clamp-1">{productName}</p>
-                <p className="text-2xl font-black text-indigo-600 mt-1.5">{formatHarga(harga)}</p>
+                <p className="text-2xl font-black text-indigo-600 mt-1.5">
+                  {harga > 0 ? formatHarga(harga + 5000) : "Gratis"}
+                </p>
+                {harga > 0 && (
+                  <p className="text-[10px] text-slate-450 mt-1 font-semibold">*Sudah termasuk biaya penanganan admin Rp 5.000</p>
+                )}
               </div>
 
               <button
@@ -593,9 +582,23 @@ export default function UnifiedCheckoutDialog({
                       <span>Rincian Pembelian</span>
                     </div>
                     <p className="text-sm font-black text-slate-800 line-clamp-1">{productName}</p>
+                    {harga > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-slate-200/50 text-xs">
+                        <div className="flex justify-between text-slate-555">
+                          <span>Harga Produk</span>
+                          <span>{formatHarga(harga)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-555">
+                          <span>Biaya Penanganan Admin</span>
+                          <span>{formatHarga(5000)}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center pt-2 border-t border-slate-200/50 mt-2">
                       <span className="text-xs text-slate-500 font-semibold">Total Bayar</span>
-                      <span className="text-lg font-black text-indigo-600">{formatHarga(harga)}</span>
+                      <span className="text-lg font-black text-indigo-600">
+                        {harga > 0 ? formatHarga(harga + 5000) : "Gratis"}
+                      </span>
                     </div>
                   </div>
 

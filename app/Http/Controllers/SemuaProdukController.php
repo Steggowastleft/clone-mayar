@@ -11,6 +11,9 @@ use App\Models\CoachingMentoring;
 use App\Models\PenggalanganDana;
 use App\Models\Tulisan;
 use App\Models\KelasOnline;
+use App\Models\Ebook;
+use App\Models\Bundling;
+use App\Models\Pendaftaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -19,16 +22,22 @@ use Inertia\Response;
 class SemuaProdukController extends Controller
 {
     /**
+    /**
      * Aggregates all products from different types
      */
-    private function getAllProducts()
+    private function getAllProducts($userId = null)
     {
-        $userId = Auth::id();
         $products = [];
 
+        $applyUserFilter = function ($query) use ($userId) {
+            if ($userId !== null) {
+                return $query->where('user_id', $userId);
+            }
+            return $query;
+        };
+
         // Fetch Webinar
-        $webinars = Webinar::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $webinars = $applyUserFilter(Webinar::orderByDesc('created_at'))
             ->get()
             ->map(fn($w) => [
                 'id' => "webinar:{$w->id}",
@@ -45,8 +54,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $webinars);
 
         // Fetch Event
-        $events = Event::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $events = $applyUserFilter(Event::orderByDesc('created_at'))
             ->get()
             ->map(fn($e) => [
                 'id' => "event:{$e->id}",
@@ -63,8 +71,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $events);
 
         // Fetch Produk Digital
-        $produkDigital = Produkdigital::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $produkDigital = $applyUserFilter(Produkdigital::orderByDesc('created_at'))
             ->get()
             ->map(fn($p) => [
                 'id' => "produk_digital:{$p->id}",
@@ -81,8 +88,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $produkDigital);
 
         // Fetch Payment Link
-        $paymentLink = PaymentLink::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $paymentLink = $applyUserFilter(PaymentLink::orderByDesc('created_at'))
             ->get()
             ->map(fn($l) => [
                 'id' => "payment_link:{$l->id}",
@@ -99,8 +105,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $paymentLink);
 
         // Fetch Bootcamp
-        $bootcamp = Bootcamp::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $bootcamp = $applyUserFilter(Bootcamp::orderByDesc('created_at'))
             ->get()
             ->map(fn($b) => [
                 'id' => "bootcamp:{$b->id}",
@@ -117,8 +122,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $bootcamp);
 
         // Fetch Coaching Mentoring
-        $coachings = CoachingMentoring::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $coachings = $applyUserFilter(CoachingMentoring::orderByDesc('created_at'))
             ->get()
             ->map(fn($c) => [
                 'id' => "coaching_mentoring:{$c->id}",
@@ -135,8 +139,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $coachings);
 
         // Fetch Penggalangan Dana
-        $penggalanganDana = PenggalanganDana::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $penggalanganDana = $applyUserFilter(PenggalanganDana::orderByDesc('created_at'))
             ->get()
             ->map(fn($p) => [
                 'id' => "penggalangan_dana:{$p->id}",
@@ -153,8 +156,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $penggalanganDana);
 
         // Fetch Tulisan
-        $tulisan = Tulisan::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $tulisan = $applyUserFilter(Tulisan::orderByDesc('created_at'))
             ->get()
             ->map(fn($t) => [
                 'id' => "tulisan:{$t->id}",
@@ -171,8 +173,7 @@ class SemuaProdukController extends Controller
         $products = array_merge($products, $tulisan);
 
         // Fetch Kelas Online
-        $kelasOnline = KelasOnline::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        $kelasOnline = $applyUserFilter(KelasOnline::orderByDesc('created_at'))
             ->get()
             ->map(fn($k) => [
                 'id' => "kelas_online:{$k->id}",
@@ -188,11 +189,8 @@ class SemuaProdukController extends Controller
             ])->toArray();
         $products = array_merge($products, $kelasOnline);
 
-
-        // Fetch Ebook (Belum Ada Model - Commented out)
-        /*
-        $ebook = Ebook::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        // Fetch Ebook
+        $ebook = $applyUserFilter(Ebook::orderByDesc('created_at'))
             ->get()
             ->map(fn($e) => [
                 'id' => "ebook:{$e->id}",
@@ -202,49 +200,28 @@ class SemuaProdukController extends Controller
                 'harga' => $e->harga ?? 0,
                 'status' => $e->status,
                 'tanggal' => $e->created_at->format('d M Y H:i'),
-                'terjual' => 0,
+                'terjual' => $e->terjual ?? 0,
                 'kategori' => 'Ebook',
+                'cover_url' => $e->cover ? asset('storage/' . $e->cover) : null,
             ])->toArray();
         $products = array_merge($products, $ebook);
-        */
 
-        // Fetch Produk Fisik (Belum Ada Model - Commented out)
-        /*
-        $produkFisik = ProdukFisik::where('user_id', $userId)
-            ->orderByDesc('created_at')
+        // Fetch Bundling
+        $bundling = $applyUserFilter(Bundling::orderByDesc('created_at'))
             ->get()
-            ->map(fn($p) => [
-                'id' => "produk_fisik:{$p->id}",
-                'product_id' => $p->id,
-                'type' => 'produk-fisik',
-                'nama' => $p->nama,
-                'harga' => $p->harga ?? 0,
-                'status' => $p->status,
-                'tanggal' => $p->created_at->format('d M Y H:i'),
-                'terjual' => 0,
-                'kategori' => 'Produk Fisik',
+            ->map(fn($b) => [
+                'id' => "bundling:{$b->id}",
+                'product_id' => $b->id,
+                'type' => 'bundling',
+                'nama' => $b->nama,
+                'harga' => $b->harga ?? 0,
+                'status' => $b->status,
+                'tanggal' => $b->created_at->format('d M Y H:i'),
+                'terjual' => $b->registrations()->count(),
+                'kategori' => 'Bundling',
+                'cover_url' => $b->cover ? asset('storage/' . $b->cover) : null,
             ])->toArray();
-        $products = array_merge($products, $produkFisik);
-        */
-
-        // Fetch Paket Berlangganan (Belum Ada Model - Commented out)
-        /*
-        $paketBerlangganan = PaketBerlangganan::where('user_id', $userId)
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($p) => [
-                'id' => "paket_berlangganan:{$p->id}",
-                'product_id' => $p->id,
-                'type' => 'paket-berlangganan',
-                'nama' => $p->nama,
-                'harga' => $p->harga ?? 0,
-                'status' => $p->status,
-                'tanggal' => $p->created_at->format('d M Y H:i'),
-                'terjual' => 0,
-                'kategori' => 'Paket Berlangganan',
-            ])->toArray();
-        $products = array_merge($products, $paketBerlangganan);
-        */
+        $products = array_merge($products, $bundling);
 
         // Sort by created_at descending
         usort($products, function ($a, $b) {
@@ -259,7 +236,7 @@ class SemuaProdukController extends Controller
      */
     public function index(): Response
     {
-        $products = $this->getAllProducts();
+        $products = $this->getAllProducts(Auth::id());
 
         return Inertia::render('semua-produk/index', [
             'produk' => $products,
@@ -444,17 +421,75 @@ class SemuaProdukController extends Controller
         };
     }
 
-    public function catalog(): Response
+    public function catalog(Request $request): Response
     {
-        $products = $this->getAllProducts();
+        $userId = $request->query('user_id') ?: $request->query('creator_id');
+
+        $products = $this->getAllProducts($userId);
 
         // Only show published products in the public catalog
         // KelasOnline uses 'aktif', while other products use 'published'
         $publishedProducts = array_filter($products, fn($p) => $p['status'] === 'published' || $p['status'] === 'aktif');
+
+        $peserta = Auth::guard('peserta')->user();
+        if ($peserta) {
+            // Get all registered product IDs for this peserta
+            // For kelas-online:
+            $kelasIds = \App\Models\KelasOnlinePeserta::where('peserta_id', $peserta->id)
+                ->whereIn('status', ['aktif', 'active', 'completed'])
+                ->pluck('kelas_online_id')
+                ->toArray();
+            
+            // For others:
+            $pendaftarans = Pendaftaran::where('peserta_id', $peserta->id)
+                ->whereIn('status', ['aktif', 'active', 'completed'])
+                ->get()
+                ->groupBy('registrable_type');
+            
+            $publishedProducts = array_filter($publishedProducts, function ($p) use ($kelasIds, $pendaftarans) {
+                if ($p['type'] === 'kelas-online') {
+                    return !in_array($p['product_id'], $kelasIds);
+                }
+                
+                $typeMapping = [
+                    'bootcamp'           => Bootcamp::class,
+                    'webinar'            => Webinar::class,
+                    'event'              => Event::class,
+                    'ebook'              => Ebook::class,
+                    'produk-digital'     => Produkdigital::class,
+                    'coaching-mentoring' => CoachingMentoring::class,
+                    'tulisan'            => Tulisan::class,
+                    'bundling'           => Bundling::class,
+                ];
+                
+                if (!isset($typeMapping[$p['type']])) {
+                    return true;
+                }
+                
+                $modelClass = $typeMapping[$p['type']];
+                if (!isset($pendaftarans[$modelClass])) {
+                    return true;
+                }
+                
+                $registeredIds = $pendaftarans[$modelClass]->pluck('registrable_id')->toArray();
+                return !in_array($p['product_id'], $registeredIds);
+            });
+        }
+
         $publishedProducts = array_values($publishedProducts);
+
+        $creator = null;
+        if ($userId) {
+            $creator = \App\Models\User::find($userId);
+        }
 
         return Inertia::render('semua-produk/catalog', [
             'produk' => $publishedProducts,
+            'creator' => $creator ? [
+                'id' => $creator->id,
+                'name' => $creator->name,
+                'email' => $creator->email,
+            ] : null,
         ]);
     }
 }

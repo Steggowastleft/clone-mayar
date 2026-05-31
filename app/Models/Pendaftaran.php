@@ -18,6 +18,8 @@ class Pendaftaran extends Model
         'tanggal_daftar',
         'tanggal_aktif',
         'tanggal_expired',
+        'order_id',
+        'snap_token',
     ];
 
     protected $casts = [
@@ -31,6 +33,11 @@ class Pendaftaran extends Model
     public function registrable()
     {
         return $this->morphTo();
+    }
+
+    public function bootcamp()
+    {
+        return $this->belongsTo(Bootcamp::class, 'registrable_id');
     }
 
     public function peserta()

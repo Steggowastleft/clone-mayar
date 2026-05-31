@@ -22,8 +22,8 @@ type Webinar = {
   url: string | null;
   harga: number;
   harga_coret: number | null;
-  lokasi: "",
-  link_zoom: "",
+  lokasi: string | null;
+  link_zoom: string | null;
   status: "published" | "unpublished" | "unlisted";
   peserta: number;
   max_peserta: number | null;

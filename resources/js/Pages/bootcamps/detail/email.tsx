@@ -7,6 +7,7 @@ type PesertaItem = {
   id: number;
   email: string;
   created_at: string;
+  tanggal_daftar?: string;
 };
 
 // ─────────────────────────────────────────────
@@ -80,7 +81,7 @@ export default function TabEmail({
 
             <p className="text-sm text-gray-700 mt-2">
               <strong>Tanggal Daftar:</strong>{" "}
-              {new Date(selectedPeserta.tanggal_daftar).toLocaleString("id-ID", {
+              {new Date(selectedPeserta.tanggal_daftar || selectedPeserta.created_at).toLocaleString("id-ID", {
                 dateStyle: "full",
                 timeStyle: "short",
               })}

@@ -110,7 +110,7 @@ export default function Welcome({
 
     const getDashboardUrl = () => {
         if (auth.user) {
-            return auth.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+            return (auth.user as any).role === 'admin' ? '/admin/dashboard' : '/dashboard';
         }
         return '/register';
     };
@@ -238,17 +238,24 @@ export default function Welcome({
                             </p>
 
                             {/* CTAs */}
-                            <div className="flex flex-wrap items-center gap-4 pt-4">
+                            <div className="flex flex-wrap items-center gap-3 pt-4">
                                 <Link
                                     href={getDashboardUrl()}
-                                    className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-base shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-1 transition duration-200 flex items-center gap-2 group"
+                                    className="px-7 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-1 transition duration-200 flex items-center gap-2 group"
                                 >
                                     {ctaText}
-                                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition" />
+                                    <ArrowRight className="h-4.5 w-4.5 group-hover:translate-x-1 transition" />
+                                </Link>
+                                <Link
+                                    href="/peserta/login"
+                                    className="px-7 py-4 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm hover:-translate-y-0.5 transition duration-200 flex items-center gap-2 shadow-sm"
+                                >
+                                    <span>Portal Member / Pembeli</span>
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                                 </Link>
                                 <a
                                     href="#simulasi"
-                                    className="px-7 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-bold text-base hover:-translate-y-0.5 transition duration-200"
+                                    className="px-6 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-600 dark:text-slate-200 font-bold text-sm hover:-translate-y-0.5 transition duration-200"
                                 >
                                     Simulasi Pendapatan
                                 </a>

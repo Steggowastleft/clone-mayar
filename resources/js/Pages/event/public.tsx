@@ -1,4 +1,6 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   Calendar, 
   MapPin, 
@@ -30,6 +32,7 @@ type EventData = {
   tanggal_tutup_daftar?: string;
   harga: number;
   redirect_url?: string;
+  user_id?: number | null;
 };
 
 type PembicaraItem = {
@@ -64,20 +67,25 @@ const formatHarga = (n: number) => {
 };
 
 export default function EventPublic({ event, tiketList = [], pembicaraList = [] }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   return (
-    <PublicProductLayout
-      productId={`event:${event.id}`}
-      title={event.name}
-      harga={event.harga}
-      hargaCoret={null}
-      redirectUrl={event.redirect_url}
-      themeColorClass="bg-pink-600 hover:bg-pink-700"
-      textColorClass="text-pink-600"
-      badgeText="Event"
-      navTitle="Mayar Event"
-      navIcon={<Calendar className="text-white h-5 w-5" />}
-    >
-      <div className="space-y-8">
+    <>
+      <PublicProductLayout
+        productId={`event:${event.id}`}
+        title={event.name}
+        harga={event.harga}
+        hargaCoret={null}
+        redirectUrl={event.redirect_url}
+        themeColorClass="bg-pink-600 hover:bg-pink-700"
+        textColorClass="text-pink-600"
+        badgeText="Event"
+        navTitle="Mayar Event"
+        navIcon={<Calendar className="text-white h-5 w-5" />}
+        onCheckout={() => setCheckoutOpen(true)}
+        creatorId={event.user_id}
+      >
+        <div className="space-y-8">
         
         {/* Cover and Top Details */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
@@ -217,5 +225,14 @@ export default function EventPublic({ event, tiketList = [], pembicaraList = [] 
 
       </div>
     </PublicProductLayout>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="event"
+        productId={event.id}
+        productName={event.name}
+        harga={event.harga}
+      />
+    </>
   );
 }

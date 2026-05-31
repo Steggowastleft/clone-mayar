@@ -75,7 +75,8 @@ class QuizController extends Controller
         // Update status / progress
         if ($assignment->is_tugas_akhir) {
             if ($assignment->bootcamp_id) {
-                Pendaftaran::where('bootcamp_id', $assignment->bootcamp_id)
+                Pendaftaran::where('registrable_id', $assignment->bootcamp_id)
+                    ->where('registrable_type', Bootcamp::class)
                     ->where('peserta_id', $peserta->id)
                     ->update(['status' => 'completed', 'tanggal_expired' => now()]);
             } else if ($assignment->kelas_online_id) {

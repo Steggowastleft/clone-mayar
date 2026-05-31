@@ -22,7 +22,7 @@ export default function TabSection({
   kelasId,
   isOwner = false,
 }: Props) {
-  const { materi } = usePage<{ materi?: { file: string | null; name: string | null } }>().props;
+  const { materi } = usePage<any>().props;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

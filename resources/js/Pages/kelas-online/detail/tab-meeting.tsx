@@ -171,10 +171,7 @@ export default function TabMeeting({
     profil_pemateri: "",
   });
 
-  const [rangeTanggal, setRangeTanggal] = useState<{
-    from?: Date;
-    to?: Date;
-  }>({});
+  const [rangeTanggal, setRangeTanggal] = useState<any>({});
 
   const [jamMulai, setJamMulai] = useState("");
   const [jamSelesai, setJamSelesai] = useState("");

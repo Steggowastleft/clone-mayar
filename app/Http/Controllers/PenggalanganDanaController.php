@@ -31,6 +31,7 @@ class PenggalanganDanaController extends Controller
                 'terkumpul',
                 'harga',
                 'cover',
+                'created_at',
             ]);
 
         return Inertia::render('penggalangan-dana/index', [
@@ -148,6 +149,78 @@ class PenggalanganDanaController extends Controller
      */
     public function show(PenggalanganDana $penggalanganDana): Response
     {
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $prefix = 'GD-' . $penggalanganDana->id . '-';
+        $allPayments = \App\Models\Pembayaran::where('order_id', 'LIKE', $prefix . '%')->get();
+
+        $totalTransaksi   = $allPayments->count();
+        $transaksiSukses  = $allPayments->where('status', 'confirmed')->count();
+        $transaksiPending = $allPayments->where('status', 'pending')->count();
+        $transaksiGagal   = $allPayments->where('status', 'rejected')->count();
+        $nominalTransaksi = $allPayments->where('status', 'confirmed')->sum('jumlah');
+
+        $checkoutCount = \App\Models\Pendaftaran::where('registrable_type', 'App\\Models\\PenggalanganDana')
+            ->where('registrable_id', $penggalanganDana->id)
+            ->count();
+
+        $chartData = [];
+        $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subDays($i);
+            $dayLabel = $dayNames[$date->dayOfWeek];
+            $dateStr = $date->toDateString();
+
+            $dayPayments = $allPayments->filter(function ($p) use ($dateStr) {
+                return $p->created_at->toDateString() === $dateStr;
+            });
+
+            $chartData[] = [
+                'day'        => $dayLabel,
+                'date'       => $date->format('d M'),
+                'Pendapatan' => (float) $dayPayments->where('status', 'confirmed')->sum('jumlah'),
+                'Transaksi'  => $dayPayments->count(),
+            ];
+        }
+
+        $thisWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $lastWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(14)) && $p->created_at->lt(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $growthPercent = $lastWeekRevenue > 0
+            ? round((($thisWeekRevenue - $lastWeekRevenue) / $lastWeekRevenue) * 100)
+            : ($thisWeekRevenue > 0 ? 100 : 0);
+
+        $busiestDay = collect($chartData)->sortByDesc('Transaksi')->first();
+
+        $analisis = [
+            'total_transaksi'    => $totalTransaksi,
+            'transaksi_sukses'   => $transaksiSukses,
+            'transaksi_pending'  => $transaksiPending,
+            'transaksi_gagal'    => $transaksiGagal,
+            'nominal_transaksi'  => (float) $nominalTransaksi,
+            'checkout_count'     => $checkoutCount,
+            'chart_data'         => $chartData,
+            'growth_percent'     => $growthPercent,
+            'busiest_day'        => $busiestDay['day'] ?? '-',
+        ];
+
+        $transaksi = $allPayments->map(fn($p) => [
+            'id'                => $p->id,
+            'pelanggan'         => $p->nama_pembeli,
+            'email'             => $p->email_pembeli,
+            'no_hp'             => $p->no_hp_pembeli,
+            'status'            => $p->status === 'confirmed' ? 'Lunas' : ($p->status === 'pending' ? 'Belum Bayar' : ($p->status === 'rejected' ? 'Gagal' : 'Dibatalkan')),
+            'metode_pembayaran' => $p->bukti_transfer ? 'Transfer Bank' : 'QRIS',
+            'kode_kupon'        => '-',
+            'tanggal'           => $p->created_at?->format('d M Y H:i'),
+            'resi'              => 'Lihat',
+        ]);
 
         // Fetch peserta yang membeli/donasi
         try {
@@ -174,6 +247,8 @@ class PenggalanganDanaController extends Controller
             'produk' => $penggalanganDana,
             'pesertaList' => $pesertaList,
             'ratings' => $ratings,
+            'analisis' => $analisis,
+            'transaksi' => $transaksi,
         ]);
     }
 
@@ -195,7 +270,9 @@ class PenggalanganDanaController extends Controller
      */
     public function edit(PenggalanganDana $penggalanganDana): Response
     {
-
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
 
         return Inertia::render('penggalangan-dana/index', [
             'produk' => $penggalanganDana,
@@ -208,6 +285,9 @@ class PenggalanganDanaController extends Controller
      */
     public function update(Request $request, PenggalanganDana $penggalanganDana)
     {
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
 
         $tipe = $penggalanganDana->tipe;
 
@@ -310,8 +390,9 @@ class PenggalanganDanaController extends Controller
      */
     public function updateStatus(Request $request, PenggalanganDana $penggalanganDana)
     {
-
-
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'status' => 'required|in:published,unpublished,unlisted',
@@ -327,6 +408,9 @@ class PenggalanganDanaController extends Controller
      */
     public function duplicate(PenggalanganDana $penggalanganDana)
     {
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
 
         // Create copy dengan timestamp baru
         $duplicate = $penggalanganDana->replicate();
@@ -352,6 +436,10 @@ class PenggalanganDanaController extends Controller
      */
     public function storeKabar(Request $request, PenggalanganDana $penggalanganDana)
     {
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'judul'     => 'required|string|max:255',
             'deskripsi' => 'required|string',
@@ -367,6 +455,9 @@ class PenggalanganDanaController extends Controller
      */
     public function destroy(PenggalanganDana $penggalanganDana)
     {
+        if ($penggalanganDana->user_id !== Auth::id()) {
+            abort(403);
+        }
 
         // Delete cover file jika ada
         if ($penggalanganDana->cover) {

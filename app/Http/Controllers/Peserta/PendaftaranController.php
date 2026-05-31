@@ -36,7 +36,8 @@ class PendaftaranController extends Controller
         $peserta = Auth::guard('peserta')->user();
 
         // Cek sudah daftar belum
-        $existing = Pendaftaran::where('bootcamp_id', $bootcamp->id)
+        $existing = Pendaftaran::where('registrable_id', $bootcamp->id)
+            ->where('registrable_type', \App\Models\Bootcamp::class)
             ->where('peserta_id', $peserta->id)
             ->first();
 
@@ -79,12 +80,13 @@ class PendaftaranController extends Controller
 
         // Buat pendaftaran — langsung aktif karena gratis
         Pendaftaran::create([
-            'bootcamp_id'    => $bootcamp->id,
-            'peserta_id'     => $peserta->id,
-            'status'         => 'active',
-            'form_data'      => $formData,
-            'harga_bayar'    => 0,
-            'tanggal_aktif'  => now(),
+            'registrable_id'   => $bootcamp->id,
+            'registrable_type' => \App\Models\Bootcamp::class,
+            'peserta_id'       => $peserta->id,
+            'status'           => 'active',
+            'form_data'        => $formData,
+            'harga_bayar'      => 0,
+            'tanggal_aktif'    => now(),
         ]);
 
         return response()->json([

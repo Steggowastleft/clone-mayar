@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ import {
   Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ type ProdukDigital = {
   sumber_file: "upload" | "file_lama" | "link";
   cover_url: string | null;
   total_penjualan: number;
+  kategori?: "e-book" | "novel" | "komik" | "template" | "tulisan" | "video";
   created_at: string;
 };
 
@@ -146,7 +148,7 @@ const defaultForm = {
   maxPembayaran: "",
   author: "",
   isbn: "",
-  format: "PDF",
+  format: "",
   bahasa: "Indonesia",
   jumlahHalaman: "",
   bisaDidownload: true,
@@ -174,6 +176,21 @@ const KATEGORI_OPTIONS = [
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat("id-ID").format(value);
 }
+
+const getFileAcceptAttribute = (kategori: string, format: string) => {
+  if (kategori === "video") {
+    if (format === "MP4") return "video/mp4";
+    return "video/*";
+  }
+  if (kategori === "komik") {
+    if (format === "PDF") return "application/pdf";
+    if (format === "JPG") return "image/jpeg,image/jpg";
+    if (format === "JPEG") return "image/jpeg";
+    if (format === "PNG") return "image/png";
+    return "application/pdf,image/png,image/jpeg,image/jpg";
+  }
+  return "application/pdf";
+};
 
 const getCategoryTheme = (cat: string) => {
   switch (cat) {
@@ -277,6 +294,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [kontenFile, setKontenFile] = useState<File | null>(null);
+  const [pageFiles, setPageFiles] = useState<(File | null)[]>([]);
   const [waktuMulaiJual, setWaktuMulaiJual] = useState<Date | undefined>();
   const [tanggalKadaluarsa, setTanggalKadaluarsa] = useState<Date | undefined>();
   const [tanggalPublish, setTanggalPublish] = useState<Date | undefined>();
@@ -289,17 +307,45 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
     setCoverFile(null);
     setCoverPreview(null);
     setKontenFile(null);
+    setPageFiles([]);
     setWaktuMulaiJual(undefined);
     setTanggalKadaluarsa(undefined);
     setTanggalPublish(undefined);
     setCreateOpen(true);
   };
 
-  const filteredProduk = produkList.filter((p) => {
-    const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  useEffect(() => {
+    if (
+      formData.kategori === "komik" &&
+      formData.format !== "PDF" &&
+      formData.sumberFile === "upload"
+    ) {
+      const count = parseInt(formData.jumlahHalaman) || 0;
+      setPageFiles((prev) => {
+        const next = [...prev];
+        if (next.length < count) {
+          while (next.length < count) {
+            next.push(null);
+          }
+        } else if (next.length > count) {
+          next.splice(count);
+        }
+        return next;
+      });
+    } else {
+      setPageFiles([]);
+    }
+  }, [formData.jumlahHalaman, formData.kategori, formData.format, formData.sumberFile]);
+
+  const handlePageFileChange = (index: number, file: File) => {
+    setPageFiles((prev) => {
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
+  };
+
+
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -344,7 +390,54 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
   const handleKontenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setKontenFile(file);
+    if (file) {
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+      
+      if (formData.kategori === "video") {
+        if (!fileType.startsWith("video/")) {
+          toast.error("Format file harus berupa video");
+          return;
+        }
+        if (formData.format === "MP4" && !fileName.endsWith(".mp4")) {
+          toast.error("File harus berupa MP4");
+          return;
+        }
+      } else if (formData.kategori === "komik") {
+        if (formData.format === "PDF" && !fileName.endsWith(".pdf") && fileType !== "application/pdf") {
+          toast.error("File harus berupa PDF");
+          return;
+        }
+        if (formData.format === "PNG" && !fileName.endsWith(".png") && fileType !== "image/png") {
+          toast.error("File harus berupa PNG");
+          return;
+        }
+        if ((formData.format === "JPG" || formData.format === "JPEG") && 
+            !fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && 
+            fileType !== "image/jpeg" && fileType !== "image/jpg") {
+          toast.error("File harus berupa JPG/JPEG");
+          return;
+        }
+        if (!formData.format) {
+          const isValid = fileType === "application/pdf" || 
+                          fileType.startsWith("image/") || 
+                          fileName.endsWith(".pdf") || 
+                          fileName.endsWith(".png") || 
+                          fileName.endsWith(".jpg") || 
+                          fileName.endsWith(".jpeg");
+          if (!isValid) {
+            toast.error("File komik harus berupa PDF atau Gambar (PNG, JPG, JPEG)");
+            return;
+          }
+        }
+      } else {
+        if (!fileName.endsWith(".pdf") && fileType !== "application/pdf") {
+          toast.error("File harus berupa PDF");
+          return;
+        }
+      }
+      setKontenFile(file);
+    }
   };
 
   const handleSubmit = () => {
@@ -360,15 +453,28 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
       toast.error("Harga harus diisi untuk produk berbayar");
       return;
     }
-    if (formData.sumberFile === "upload" && !kontenFile) {
-      toast.error("File konten harus diupload");
-      return;
+    if (formData.sumberFile === "upload") {
+      if (formData.kategori === "komik" && formData.format !== "PDF") {
+        const count = parseInt(formData.jumlahHalaman) || 0;
+        if (count <= 0) {
+          toast.error("Jumlah halaman harus diisi dan lebih besar dari 0");
+          return;
+        }
+        const missingPages = pageFiles.some((f) => f === null);
+        if (missingPages) {
+          toast.error("Semua halaman komik harus diupload");
+          return;
+        }
+      } else if (!kontenFile && formData.kategori !== "tulisan") {
+        toast.error("File konten harus diupload");
+        return;
+      }
     }
-    if (formData.sumberFile === "file_lama" && !formData.redirectUrl) {
+    if (formData.sumberFile === "file_lama" && !formData.redirectUrl && formData.kategori !== "tulisan") {
       toast.error("File lama harus dipilih");
       return;
     }
-    if (formData.sumberFile === "link" && !formData.redirectUrl) {
+    if (formData.sumberFile === "link" && !formData.redirectUrl && formData.kategori !== "tulisan") {
       toast.error("URL redirect harus diisi");
       return;
     }
@@ -401,7 +507,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
     if (formData.bahasa) payload.append("bahasa", formData.bahasa);
     if (formData.jumlahHalaman) payload.append("jumlah_halaman", formData.jumlahHalaman);
     payload.append("bisa_didownload", formData.bisaDidownload ? "1" : "0");
-    if (formData.kategori === "tulisan" || formData.kategori === "komik") {
+    if (formData.kategori === "novel" || formData.kategori === "komik") {
       payload.append("tipe_tulisan", formData.tipeTulisan);
       if (formData.tipeTulisan === "chapter") {
         payload.append("mekanisme_bayar", formData.mekanismeBayar);
@@ -422,7 +528,15 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
     if (tanggalPublish)
       payload.append("tanggal_publish", format(tanggalPublish, "yyyy-MM-dd"));
     if (coverFile) payload.append("cover", coverFile);
-    if (kontenFile) payload.append("file", kontenFile);
+    if (formData.kategori === "komik" && formData.format !== "PDF" && formData.sumberFile === "upload") {
+      pageFiles.forEach((file) => {
+        if (file) {
+          payload.append("page_files[]", file);
+        }
+      });
+    } else {
+      if (kontenFile) payload.append("file", kontenFile);
+    }
 
     router.post("/produk-digital", payload, {
       forceFormData: true,
@@ -440,180 +554,265 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
     });
   };
 
+  // Stats
+  const totalProduk = produkList.length;
+  const publikCount = produkList.filter((p) => p.status === "published").length;
+  const tidakPublikCount = totalProduk - publikCount;
+  const totalPendapatan = produkList.reduce((acc, p) => acc + p.total_penjualan * p.harga, 0);
+
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+
+  const filteredProduk = produkList.filter((p) => {
+    const matchStatus = statusFilter === "all" || p.status === statusFilter;
+    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = categoryFilter === "all" || p.kategori === categoryFilter;
+    let matchDate = true;
+    if (dateFilter) {
+      matchDate = p.created_at.toLowerCase().includes(format(dateFilter, "d").toLowerCase());
+    }
+    return matchStatus && matchSearch && matchCategory && matchDate;
+  });
+
   return (
     <DashboardLayout title="Produk Digital">
       <Head title="Produk Digital" />
-      <div className="flex gap-0 min-h-screen">
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">PROJEK</p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Produk Digital</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/produk-digital/catalog", "_blank")}
-              >
-                PRODUK
-              </Button>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={openCreate}
-              >
-                + BUAT
-              </Button>
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Produk Digital</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Produk: <span className="font-bold text-slate-800">{totalProduk}</span></span>
+                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-650 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(totalPendapatan)}</span></span>
+                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +6% Dari bulan kemarin
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">Semua Produk Digital</h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Filter Produk"
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <svg
-                    className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Printer className="h-5 w-5" />
-                </button>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Download className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6">
-              {filteredProduk.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">
-                  There are no records to display
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredProduk.map((produk) => (
-                    <div
-                      key={produk.id}
-                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Cover thumbnail or icon */}
-                        {produk.cover_url ? (
-                          <img
-                            src={produk.cover_url}
-                            alt={produk.nama}
-                            className="h-12 w-16 object-cover rounded-md shrink-0"
-                          />
-                        ) : (
-                          <div className="bg-purple-50 rounded-lg p-2 mt-0.5">
-                            <Package className="h-5 w-5 text-purple-500" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-gray-800">{produk.nama}</p>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 flex-wrap">
-                            {produk.tipe_pembayaran === "berbayar" ? (
-                              <span className="flex items-center gap-1 font-medium text-gray-700">
-                                <Tag className="h-3 w-3" />
-                                Rp {formatRupiah(produk.harga)}
-                                {produk.harga_coret && (
-                                  <span className="line-through text-gray-400 text-xs ml-1">
-                                    Rp {formatRupiah(produk.harga_coret)}
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-blue-600 font-medium">Gratis</span>
-                            )}
-                            <span>{produk.total_penjualan} penjualan</span>
-                            <span className="text-xs text-gray-400">{produk.created_at}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {tipeBadge(produk.tipe_pembayaran)}
-                        {statusBadge(produk.status)}
-                        <Button
-                          size="sm"
-                          onClick={() => router.visit(`/produk-digital/${produk.id}`)}
-                        >
-                          Detail
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+            >
+              <Download className="h-4 w-4" /> Ekspor Data
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={openCreate}
+            >
+              + Tambah Produk
+            </Button>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <Input
-            placeholder="Cari Produk Digital"
-            className="bg-white text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="space-y-2">
-            {filterButtons.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                {btn.label}
-              </button>
-            ))}
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <Input
+              placeholder="Cari Nama Produk..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <button
-            onClick={() => window.open("/produk-digital/catalog", "_blank")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2"
-          >
-            KATALOG PRODUK DIGITAL
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            Katalog adalah halaman online dimana semua produk digital anda yang aktif ditampilkan.
-          </p>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Kategori Select */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Kategori" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                <SelectItem value="e-book">E-Book</SelectItem>
+                <SelectItem value="novel">Novel</SelectItem>
+                <SelectItem value="komik">Komik</SelectItem>
+                <SelectItem value="tulisan">Tulisan / Artikel</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <button
-            onClick={openCreate}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition"
-          >
-            + Buat Produk Digital Baru
-          </button>
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter */}
+            <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-350 transition text-slate-600",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-450 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateFilterOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateFilterOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Produk Digital</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredProduk.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProduk.map((produk, index) => {
+                    const statusIsPublik = produk.status === "published";
+                    const itemRevenue = produk.total_penjualan * produk.harga;
+                    return (
+                      <tr key={produk.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {produk.cover_url ? (
+                            <img
+                              src={produk.cover_url}
+                              alt={produk.nama}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-slate-655 capitalize">
+                          {produk.kategori || "e-book"}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[200px] truncate">
+                          {produk.nama}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold whitespace-nowrap">
+                          {produk.tipe_pembayaran === "berbayar" ? `Rp. ${formatRupiah(produk.harga)}` : "Gratis"}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{produk.total_penjualan}</td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-bold whitespace-nowrap">
+                          Rp. {formatRupiah(itemRevenue)}
+                        </td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-750 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-400 font-semibold whitespace-nowrap">
+                          {produk.created_at}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => router.visit(`/produk-digital/${produk.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* ─── CREATE DIALOG ─────────────────────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent aria-describedby={undefined} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
           <div className={cn("bg-gradient-to-br p-6 rounded-t-lg sticky top-0 z-10 text-white", theme.from, theme.to)}>
             <div className="flex items-center gap-3 mb-1">
@@ -637,7 +836,11 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
               </Label>
               <Select
                 value={formData.kategori}
-                onValueChange={(value) => setFormData({ ...formData, kategori: value as any })}
+                onValueChange={(value) => {
+                  // Reset format based on category: 'PDF' only for categories that use Select, '' for categories using number input
+                  const newFormat = (value === "e-book" || value === "komik") ? "PDF" : "";
+                  setFormData({ ...formData, kategori: value as any, format: newFormat });
+                }}
               >
                 <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
                   <SelectValue placeholder="-- Pilih Kategori --" />
@@ -672,8 +875,8 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   <p className="text-xs text-gray-400 text-right">{formData.nama.length}/200</p>
                 </div>
 
-                {/* Tipe Penulisan & Mekanisme Pembayaran (Khusus Komik dan Tulisan/Artikel) */}
-                {(formData.kategori === "komik" || formData.kategori === "tulisan") && (
+                {/* Tipe Penulisan & Mekanisme Pembayaran (Khusus Komik dan Novel) */}
+                {(formData.kategori === "komik" || formData.kategori === "novel") && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-gray-700">Tipe Penulisan *</Label>
@@ -685,17 +888,8 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           <SelectValue placeholder="Pilih tipe penulisan..." />
                         </SelectTrigger>
                         <SelectContent className="z-[200]">
-                          {formData.kategori === "tulisan" ? (
-                            <>
-                              <SelectItem value="one_shot">One-Shot (Cerpen,Blog,Essay)</SelectItem>
-                              <SelectItem value="chapter">Chapter (Buku, Antologi)</SelectItem>
-                            </>
-                          ) : (
-                            <>
-                              <SelectItem value="one_shot">One-Shot</SelectItem>
-                              <SelectItem value="chapter">Chapter</SelectItem>
-                            </>
-                          )}
+                          <SelectItem value="one_shot">One-Shot</SelectItem>
+                          <SelectItem value="chapter">Chapter</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -710,7 +904,6 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           <SelectValue placeholder="Pilih mekanisme..." />
                         </SelectTrigger>
                         <SelectContent className="z-[200]">
-                          <SelectItem value="sekali_bayar">Sekali Bayar</SelectItem>
                           <SelectItem value="per_chapter">Bayar Per-chapter</SelectItem>
                           <SelectItem value="semua_chapter">Semua Chapter(paket)</SelectItem>
                         </SelectContent>
@@ -748,11 +941,10 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         <span className="absolute left-3 top-2 text-sm text-gray-500 font-semibold text-blue-600">RP.</span>
                         <Input
                           className="pl-9"
-                          type="number"
-                          min={0}
+                          type="text"
                           placeholder="50.000"
-                          value={formData.harga}
-                          onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                          value={formData.harga ? formatRupiah(Number(formData.harga)) : ""}
+                          onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                         />
                       </div>
                     </div>
@@ -767,11 +959,10 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           <span className="absolute left-3 top-2 text-sm text-gray-500 font-semibold text-blue-600">RP.</span>
                           <Input
                             className="pl-9"
-                            type="number"
-                            min={0}
+                            type="text"
                             placeholder="75.000"
-                            value={formData.hargaCoret}
-                            onChange={(e) => setFormData({ ...formData, hargaCoret: e.target.value })}
+                            value={formData.hargaCoret ? formatRupiah(Number(formData.hargaCoret)) : ""}
+                            onChange={(e) => setFormData({ ...formData, hargaCoret: e.target.value.replace(/\D/g, "") })}
                           />
                         </div>
                       </div>
@@ -785,12 +976,19 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                     {formData.kategori === "novel" || formData.kategori === "komik" ? "Deskripsi/Sinopsis" : "Deskripsi"}{" "}
                     <span className="text-red-500">*</span>
                   </Label>
-                  <Textarea
-                    placeholder="Tuliskan deskripsi produk digital..."
-                    rows={4}
-                    value={formData.deskripsi}
-                    onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                  />
+                  {formData.kategori === "tulisan" ? (
+                    <RichTextEditor
+                      value={formData.deskripsi}
+                      onChange={(val) => setFormData({ ...formData, deskripsi: val })}
+                    />
+                  ) : (
+                    <Textarea
+                      placeholder="Tuliskan deskripsi produk digital..."
+                      rows={4}
+                      value={formData.deskripsi}
+                      onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                    />
+                  )}
                 </div>
 
                 {/* Transkrip (khusus video/podcast) */}
@@ -931,25 +1129,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   </div>
                 )}
 
-                {/* Kategori Produk (Khusus Ebook) */}
-                {formData.kategori === "e-book" && (
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">Kategori Produk</Label>
-                    <Select
-                      value={formData.kategori_produk}
-                      onValueChange={(value) => setFormData({ ...formData, kategori_produk: value })}
-                    >
-                      <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                        <SelectValue placeholder="Pilih Kategori Produk..." />
-                      </SelectTrigger>
-                      <SelectContent className="z-[200]">
-                        <SelectItem value="Buku Programmer">Buku Programmer</SelectItem>
-                        <SelectItem value="Buku Soal SMA">Buku Soal SMA</SelectItem>
-                        <SelectItem value="Resep Masak">Resep Masak</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+
 
                 {/* Toggles / Link URL / File uploads */}
                 {/* Switch untuk Ebook saja */}
@@ -980,7 +1160,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   </div>
                 ) : (
                   /* Jika Pakai Upload/File (Novel, Komik, Ebook, Video/Podcast semuanya butuh file jika bukan link) */
-                  (formData.kategori === "novel" || formData.kategori === "e-book" || formData.kategori === "video") && (
+                  (formData.kategori === "novel" || formData.kategori === "e-book" || formData.kategori === "video" || formData.kategori === "komik" || formData.kategori === "tulisan") && (
                     <div className="space-y-4 p-4 border border-gray-100 rounded-lg bg-gray-50/50">
                       {/* File Digital Type */}
                       <div className="space-y-1">
@@ -996,22 +1176,42 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                             {formData.kategori === "video" ? (
                               <>
                                 <SelectItem value="MP4">MP4</SelectItem>
-                                <SelectItem value="WAV">WAV</SelectItem>
-                                <SelectItem value="MP3">MP3</SelectItem>
+                              </>
+                            ) : formData.kategori === "komik" ? (
+                              <>
+                                <SelectItem value="PDF">PDF</SelectItem>
+                                <SelectItem value="JPG">JPG</SelectItem>
+                                <SelectItem value="PNG">PNG</SelectItem>
+                                <SelectItem value="JPEG">JPEG</SelectItem>
                               </>
                             ) : (
                               <>
                                 <SelectItem value="PDF">PDF</SelectItem>
-                                <SelectItem value="EPUB">EPUB</SelectItem>
                               </>
                             )}
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Sumber File */}
+                      {/* Jumlah Halaman (Khusus Komik) */}
+                      {formData.kategori === "komik" && (
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Jumlah Halaman <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            placeholder="Masukkan jumlah halaman..."
+                            value={formData.jumlahHalaman}
+                            onChange={(e) => setFormData({ ...formData, jumlahHalaman: e.target.value })}
+                          />
+                        </div>
+                      )}
+
+                    {/* Sumber File */}
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Sumber File *</Label>
+                        <Label className="text-sm font-medium text-gray-700">Sumber File {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
                         <Select
                           value={formData.sumberFile}
                           onValueChange={(value) => setFormData({ ...formData, sumberFile: value as any })}
@@ -1028,37 +1228,138 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                       {/* File Upload Zone */}
                       {formData.sumberFile === "upload" ? (
-                        <div className="space-y-1">
-                          <Label className="text-sm font-medium text-gray-700">File/Konten *</Label>
-                          <div
-                            className={cn(
-                              "border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
-                            )}
-                            onClick={() => kontenInputRef.current?.click()}
-                          >
-                            {kontenFile ? (
-                              <div className="space-y-1">
-                                <Package className="h-8 w-8 text-blue-500 mx-auto" />
-                                <p className="text-sm font-medium text-blue-600">{kontenFile.name}</p>
-                                <p className="text-xs text-gray-400">
-                                  {(kontenFile.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
+                        formData.kategori === "komik" && formData.format !== "PDF" ? (
+                          pageFiles.length > 0 ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium text-gray-700">Upload Halaman Komik ({pageFiles.length} Halaman)</Label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs flex items-center gap-1.5 py-1 px-2.5 h-auto bg-white hover:bg-gray-50 border-gray-200"
+                                  onClick={() => document.getElementById('bulk-upload-pages')?.click()}
+                                >
+                                  <Upload className="h-3.5 w-3.5 text-gray-500" /> Upload Sekaligus
+                                </Button>
+                                <input
+                                  id="bulk-upload-pages"
+                                  type="file"
+                                  multiple
+                                  accept={getFileAcceptAttribute("komik", formData.format)}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const files = Array.from(e.target.files || []);
+                                    if (files.length === 0) return;
+                                    
+                                    // Sort alphabetically/numerically
+                                    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                                    
+                                    setPageFiles((prev) => {
+                                      const next = [...prev];
+                                      for (let i = 0; i < Math.min(files.length, next.length); i++) {
+                                        next[i] = files[i];
+                                      }
+                                      return next;
+                                    });
+                                    toast.success(`Berhasil memuat ${Math.min(files.length, pageFiles.length)} file halaman.`);
+                                  }}
+                                />
                               </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                                <p className="text-sm text-gray-500 font-semibold text-blue-600">Upload files...</p>
-                                <p className="text-xs text-gray-400">Drop files here</p>
+                              <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-md bg-white">
+                                {pageFiles.map((file, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="border border-gray-200 rounded-lg p-3 bg-gray-50/50 flex flex-col justify-between hover:border-blue-400 transition cursor-pointer relative"
+                                    onClick={() => {
+                                      const input = document.getElementById(`page-input-${idx}`);
+                                      input?.click();
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-semibold text-gray-500">Halaman {idx + 1}</span>
+                                      {file ? (
+                                        <span className="text-xs text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded">
+                                          ✓ Uploaded
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-red-500 font-bold bg-red-50 px-1.5 py-0.5 rounded">
+                                          Belum diisi
+                                        </span>
+                                      )}
+                                    </div>
+                                    {file ? (
+                                      <p className="text-xs text-gray-600 truncate font-medium">{file.name}</p>
+                                    ) : (
+                                      <p className="text-xs text-gray-400 font-normal">Pilih gambar...</p>
+                                    )}
+                                    <input
+                                      id={`page-input-${idx}`}
+                                      type="file"
+                                      accept={getFileAcceptAttribute("komik", formData.format)}
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) {
+                                          const fileType = f.type;
+                                          const fileName = f.name.toLowerCase();
+                                          if (formData.format === "PNG" && !fileName.endsWith(".png") && fileType !== "image/png") {
+                                            toast.error(`File halaman ${idx + 1} harus berupa PNG`);
+                                            return;
+                                          }
+                                          if ((formData.format === "JPG" || formData.format === "JPEG") && 
+                                              !fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && 
+                                              fileType !== "image/jpeg" && fileType !== "image/jpg") {
+                                            toast.error(`File halaman ${idx + 1} harus berupa JPG/JPEG`);
+                                            return;
+                                          }
+                                          handlePageFileChange(idx, f);
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ))}
                               </div>
-                            )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-xs text-gray-400 border border-dashed rounded-md bg-white">
+                              Masukkan jumlah halaman untuk menampilkan slot upload
+                            </div>
+                          )
+                        ) : (
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium text-gray-700">File/Konten {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
+                            <div
+                              className={cn(
+                                "border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
+                              )}
+                              onClick={() => kontenInputRef.current?.click()}
+                            >
+                              {kontenFile ? (
+                                <div className="space-y-1">
+                                  <Package className="h-8 w-8 text-blue-500 mx-auto" />
+                                  <p className="text-sm font-medium text-blue-600">{kontenFile.name}</p>
+                                  <p className="text-xs text-gray-400">
+                                    {(kontenFile.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                  <p className="text-sm text-gray-500 font-semibold text-blue-600">Upload files...</p>
+                                  <p className="text-xs text-gray-400">Drop files here</p>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              ref={kontenInputRef}
+                              type="file"
+                              accept={getFileAcceptAttribute(formData.kategori, formData.format)}
+                              className="hidden"
+                              onChange={handleKontenChange}
+                            />
                           </div>
-                          <input
-                            ref={kontenInputRef}
-                            type="file"
-                            className="hidden"
-                            onChange={handleKontenChange}
-                          />
-                        </div>
+                        )
                       ) : (
                         /* File Lama */
                         <div className="space-y-1">
@@ -1149,14 +1450,42 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           value={formData.isbn}
                           onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
                         />
+                        <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: fiksi, romance, bestseller)</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
-                        <Input
-                          placeholder="SU"
-                          value={formData.format}
-                          onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 w-9 p-0 bg-white"
+                            onClick={() => {
+                              const val = parseInt(formData.format) || 0;
+                              if (val > 0) setFormData({ ...formData, format: String(val - 1) });
+                            }}
+                          >
+                            -
+                          </Button>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={formData.format}
+                            onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+                            className="w-24 text-center bg-white"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 w-9 p-0 bg-white"
+                            onClick={() => {
+                              const val = parseInt(formData.format) || 0;
+                              setFormData({ ...formData, format: String(val + 1) });
+                            }}
+                          >
+                            +
+                          </Button>
+                          <span className="text-xs text-gray-500 font-medium">Tahun</span>
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
@@ -1165,21 +1494,6 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           value={formData.bahasa}
                           onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Status</Label>
-                        <Select
-                          value={formData.tipeTulisan}
-                          onValueChange={(value) => setFormData({ ...formData, tipeTulisan: value as any })}
-                        >
-                          <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                            <SelectValue placeholder="Pilih status..." />
-                          </SelectTrigger>
-                          <SelectContent className="z-[200]">
-                            <SelectItem value="tamat">Tamat</SelectItem>
-                            <SelectItem value="ongoing">Ongoing</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
                   )}
@@ -1253,15 +1567,6 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Jumlah Halaman</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={formData.jumlahHalaman}
-                          onChange={(e) => setFormData({ ...formData, jumlahHalaman: e.target.value })}
-                        />
-                      </div>
                     </div>
                   )}
 
@@ -1285,6 +1590,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">Format File</Label>
                         <Select
                           value={formData.format}
                           onValueChange={(value) => setFormData({ ...formData, format: value })}
@@ -1294,7 +1600,6 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           </SelectTrigger>
                           <SelectContent className="z-[200]">
                             <SelectItem value="PDF">PDF</SelectItem>
-                            <SelectItem value="EPUB">EPUB</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1409,14 +1714,42 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           value={formData.genre}
                           onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
                         />
+                        <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: video, tutorial, tips)</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
-                        <Input
-                          placeholder="SU"
-                          value={formData.isbn}
-                          onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 w-9 p-0 bg-white"
+                            onClick={() => {
+                              const val = parseInt(formData.isbn) || 0;
+                              if (val > 0) setFormData({ ...formData, isbn: String(val - 1) });
+                            }}
+                          >
+                            -
+                          </Button>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={formData.isbn}
+                            onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
+                            className="w-24 text-center bg-white"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 w-9 p-0 bg-white"
+                            onClick={() => {
+                              const val = parseInt(formData.isbn) || 0;
+                              setFormData({ ...formData, isbn: String(val + 1) });
+                            }}
+                          >
+                            +
+                          </Button>
+                          <span className="text-xs text-gray-500 font-medium">Tahun</span>
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
@@ -1425,21 +1758,6 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           value={formData.bahasa}
                           onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Status</Label>
-                        <Select
-                          value={formData.tipeTulisan}
-                          onValueChange={(value) => setFormData({ ...formData, tipeTulisan: value as any })}
-                        >
-                          <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                            <SelectValue placeholder="Pilih status..." />
-                          </SelectTrigger>
-                          <SelectContent className="z-[200]">
-                            <SelectItem value="tamat">Tamat</SelectItem>
-                            <SelectItem value="ongoing">Ongoing</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
                   )}

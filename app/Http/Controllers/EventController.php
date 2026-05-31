@@ -32,6 +32,8 @@ class EventController extends Controller
                 'location' => $e->lokasi,
                 'participants' => $e->pendaftaran()->count(),
                 'tipe'     => $e->tipe,
+                'cover_url' => $e->cover_url,
+                'created_at' => $e->created_at->format('Y-m-d H:i:s'),
             ]);
 
         return Inertia::render('event/index', [
@@ -90,6 +92,79 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function show(Event $event): Response
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $prefix = 'EV-' . $event->id . '-';
+        $allPayments = \App\Models\Pembayaran::where('order_id', 'LIKE', $prefix . '%')->get();
+
+        $totalTransaksi   = $allPayments->count();
+        $transaksiSukses  = $allPayments->where('status', 'confirmed')->count();
+        $transaksiPending = $allPayments->where('status', 'pending')->count();
+        $transaksiGagal   = $allPayments->where('status', 'rejected')->count();
+        $nominalTransaksi = $allPayments->where('status', 'confirmed')->sum('jumlah');
+
+        $checkoutCount = \App\Models\Pendaftaran::where('registrable_type', 'App\\Models\\Event')
+            ->where('registrable_id', $event->id)
+            ->count();
+
+        $chartData = [];
+        $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subDays($i);
+            $dayLabel = $dayNames[$date->dayOfWeek];
+            $dateStr = $date->toDateString();
+
+            $dayPayments = $allPayments->filter(function ($p) use ($dateStr) {
+                return $p->created_at->toDateString() === $dateStr;
+            });
+
+            $chartData[] = [
+                'day'        => $dayLabel,
+                'date'       => $date->format('d M'),
+                'Pendapatan' => (float) $dayPayments->where('status', 'confirmed')->sum('jumlah'),
+                'Transaksi'  => $dayPayments->count(),
+            ];
+        }
+
+        $thisWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $lastWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(14)) && $p->created_at->lt(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $growthPercent = $lastWeekRevenue > 0
+            ? round((($thisWeekRevenue - $lastWeekRevenue) / $lastWeekRevenue) * 100)
+            : ($thisWeekRevenue > 0 ? 100 : 0);
+
+        $busiestDay = collect($chartData)->sortByDesc('Transaksi')->first();
+
+        $analisis = [
+            'total_transaksi'    => $totalTransaksi,
+            'transaksi_sukses'   => $transaksiSukses,
+            'transaksi_pending'  => $transaksiPending,
+            'transaksi_gagal'    => $transaksiGagal,
+            'nominal_transaksi'  => (float) $nominalTransaksi,
+            'checkout_count'     => $checkoutCount,
+            'chart_data'         => $chartData,
+            'growth_percent'     => $growthPercent,
+            'busiest_day'        => $busiestDay['day'] ?? '-',
+        ];
+
+        $transaksi = $allPayments->map(fn($p) => [
+            'id'                => $p->id,
+            'pelanggan'         => $p->nama_pembeli,
+            'email'             => $p->email_pembeli,
+            'no_hp'             => $p->no_hp_pembeli,
+            'status'            => $p->status === 'confirmed' ? 'Lunas' : ($p->status === 'pending' ? 'Belum Bayar' : ($p->status === 'rejected' ? 'Gagal' : 'Dibatalkan')),
+            'metode_pembayaran' => $p->bukti_transfer ? 'Transfer Bank' : 'QRIS',
+            'kode_kupon'        => '-',
+            'tanggal'           => $p->created_at?->format('d M Y H:i'),
+            'resi'              => 'Lihat',
+        ]);
+
         return Inertia::render('event/show', [
             'event' => [
                 'id'       => $event->id,
@@ -114,14 +189,16 @@ class EventController extends Controller
                 ->get()
                 ->map(fn($p) => [
                     'id'     => $p->id,
-                    'nama'   => $p->peserta->nama,
-                    'email'  => $p->peserta->email,
+                    'nama'   => $p->peserta->nama ?? 'Unknown',
+                    'email'  => $p->peserta->email ?? 'unknown@example.com',
                     'status' => $p->status,
                     'tanggal_daftar' => $p->created_at->format('d M Y H:i'),
                 ]),
             'tiketList' => $event->tiket,
             'pembicaraList' => $event->pembicaras,
             'ratings'     => [],
+            'analisis'    => $analisis,
+            'transaksi'   => $transaksi,
         ]);
     }
 
@@ -130,6 +207,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function updateStatus(Request $request, Event $event)
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $request->validate([
             'status' => 'required|in:published,unpublished,unlisted',
         ]);
@@ -146,6 +227,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function edit(Event $event): Response
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         return Inertia::render('event/edit', [
             'event' => [
                 ...$event->toArray(),
@@ -160,6 +245,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function update(Request $request, Event $event)
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'nama'                    => 'required|string|max:100',
             'deskripsi'               => 'required|string',
@@ -205,6 +294,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function destroy(Event $event)
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         if ($event->cover) {
             Storage::disk('public')->delete($event->cover);
         }
@@ -286,6 +379,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function storeTiket(Request $request, Event $event)
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'nama' => 'required|string|max:100',
             'harga' => 'required|numeric|min:0',
@@ -305,6 +402,10 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function storePembicara(Request $request, Event $event)
     {
+        if ($event->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'nama' => 'required|string|max:100',
             'pekerjaan' => 'required|string|max:100',

@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DateTimePicker } from "./components/DatePickers";
+
 import { MapPicker } from "@/components/ui/mappicker";
 
 // ─────────────────────────────────────────────
@@ -192,16 +192,13 @@ export default function TabSesiMeeting({
   const [errors,       setErrors]       = useState<Record<string, string>>({});
 
   const [sesiForm,     setSesiForm]  = useState(emptyForm);
-  const [rangeTanggal, setRangeTanggal] = useState<{
-  from?: Date;
-  to?: Date;
-  }>({});
+  const [rangeTanggal, setRangeTanggal] = useState<any>({});
 
   const [jamMulai, setJamMulai] = useState("");
   const [jamSelesai, setJamSelesai] = useState("");
 
   // ── Sync sesiList dari props jika reload ──
-  const page = usePage<{ sesiList?: Sesi[] }>();
+  const page = usePage() as any;
   useEffect(() => {
     if (page.props.sesiList) setSesiList(page.props.sesiList);
   }, [page.props.sesiList]);
@@ -219,6 +216,27 @@ export default function TabSesiMeeting({
       namaPemateri:  sesi.nama_pemateri   || "",
       profilPemateri:sesi.profil_pemateri || "",
     });
+    if (sesi.waktu_mulai) {
+      const parts = sesi.waktu_mulai.split(" ");
+      const datePart = parts[0];
+      const timePart = parts[1] || "";
+      const fromDate = new Date(datePart);
+      setJamMulai(timePart.slice(0, 5));
+      
+      let toDate: Date | undefined = undefined;
+      if (sesi.waktu_selesai) {
+        const toParts = sesi.waktu_selesai.split(" ");
+        const toDatePart = toParts[0];
+        const toTimePart = toParts[1] || "";
+        toDate = new Date(toDatePart);
+        setJamSelesai(toTimePart.slice(0, 5));
+      }
+      setRangeTanggal({ from: fromDate, to: toDate });
+    } else {
+      setRangeTanggal({});
+      setJamMulai("");
+      setJamSelesai("");
+    }
     setCreateOpen(true);
   };
 
@@ -226,8 +244,9 @@ export default function TabSesiMeeting({
     setCreateOpen(false);
     setEditingSesi(null);
     setSesiForm(emptyForm);
-    setWaktuMulai(emptyWaktu);
-    setWaktuSelesai(emptyWaktu);
+    setRangeTanggal({});
+    setJamMulai("");
+    setJamSelesai("");
     setErrors({});
     setIsOnline(false);
   };
@@ -236,7 +255,7 @@ export default function TabSesiMeeting({
   const validate = () => {
     const e: Record<string, string> = {};
     if (!sesiForm.judul.trim())        e.judul = "Judul sesi wajib diisi.";
-    if (!waktuMulai.date)              e.waktuMulai = "Waktu mulai wajib diisi.";
+    if (!rangeTanggal.from)            e.waktuMulai = "Waktu mulai wajib diisi.";
     if (isOnline && !sesiForm.linkSesi.trim()) e.linkSesi = "Link sesi wajib diisi untuk sesi online.";
     if (!isOnline && !sesiForm.lokasi.trim())  e.lokasi   = "Lokasi wajib diisi untuk sesi offline.";
     setErrors(e);

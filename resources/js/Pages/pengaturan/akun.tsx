@@ -80,6 +80,7 @@ interface Props {
     bank_provider?: string;
     bank_account_number?: string;
     bank_account_name?: string;
+    created_at?: string;
   };
   verification?: {
     id: number;
@@ -327,131 +328,328 @@ export default function PengaturanAkun({ user, verification }: Props) {
   };
 
   return (
-    <DashboardLayout>
-      <Head title="Pengaturan Akun" />
-      <div className="flex gap-6">
-        {/* Navigation Sidebar */}
-        <div className="w-56 border-r border-gray-200 bg-white p-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 pb-2 pt-1">Pengaturan</p>
-          <button onClick={() => setActiveTab('detail')} className={`w-full text-left px-3 py-2 rounded-md ${activeTab==='detail'?'bg-blue-50 text-blue-700':'text-gray-600 hover:bg-gray-100'}`}>Detail Bisnis</button>
-          <button onClick={() => setActiveTab('rekening')} className={`w-full text-left mt-1 px-3 py-2 rounded-md ${activeTab==='rekening'?'bg-blue-50 text-blue-700':'text-gray-600 hover:bg-gray-100'}`}>Rekening</button>
-          <button onClick={() => setActiveTab('verifikasi')} className={`w-full text-left mt-1 px-3 py-2 rounded-md ${activeTab==='verifikasi'?'bg-blue-50 text-blue-700':'text-gray-600 hover:bg-gray-100'}`}>Verifikasi</button>
+    <DashboardLayout title="Pengaturan Akun">
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Pengaturan Akun</h1>
+
+        {/* ── Tabs Navigation ── */}
+        <div className="flex border border-gray-250 rounded-xl overflow-hidden w-max bg-white mb-6">
+          <button
+            onClick={() => setActiveTab('detail')}
+            className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-r border-gray-200 last:border-0 ${
+              activeTab === 'detail' ? 'bg-blue-50/70 text-blue-600' : 'text-slate-500 hover:bg-slate-50/50'
+            }`}
+          >
+            Detail Bisnis
+          </button>
+          <button
+            onClick={() => setActiveTab('rekening')}
+            className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-r border-gray-200 last:border-0 ${
+              activeTab === 'rekening' ? 'bg-blue-50/70 text-blue-600' : 'text-slate-500 hover:bg-slate-50/50'
+            }`}
+          >
+            Rekening
+          </button>
+          <button
+            onClick={() => setActiveTab('verifikasi')}
+            className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all last:border-0 ${
+              activeTab === 'verifikasi' ? 'bg-blue-50/70 text-blue-600' : 'text-slate-500 hover:bg-slate-50/50'
+            }`}
+          >
+            Verifikasi
+          </button>
         </div>
 
-        {/* Tab Contents */}
-        <div className="flex-1 p-6">
+        {/* ── Tab Content ── */}
+        <div className="min-h-[400px]">
           {activeTab === 'detail' && (
-            <div className="max-w-3xl">
-              <h2 className="text-lg font-bold mb-4 text-slate-800">Detail Bisnis</h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 shadow-sm">
-                <div>
-                  <Label>Nama Bisnis</Label>
-                  <Input placeholder="Nama Bisnis" maxLength={100} value={detail.business_name} onChange={(e) => setDetail({ ...detail, business_name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Website</Label>
-                  <Input
-                    placeholder="https://example.com"
-                    value={detail.website}
-                    onChange={(e) => setDetail({ ...detail, website: e.target.value })}
-                  />
-                  {businessErrors.website && (
-                    <p className="text-sm text-red-600 mt-1">{businessErrors.website}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Email Bisnis</Label>
-                  <Input
-                    placeholder="email@domain.com"
-                    value={detail.business_email}
-                    onChange={(e) => setDetail({ ...detail, business_email: e.target.value })}
-                  />
-                  {businessErrors.business_email && (
-                    <p className="text-sm text-red-600 mt-1">{businessErrors.business_email}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>No HP Bisnis</Label>
-                  <Input placeholder="08xxxxxxxxxx" maxLength={15} value={detail.phone} onChange={(e) => setDetail({ ...detail, phone: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Alamat</Label>
-                  <Textarea placeholder="Alamat lengkap" value={detail.address} onChange={(e) => setDetail({ ...detail, address: e.target.value })} rows={3} />
-                </div>
-                <div className="flex gap-2">
-                  <div className="w-1/3">
-                    <Label>Negara</Label>
-                    <Input value={detail.country} onChange={(e) => setDetail({ ...detail, country: e.target.value })} />
+            <div className="space-y-6">
+              <div className="flex flex-col lg:flex-row gap-8 items-start">
+                {/* Data Bisnis Column */}
+                <div className="flex-1 w-full space-y-4">
+                  <h2 className="text-xl font-bold text-slate-850">Data Bisnis</h2>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3.5">
+                    {/* Nama Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-start bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Nama
+                      </div>
+                      <div className="px-4 py-3 flex flex-col gap-1 w-full">
+                        <input
+                          type="text"
+                          placeholder="Nama Bisnis"
+                          maxLength={100}
+                          value={detail.business_name}
+                          onChange={(e) => setDetail({ ...detail, business_name: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400 font-semibold"
+                        />
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          Jika anda ingin mengubah nama bisnis, silahkan kirimkan permintaan ke whatsapp admin disini (+62812345878) dengan menyertakan alasan, akun sosmed/website baru dan akun email mayar anda
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Website Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Website
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="leeyjayasukses.id"
+                          value={detail.website}
+                          onChange={(e) => setDetail({ ...detail, website: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400"
+                        />
+                        {businessErrors.website && (
+                          <p className="text-xs text-red-650 mt-1">{businessErrors.website}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Email Bisnis Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Email Bisnis
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="email"
+                          placeholder="leeyjayasukses@gmail.com"
+                          value={detail.business_email}
+                          onChange={(e) => setDetail({ ...detail, business_email: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400"
+                        />
+                        {businessErrors.business_email && (
+                          <p className="text-xs text-red-650 mt-1">{businessErrors.business_email}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* No Hp Bisnis Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        No Hp Bisnis
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="0812349999"
+                          maxLength={15}
+                          value={detail.phone}
+                          onChange={(e) => setDetail({ ...detail, phone: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Alamat Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-start bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Alamat
+                      </div>
+                      <div className="px-4 py-2">
+                        <textarea
+                          placeholder="Alamat lengkap"
+                          value={detail.address}
+                          onChange={(e) => setDetail({ ...detail, address: e.target.value })}
+                          rows={2}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400 resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Negara Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Negara*
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={detail.country}
+                          onChange={(e) => setDetail({ ...detail, country: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Provinsi Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Provinsi*
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={detail.province}
+                          onChange={(e) => setDetail({ ...detail, province: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Kota/Kabupaten Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Kota/Kabupaten*
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={detail.city}
+                          onChange={(e) => setDetail({ ...detail, city: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Kecamatan Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Kecamatan*
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={detail.district}
+                          onChange={(e) => setDetail({ ...detail, district: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mata Uang Row */}
+                    <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                      <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                        Mata Uang*
+                      </div>
+                      <div className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={detail.currency}
+                          onChange={(e) => setDetail({ ...detail, currency: e.target.value })}
+                          className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                        />
+                        {businessErrors.currency && (
+                          <p className="text-xs text-red-650 mt-1">{businessErrors.currency}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Submit Row */}
+                    <div className="pt-2">
+                      <button
+                        onClick={submitDetail}
+                        disabled={loading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md uppercase tracking-wider text-xs"
+                      >
+                        {loading ? 'Menyimpan...' : 'Simpan Detail Bisnis'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-1/3">
-                    <Label>Provinsi</Label>
-                    <Input value={detail.province} onChange={(e) => setDetail({ ...detail, province: e.target.value })} />
-                  </div>
-                  <div className="w-1/3">
-                    <Label>Kota / Kabupaten</Label>
-                    <Input value={detail.city} onChange={(e) => setDetail({ ...detail, city: e.target.value })} />
+                </div>
+
+                {/* Foto Profil Column */}
+                <div className="w-full lg:w-72 space-y-4 shrink-0">
+                  <h2 className="text-xl font-bold text-slate-850">Foto Profil</h2>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col items-center">
+                    <div className="w-40 h-40 rounded-full bg-slate-200 flex items-center justify-center mb-6 overflow-hidden border border-slate-300">
+                      <div className="w-full h-full bg-gray-300 rounded-full" />
+                    </div>
+                    
+                    <div className="w-full space-y-2.5">
+                      <label className="w-full block cursor-pointer border border-blue-500 hover:bg-blue-50/50 text-blue-600 font-bold py-2 rounded-xl text-xs transition-colors uppercase tracking-wider text-center">
+                        Ganti Foto
+                        <input type="file" className="hidden" accept="image/*" />
+                      </label>
+                      <button className="w-full border border-red-500 hover:bg-red-50/50 text-red-500 font-bold py-2 rounded-xl text-xs transition-colors uppercase tracking-wider">
+                        Hapus
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <div className="w-1/2">
-                    <Label>Kecamatan</Label>
-                    <Input value={detail.district} onChange={(e) => setDetail({ ...detail, district: e.target.value })} />
-                  </div>
-                  <div className="w-1/2">
-                    <Label>Mata Uang</Label>
-                    <Input
-                      placeholder="IDR"
-                      maxLength={10}
-                      value={detail.currency}
-                      onChange={(e) => setDetail({ ...detail, currency: e.target.value })}
-                    />
-                    {businessErrors.currency && (
-                      <p className="text-sm text-red-600 mt-1">{businessErrors.currency}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={submitDetail} disabled={loading}>
-                    {loading ? 'Menyimpan...' : 'Simpan Detail Bisnis'}
-                  </Button>
-                </div>
+              </div>
+
+              {/* Timestamp Footer Bar */}
+              <div className="border border-blue-100 rounded-xl bg-blue-50/5 py-3.5 text-center text-blue-600 font-semibold text-xs mt-6">
+                Dibuat {user?.created_at || '10 Jan 2026 22:24'}
               </div>
             </div>
           )}
 
           {activeTab === 'rekening' && (
-            <div className="max-w-2xl">
-              <h2 className="text-lg font-bold mb-4 text-slate-800">Rekening</h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 shadow-sm">
-                <div>
-                  <Label>Nama Bank / E-Wallet</Label>
-                  <Input value={bank.provider} onChange={(e) => setBank({ ...bank, provider: e.target.value })} />
+            <div className="max-w-3xl space-y-4">
+              <h2 className="text-xl font-bold text-slate-850">Rekening</h2>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3.5">
+                {/* Bank Provider Row */}
+                <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                  <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                    Nama Bank / E-Wallet
+                  </div>
+                  <div className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={bank.provider}
+                      onChange={(e) => setBank({ ...bank, provider: e.target.value })}
+                      className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Nomor Rekening / E-Wallet</Label>
-                  <Input value={bank.account_number} onChange={(e) => setBank({ ...bank, account_number: e.target.value })} />
+
+                {/* Account Number Row */}
+                <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                  <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                    Nomor Rekening / E-Wallet
+                  </div>
+                  <div className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={bank.account_number}
+                      onChange={(e) => setBank({ ...bank, account_number: e.target.value })}
+                      className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Atas Nama</Label>
-                  <Input value={bank.account_name} onChange={(e) => setBank({ ...bank, account_name: e.target.value })} />
+
+                {/* Account Name Row */}
+                <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                  <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                    Atas Nama
+                  </div>
+                  <div className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={bank.account_name}
+                      onChange={(e) => setBank({ ...bank, account_name: e.target.value })}
+                      className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                    />
+                  </div>
                 </div>
+
+                {/* Submit Row */}
                 <div className="pt-2">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={submitBank} disabled={bankLoading}>
+                  <button
+                    onClick={submitBank}
+                    disabled={bankLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md uppercase tracking-wider text-xs"
+                  >
                     {bankLoading ? 'Menyimpan...' : 'Simpan Data Rekening'}
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'verifikasi' && (
-            <div className="max-w-3xl">
-              <h2 className="text-lg font-bold mb-4 text-slate-800">Verifikasi Akun</h2>
+            <div className="max-w-3xl space-y-6">
+              <h2 className="text-xl font-bold text-slate-850">Verifikasi Akun</h2>
 
               {/* Status Section */}
               <div className="mb-6">
                 {status === 'approved' && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 flex gap-4 items-start shadow-sm animate-fade-in">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex gap-4 items-start shadow-sm">
                     <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
                       <CheckCircle className="h-6 w-6" />
                     </div>
@@ -489,7 +687,7 @@ export default function PengaturanAkun({ user, verification }: Props) {
                 )}
 
                 {status === 'pending' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex gap-4 items-start shadow-sm">
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4 items-start shadow-sm">
                     <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
                       <Clock className="h-6 w-6 animate-pulse" />
                     </div>
@@ -527,7 +725,7 @@ export default function PengaturanAkun({ user, verification }: Props) {
                 )}
 
                 {(status === 'rejected' || status === 'declined') && (
-                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 flex gap-4 items-start shadow-sm mb-4">
+                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 flex gap-4 items-start shadow-sm mb-4">
                     <div className="p-3 bg-rose-100 text-rose-700 rounded-xl">
                       <XCircle className="h-6 w-6" />
                     </div>
@@ -549,7 +747,7 @@ export default function PengaturanAkun({ user, verification }: Props) {
                 )}
 
                 {!status && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 flex gap-4 items-start shadow-sm">
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-4 items-start shadow-sm">
                     <div className="p-3 bg-blue-100 text-blue-700 rounded-xl">
                       <ShieldAlert className="h-6 w-6" />
                     </div>
@@ -563,100 +761,169 @@ export default function PengaturanAkun({ user, verification }: Props) {
                 )}
               </div>
 
-              {/* Only show the request form if the status is not pending and not approved */}
+              {/* Formulir Pengajuan */}
               {status !== 'pending' && status !== 'approved' && (
-                <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 shadow-sm">
-                  <div className="border-b border-gray-100 pb-3 mb-2">
-                    <h3 className="font-bold text-slate-850 text-base">Formulir Pengajuan Verifikasi</h3>
-                    <p className="text-xs text-gray-500">Lengkapi seluruh data legalitas di bawah untuk proses verifikasi akun.</p>
-                  </div>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                  <h3 className="font-bold text-slate-800 text-lg mb-2">Data Rekening Bisnis</h3>
                   
-                  <div>
-                    <Label>Jenis Verifikasi</Label>
-                    <Select onValueChange={(v: string) => setVerif({ ...verif, verification_type: v })} defaultValue={verif.verification_type}>
-                      <SelectTrigger><SelectValue placeholder="Pilih jenis..." /></SelectTrigger>
-                      <SelectContent>
-                        {VERIF_TYPES.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Nama sesuai KTP / Penanggung Jawab</Label>
-                    <Input
-                      placeholder="Masukkan Nama Sesuai KTP"
-                      value={verif.legal_name}
-                      onChange={(e) => setVerif({ ...verif, legal_name: e.target.value })}
-                    />
-                    {verificationErrors.legal_name && (
-                      <p className="text-sm text-red-600 mt-1">{verificationErrors.legal_name}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Nomor KTP</Label>
-                    <Input
-                      placeholder="1234567890123456"
-                      value={verif.id_number}
-                      onChange={(e) => setVerif({ ...verif, id_number: e.target.value })}
-                    />
-                    {verificationErrors.id_number && (
-                      <p className="text-sm text-red-600 mt-1">{verificationErrors.id_number}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Nama Usaha / Bisnis</Label>
-                    <Input placeholder="Nama Usaha" maxLength={100} value={verif.business_name} onChange={(e) => setVerif({ ...verif, business_name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Deskripsi Usaha</Label>
-                    <Textarea placeholder="Deskripsi singkat usaha" value={verif.business_description} onChange={(e) => setVerif({ ...verif, business_description: e.target.value })} rows={3} />
-                  </div>
-                  <div>
-                    <Label>Alamat Usaha</Label>
-                    <Textarea placeholder="Alamat usaha" value={verif.business_address} onChange={(e) => setVerif({ ...verif, business_address: e.target.value })} rows={2} />
-                  </div>
-                  <div>
-                    <Label>Website</Label>
-                    <Input
-                      placeholder="https://example.com"
-                      value={verif.website}
-                      onChange={(e) => setVerif({ ...verif, website: e.target.value })}
-                    />
-                    {verificationErrors.website && (
-                      <p className="text-sm text-red-600 mt-1">{verificationErrors.website}</p>
-                    )}
-                  </div>
-
-                  <div className="pt-2">
-                    <Label className="font-bold text-slate-800 text-sm mb-3 block">Dokumen Wajib</Label>
-                    <div className="grid gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      {requiredDocs.map((d) => (
-                        <div key={d.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/50 last:border-0 last:pb-0">
-                          <div className="flex-1">
-                            <Label className="text-sm font-semibold text-slate-700">{d.label}</Label>
-                            <p className="text-xs text-slate-400">Format: JPG, JPEG, PNG, PDF (Maks. 5MB)</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="cursor-pointer inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 transition-colors px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 shadow-sm">
-                              <Upload className="h-3.5 w-3.5 text-slate-400" />
-                              <span>{docs[d.key] ? 'Ubah File' : 'Pilih File'}</span>
-                              <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={(e) => onFileChange(d.key, e.target.files?.[0] ?? null)} />
-                            </label>
-                            {docs[d.key] && (
-                              <span className="text-xs text-emerald-600 font-medium truncate max-w-[150px]" title={docs[d.key]?.name}>
-                                {docs[d.key]?.name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Jenis Verifikasi Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Jenis Verifikasi
+                    </div>
+                    <div className="px-4 py-2">
+                      <Select onValueChange={(v: string) => setVerif({ ...verif, verification_type: v })} defaultValue={verif.verification_type}>
+                        <SelectTrigger className="w-full border-0 shadow-none focus:ring-0 p-0 h-auto bg-transparent text-slate-700 text-sm">
+                          <SelectValue placeholder="Pilih jenis..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VERIF_TYPES.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  <div className="pt-4 flex gap-2">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6" onClick={submitVerification} disabled={loading}>
-                      {loading ? 'Mengirim...' : 'Ajukan Verifikasi'}
-                    </Button>
+                  {/* Nama Sesuai KTP Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Nama Sesuai KTP*
+                    </div>
+                    <div className="px-4 py-2">
+                      <input
+                        type="text"
+                        placeholder="Masukkan Nama Sesuai KTP"
+                        value={verif.legal_name}
+                        onChange={(e) => setVerif({ ...verif, legal_name: e.target.value })}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                      />
+                      {verificationErrors.legal_name && (
+                        <p className="text-xs text-red-650 mt-1">{verificationErrors.legal_name}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nomor KTP Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Nomor KTP*
+                    </div>
+                    <div className="px-4 py-2">
+                      <input
+                        type="text"
+                        placeholder="1234567890123456"
+                        value={verif.id_number}
+                        onChange={(e) => setVerif({ ...verif, id_number: e.target.value })}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                      />
+                      {verificationErrors.id_number && (
+                        <p className="text-xs text-red-650 mt-1">{verificationErrors.id_number}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nama Usaha Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Nama Usaha / Bisnis*
+                    </div>
+                    <div className="px-4 py-2">
+                      <input
+                        type="text"
+                        placeholder="Nama Usaha"
+                        maxLength={100}
+                        value={verif.business_name}
+                        onChange={(e) => setVerif({ ...verif, business_name: e.target.value })}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Deskripsi Usaha Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-start bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Deskripsi Usaha / Bisnis (Lengkapi dengan sosial media dan/atau website)*
+                    </div>
+                    <div className="px-4 py-2">
+                      <textarea
+                        placeholder="Deskripsi singkat usaha"
+                        value={verif.business_description}
+                        onChange={(e) => setVerif({ ...verif, business_description: e.target.value })}
+                        rows={3}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400 resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Alamat Usaha Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-start bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Alamat Usaha / Bisnis*
+                    </div>
+                    <div className="px-4 py-2">
+                      <textarea
+                        placeholder="Alamat usaha"
+                        value={verif.business_address}
+                        onChange={(e) => setVerif({ ...verif, business_address: e.target.value })}
+                        rows={2}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm placeholder:text-slate-400 resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Website Row */}
+                  <div className="border border-blue-100 rounded-xl overflow-hidden grid grid-cols-[180px_1fr] items-center bg-white focus-within:border-blue-500 transition-colors">
+                    <div className="font-bold text-slate-700 text-xs px-4 py-4 bg-slate-50/50 border-r border-blue-100 h-full flex items-center shrink-0">
+                      Website
+                    </div>
+                    <div className="px-4 py-2">
+                      <input
+                        type="text"
+                        placeholder="leeyjayasukses.id"
+                        value={verif.website}
+                        onChange={(e) => setVerif({ ...verif, website: e.target.value })}
+                        className="w-full border-0 focus:ring-0 px-0 py-0.5 bg-transparent text-slate-700 text-sm"
+                      />
+                      {verificationErrors.website && (
+                        <p className="text-xs text-red-650 mt-1">{verificationErrors.website}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Grid of 4 dashed upload zones */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    {requiredDocs.map((d) => (
+                      <div key={d.key} className="flex flex-col">
+                        <label className="text-xs font-bold text-slate-700 mb-1.5 block">{d.label}*</label>
+                        <div className="border-2 border-dashed border-blue-200 hover:border-blue-400 rounded-2xl p-6 bg-slate-50/40 flex flex-col items-center justify-center text-center transition-colors relative min-h-[120px]">
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => onFileChange(d.key, e.target.files?.[0] ?? null)}
+                          />
+                          <Upload className="h-5 w-5 text-blue-400 mb-2" />
+                          <div className="flex flex-col items-center gap-1.5">
+                            <span className="text-xs font-semibold text-blue-600 hover:underline">
+                              {docs[d.key] ? 'Ubah file...' : 'Upload files...'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {docs[d.key] ? docs[d.key]!.name : 'Drop files here'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-4">
+                    <button
+                      onClick={submitVerification}
+                      disabled={loading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md uppercase tracking-wider text-xs"
+                    >
+                      {loading ? 'Mengirim...' : 'Kirim Data Verifikasi'}
+                    </button>
                   </div>
                 </div>
               )}

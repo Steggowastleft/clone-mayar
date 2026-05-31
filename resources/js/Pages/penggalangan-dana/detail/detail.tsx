@@ -10,6 +10,9 @@ import {
 import { Copy, Code2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type PenggalanganDana } from "../detail";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
   const [deskOpen, setDeskOpen] = useState(false);
@@ -177,71 +180,74 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
   return (
     <>
       {/* Share Links */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 mb-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
-          Share Link Penggalangan Dana
+      <div className="bg-white border border-blue-100 rounded-xl shadow-sm p-6 mb-5 space-y-4">
+        <h3 className="text-base font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+          Bagi Tautan untuk Menerima {shareLabel}
         </h3>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              label: `COPY LINK ${shareLabel}`,
+              label: `Tautan ${shareLabel} (Checkout)`,
               url: `${baseUrl}/penggalangan-dana/${produk?.id}`,
             },
             {
-              label: "COPY HALAMAN PRODUK",
+              label: "Halaman Detail Produk",
               url: `${baseUrl}/penggalangan-dana/${produk?.id}`,
             },
           ].map((item) => (
-            <div key={item.label}>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-t-md text-xs text-gray-500 truncate">
-                {item.url}
-              </div>
-
-              <div className="flex">
-                <button
-                  onClick={() => navigator.clipboard.writeText(item.url)}
-                  className="flex-1 py-2 bg-white border border-t-0 border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+            <div key={item.label} className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={item.url}
+                  className="bg-slate-50/50 border-slate-200 text-xs font-semibold text-slate-600 select-all h-9"
+                />
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.url);
+                    toast.success(`${item.label} berhasil disalin!`);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 h-9"
+                  size="sm"
                 >
-                  <Copy className="h-3 w-3" /> {item.label}
-                </button>
-
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-2 bg-gray-800 border border-t-0 border-gray-800 text-white hover:bg-gray-700 flex items-center"
-                  title="Buka di tab baru"
-                >
-                  <Code2 className="h-4 w-4" />
-                </a>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           ))}
         </div>
 
-        <p className="text-xs text-gray-400 text-center mt-3">
+        <p className="text-[11px] text-slate-400 text-center mt-3 leading-relaxed">
           Share link di atas ke sosial media, whatsapp, telegram, tiktok,
           landing page, email atau channel penjualan lainnya untuk menerima {shareDesc}.
         </p>
       </div>
 
       {/* Detail Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <table className="w-full">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className="border-b border-gray-50 last:border-0">
-                <td className="px-5 py-3 text-sm text-gray-500 w-56 align-top">
-                  {row.label}
-                </td>
-                <td className="px-5 py-3 text-sm text-gray-800">
-                  {row.value}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6">
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <tbody className="divide-y divide-slate-200">
+              {rows.map((row, i) => (
+                <tr key={i} className="hover:bg-slate-50/20 transition">
+                  <td className="px-5 py-4 text-xs font-bold text-slate-550 w-56 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap align-top animate-none">
+                    {row.label}
+                  </td>
+                  <td className="px-5 py-4 text-xs font-medium text-slate-700">
+                    {row.value}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Centered Created At */}
+        <div className="text-center py-3 border border-blue-150 rounded-lg text-blue-650 font-bold bg-white mt-5 text-xs">
+          Dibuat tanggal {formatTanggal(produk?.created_at)}
+        </div>
       </div>
 
       {/* Dialogs */}
@@ -251,7 +257,7 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
             <DialogTitle>Cerita / Deskripsi</DialogTitle>
             <DialogDescription>Deskripsi lengkap penggalangan dana ini.</DialogDescription>
           </DialogHeader>
-          <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
             {produk?.deskripsi || "Tidak ada deskripsi."}
           </div>
         </DialogContent>
@@ -264,7 +270,7 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
               {produk?.tipe === "wakaf" ? "Tujuan Wakaf" : "Tujuan Donasi"}
             </DialogTitle>
           </DialogHeader>
-          <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
             {produk?.tujuan || "Tidak ada tujuan."}
           </div>
         </DialogContent>
@@ -275,7 +281,7 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
           <DialogHeader>
             <DialogTitle>Penerima Manfaat</DialogTitle>
           </DialogHeader>
-          <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
             {produk?.penerima_manfaat || "Tidak ada informasi penerima manfaat."}
           </div>
         </DialogContent>
@@ -286,7 +292,7 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
           <DialogHeader>
             <DialogTitle>Rincian Penggunaan Dana</DialogTitle>
           </DialogHeader>
-          <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
             {produk?.rincian_penggunaan || "Tidak ada rincian."}
           </div>
         </DialogContent>

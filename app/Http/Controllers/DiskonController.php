@@ -25,7 +25,8 @@ class DiskonController extends Controller
     // ─────────────────────────────────────
     public function index(): Response
     {
-        $diskons = Diskon::with('user')
+        $diskons = Diskon::where('user_id', Auth::id())
+            ->with('user')
             ->latest()
             ->get()
             ->map(fn($d) => [

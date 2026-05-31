@@ -1,5 +1,5 @@
 import { Head } from "@inertiajs/react";
-import { CheckoutDialog, PaymentDialog } from "@/Pages/Peserta/checkoutdialog";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { useState } from "react";
 import {
   ChevronDown, ChevronUp, CheckCircle2,
@@ -43,6 +43,7 @@ type Bootcamp = {
   max_peserta?: number;
   tanggal_mulai_pembelajaran?: string;
   tanggal_batas_pembelajaran?: string;
+  user_id?: number | null;
 };
 
 type Peserta = {
@@ -111,7 +112,6 @@ function ContentCard({ title, children }: { title: string; children: React.React
 export default function BootcampPublic(props: Props) {
   const { bootcamp, peserta = null } = props;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [paymentOpen,  setPaymentOpen]  = useState(false);
   const isBerbayar = (bootcamp.harga ?? 0) > 0;
 
   const sesiList   = ensureArray(props.sesiList);
@@ -135,11 +135,7 @@ export default function BootcampPublic(props: Props) {
   ].filter(Boolean) as { href: string; label: string }[];
 
   const handleCheckoutClick = () => {
-    if (isBerbayar) {
-      setPaymentOpen(true);
-    } else {
-      setCheckoutOpen(true);
-    }
+    setCheckoutOpen(true);
   };
 
   return (
@@ -155,6 +151,7 @@ export default function BootcampPublic(props: Props) {
       navTitle="Mayar Bootcamp"
       navIcon={<GraduationCap className="text-white h-5 w-5" />}
       onCheckout={handleCheckoutClick}
+      creatorId={bootcamp.user_id}
     >
       <div className="space-y-8">
         
@@ -431,22 +428,13 @@ export default function BootcampPublic(props: Props) {
 
       </div>
 
-      {/* Payment Dialog (berbayar) */}
-      <PaymentDialog
-        open={paymentOpen}
-        onOpenChange={setPaymentOpen}
-        bootcampId={bootcamp.id}
-        bootcampName={bootcamp.name}
-        harga={bootcamp.harga ?? 0}
-      />
-
-      {/* Checkout Dialog (gratis) */}
-      <CheckoutDialog
+      <UnifiedCheckoutDialog
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
-        bootcampId={bootcamp.id}
-        bootcampName={bootcamp.name}
-        harga={bootcamp.harga}
+        productType="bootcamp"
+        productId={bootcamp.id}
+        productName={bootcamp.name}
+        harga={bootcamp.harga ?? 0}
       />
     </PublicProductLayout>
   );

@@ -5,7 +5,7 @@ import {
   Users, Calendar, Play, ArrowRight, Award,
   Clock, BookOpen, GraduationCap
 } from "lucide-react";
-import { KelasOnlineCheckoutDialog } from "./components/checkout-dialog";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import PublicProductLayout from "@/components/public/PublicProductLayout";
 
 // ─────────────────────────────────────────────
@@ -25,6 +25,7 @@ type KelasOnline = {
   nilai_minimum_quiz?: number;
   peserta_terdaftar_count: number;
   owner: { name: string };
+  user_id?: number | null;
 };
 
 type Peserta = {
@@ -79,6 +80,7 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
       navTitle="Mayar Kelas Online"
       navIcon={<GraduationCap className="text-white h-5 w-5" />}
       onCheckout={() => setCheckoutOpen(true)}
+      creatorId={kelas.user_id}
     >
       <div className="space-y-8">
         
@@ -201,10 +203,13 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
       </div>
 
       {/* Checkout Dialog */}
-      <KelasOnlineCheckoutDialog
+      <UnifiedCheckoutDialog
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
-        kelas={kelas}
+        productType="kelas-online"
+        productId={kelas.id}
+        productName={kelas.nama}
+        harga={kelas.harga}
       />
     </PublicProductLayout>
   );

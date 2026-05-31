@@ -221,60 +221,44 @@ export default function TabDetail({ event, pembicaraList = [] }: { event: EventD
   return (
     <>
       {/* Share Links */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 mb-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
-          Share Link untuk Menerima Pendaftaran
+      <div className="bg-white border border-blue-100 rounded-xl shadow-sm p-6 mb-5 space-y-4">
+        <h3 className="text-base font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+          Bagi Tautan untuk Menerima Pendaftaran
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              label: "COPY LINK PENDAFTARAN",
+              label: "Tautan Pendaftaran (Checkout)",
               url: `${baseUrl}/p/${event.id}/event`,
-              openable: false,
             },
             {
-              label: "COPY HALAMAN EVENT",
+              label: "Halaman Detail Event",
               url: `${baseUrl}/event/${event.id}`,
-              openable: true,
             },
           ].map((item) => (
-            <div key={item.label}>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-t-md text-xs text-gray-500 truncate">
-                {item.url}
-              </div>
-              <div className="flex">
-                <button
-                  onClick={() =>
-                    navigator.clipboard.writeText(item.url)
-                  }
-                  className="flex-1 py-2 bg-white border border-t-0 border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+            <div key={item.label} className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={item.url}
+                  className="bg-slate-50/50 border-slate-200 text-xs font-semibold text-slate-600 select-all h-9"
+                />
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(item.url);
+                    toast.success(`${item.label} berhasil disalin!`);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 h-9"
+                  size="sm"
                 >
-                  <Copy className="h-3 w-3" /> {item.label}
-                </button>
-                {item.openable ? (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-2 bg-gray-800 border border-t-0 border-gray-800 text-white hover:bg-gray-700 flex items-center"
-                    title="Buka di tab baru"
-                  >
-                    <Code2 className="h-4 w-4" />
-                  </a>
-                ) : (
-                  <button className="px-3 py-2 bg-gray-800 border border-t-0 border-gray-800 text-white hover:bg-gray-700">
-                    <Code2 className="h-4 w-4" />
-                  </button>
-                )}
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400 text-center mt-3">
-          Share link diatas ke sosial media, whatsapp, telegram,
-          tiktok, landing page, email atau channel penjualan lainnya
-          untuk menerima order dan pembayaran.
-        </p>
       </div>
 
       {/* Buat Tiket Section */}
@@ -337,28 +321,30 @@ export default function TabDetail({ event, pembicaraList = [] }: { event: EventD
       </div>
 
       {/* Detail Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <table className="w-full">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr
-                key={i}
-                className="border-b border-gray-50 last:border-0"
-              >
-                <td className="px-5 py-3 text-sm text-gray-500 w-56 align-top">
-                  {row.label}
-                </td>
-                <td className="px-5 py-3 text-sm text-gray-800">
-                  {row.value}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="px-5 py-3 border-t border-gray-100">
-          <p className="text-xs text-gray-400">
-            Dibuat Tanggal: {event.date}
-          </p>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6">
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <tbody className="divide-y divide-slate-200">
+              {rows.map((row, i) => (
+                <tr
+                  key={i}
+                  className="hover:bg-slate-50/20 transition"
+                >
+                  <td className="px-5 py-4 text-xs font-bold text-slate-550 w-56 border-r border-slate-200 bg-slate-50/30 whitespace-nowrap align-top">
+                    {row.label}
+                  </td>
+                  <td className="px-5 py-4 text-xs font-medium text-slate-700">
+                    {row.value}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Centered Created At */}
+        <div className="text-center py-3 border border-blue-150 rounded-lg text-blue-650 font-bold bg-white mt-5 text-xs">
+          Dibuat tanggal {event.date || "-"}
         </div>
       </div>
 

@@ -6,15 +6,13 @@ import { cn } from "@/lib/utils";
 import {
   BarChart3,
   BookOpen,
-  Users2,
-  Star,
-  Mail,
-  Settings,
   Package,
+  TrendingUp,
 } from "lucide-react";
 
 import TabTransaksi from "./detail/transaksi";
 import TabDetail from "./detail/detail";
+import TabAnalisis from "./detail/analisis";
 import { SidebarPanel } from "./detail/components/sidebarpanel";
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -31,6 +29,7 @@ export type ProdukDigitalData = {
   deskripsi: string;
   sumber_file: "upload" | "file_lama" | "link";
   file_url: string | null;
+  file_lama_id: string | null;
   redirect_url: string | null;
   cover_url: string | null;
   waktu_mulai_jual: string | null;
@@ -40,11 +39,42 @@ export type ProdukDigitalData = {
   bisa_affiliate: boolean;
   total_penjualan: number;
   created_at: string;
+
+  // Specific fields
+  author?: string | null;
+  isbn?: string | null;
+  format?: string | null;
+  bahasa?: string | null;
+  jumlah_halaman?: number | null;
+  bisa_didownload?: boolean;
+  tipe_tulisan?: string | null;
+  mekanisme_bayar?: string | null;
+  genre?: string | null;
+  transkrip?: string | null;
+  pembicara?: string | null;
+  durasi?: string | null;
+  artis?: string | null;
+  kategori_produk?: string | null;
+  tipe_pembaca?: string | null;
+};
+
+export type AnalisisData = {
+  total_transaksi: number;
+  transaksi_sukses: number;
+  transaksi_pending: number;
+  transaksi_gagal: number;
+  nominal_transaksi: number;
+  checkout_count: number;
+  chart_data: { day: string; date: string; Pendapatan: number; Transaksi: number }[];
+  growth_percent: number;
+  busiest_day: string;
 };
 
 type Props = {
   produk: ProdukDigitalData;
   oldFiles: any[];
+  analisis: AnalisisData;
+  transaksi: any[];
 };
 
 // ─── Placeholder tab ─────────────────────────────────────────────────
@@ -52,7 +82,7 @@ type Props = {
 function TabPlaceholder({ label }: { label: string }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-12 text-center">
-      <p className="text-gray-400 text-sm">
+      <p className="text-gray-450 text-sm">
         Fitur <strong>{label}</strong> akan segera tersedia
       </p>
     </div>
@@ -61,48 +91,32 @@ function TabPlaceholder({ label }: { label: string }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────
 
-export default function ProdukDigitalShow({ produk, oldFiles }: Props) {
+export default function ProdukDigitalShow({ produk, oldFiles, analisis, transaksi }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
   const tabs = [
     {
-      id: "transaksi",
-      label: "TRANSAKSI",
-      icon: <BarChart3 className="h-3 w-3" />,
-    },
-    {
       id: "detail",
       label: "DETAIL",
-      icon: <BookOpen className="h-3 w-3" />,
     },
     {
-      id: "pembeli",
-      label: "PEMBELI",
-      icon: <Users2 className="h-3 w-3" />,
+      id: "transaksi",
+      label: "TRANSAKSI",
     },
     {
-      id: "rating",
-      label: "RATING",
-      icon: <Star className="h-3 w-3" />,
-    },
-    {
-      id: "email",
-      label: "EMAIL",
-      icon: <Mail className="h-3 w-3" />,
-    },
-    {
-      id: "pengaturan",
-      label: "PENGATURAN",
-      icon: <Settings className="h-3 w-3" />,
+      id: "analisis",
+      label: "ANALISIS",
     },
   ];
 
   const renderTab = () => {
     switch (activeTab) {
-      case "transaksi":
-        return <TabTransaksi />;
       case "detail":
         return <TabDetail produk={produk} />;
+      case "transaksi":
+        return <TabTransaksi transaksi={transaksi} />;
+      case "analisis":
+        return <TabAnalisis produk={produk} analisis={analisis} />;
       default:
         return (
           <TabPlaceholder
@@ -115,65 +129,52 @@ export default function ProdukDigitalShow({ produk, oldFiles }: Props) {
   return (
     <DashboardLayout>
       <Head title={produk.nama} />
-      <div className="p-6">
+      <div className="p-6 bg-slate-50/20 min-h-screen">
         {/* Breadcrumb + Title */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs text-gray-400 mb-1">
-              PROJEK ·{" "}
-              <button
-                onClick={() => router.visit("/produk-digital")}
-                className="hover:text-blue-600 transition"
-              >
-                Produk Digital
-              </button>
+            <p className="text-xs text-slate-400 font-semibold mb-1">
+              Produk Digital
             </p>
-            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-500" />
+            <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
               {produk.nama}
             </h1>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="border-blue-500 text-blue-600 hover:bg-blue-50 text-sm"
-            >
-              PRODUK
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-              onClick={() => router.visit("/produk-digital")}
-            >
-              + BUAT
-            </Button>
-          </div>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+            onClick={() => router.visit("/produk-digital")}
+          >
+            + Tambah Produk
+          </Button>
         </div>
 
         {/* Tab Bar */}
-        <div className="border-b border-gray-200 mb-5 overflow-x-auto">
-          <div className="flex gap-0 min-w-max">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-4 py-2.5 text-xs font-semibold tracking-wide border-b-2 transition whitespace-nowrap flex items-center gap-1.5",
-                  activeTab === tab.id
-                    ? "border-purple-600 text-purple-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
+        <div className="flex mb-6 overflow-x-auto">
+          <div className="flex border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "px-8 py-2.5 text-xs font-bold tracking-wider transition whitespace-nowrap",
+                    isActive
+                      ? "bg-blue-50 text-blue-600 font-extrabold border-r border-blue-200 last:border-0"
+                      : "text-blue-500 hover:bg-slate-50 border-r border-blue-150 last:border-0"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Content + Sidebar */}
-        <div className="flex gap-5">
+        <div className="flex gap-6">
           <div className="flex-1 min-w-0">{renderTab()}</div>
-          <div className="w-64 shrink-0">
+          <div className="w-80 shrink-0">
             <SidebarPanel produk={produk} oldFiles={oldFiles} />
           </div>
         </div>

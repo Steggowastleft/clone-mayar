@@ -38,7 +38,7 @@ class PaymentLinkController extends Controller
             'status'      => $l->status,
             'slug'        => $l->slug,
             'cover_url'   => $l->cover_url,
-            'created_at'  => $l->created_at->format('d M Y'),
+            'created_at'  => $l->created_at->format('Y-m-d H:i:s'),
             'tanggal_kadaluarsa' => $l->tanggal_kadaluarsa?->format('d M Y'),
             'maksimum_pembayaran' => $l->maksimum_pembayaran,
             'bisa_affiliate' => $l->bisa_affiliate,
@@ -107,15 +107,94 @@ class PaymentLinkController extends Controller
     // ─────────────────────────────────────────────────────
     // Show – halaman detail payment link
     // ─────────────────────────────────────────────────────
-   public function show(PaymentLink $paymentLink)
-{
-    return Inertia::render('PaymentLink/Show', [
-        'link' => $this->formatLink($paymentLink),
-    ]);
-}
+    public function show(PaymentLink $paymentLink)
+    {
+        if ($paymentLink->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $prefix = 'PL-' . $paymentLink->id . '-';
+        $allPayments = \App\Models\Pembayaran::where('order_id', 'LIKE', $prefix . '%')->get();
+
+        $totalTransaksi   = $allPayments->count();
+        $transaksiSukses  = $allPayments->where('status', 'confirmed')->count();
+        $transaksiPending = $allPayments->where('status', 'pending')->count();
+        $transaksiGagal   = $allPayments->where('status', 'rejected')->count();
+        $nominalTransaksi = $allPayments->where('status', 'confirmed')->sum('jumlah');
+
+        $checkoutCount = \App\Models\Pendaftaran::where('registrable_type', 'App\\Models\\PaymentLink')
+            ->where('registrable_id', $paymentLink->id)
+            ->count();
+
+        $chartData = [];
+        $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subDays($i);
+            $dayLabel = $dayNames[$date->dayOfWeek];
+            $dateStr = $date->toDateString();
+
+            $dayPayments = $allPayments->filter(function ($p) use ($dateStr) {
+                return $p->created_at->toDateString() === $dateStr;
+            });
+
+            $chartData[] = [
+                'day'        => $dayLabel,
+                'date'       => $date->format('d M'),
+                'Pendapatan' => (float) $dayPayments->where('status', 'confirmed')->sum('jumlah'),
+                'Transaksi'  => $dayPayments->count(),
+            ];
+        }
+
+        $thisWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $lastWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(\Carbon\Carbon::now()->subDays(14)) && $p->created_at->lt(\Carbon\Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $growthPercent = $lastWeekRevenue > 0
+            ? round((($thisWeekRevenue - $lastWeekRevenue) / $lastWeekRevenue) * 100)
+            : ($thisWeekRevenue > 0 ? 100 : 0);
+
+        $busiestDay = collect($chartData)->sortByDesc('Transaksi')->first();
+
+        $analisis = [
+            'total_transaksi'    => $totalTransaksi,
+            'transaksi_sukses'   => $transaksiSukses,
+            'transaksi_pending'  => $transaksiPending,
+            'transaksi_gagal'    => $transaksiGagal,
+            'nominal_transaksi'  => (float) $nominalTransaksi,
+            'checkout_count'     => $checkoutCount,
+            'chart_data'         => $chartData,
+            'growth_percent'     => $growthPercent,
+            'busiest_day'        => $busiestDay['day'] ?? '-',
+        ];
+
+        $transaksi = $allPayments->map(fn($p) => [
+            'id'                => $p->id,
+            'pelanggan'         => $p->nama_pembeli,
+            'email'             => $p->email_pembeli,
+            'no_hp'             => $p->no_hp_pembeli,
+            'status'            => $p->status === 'confirmed' ? 'Lunas' : ($p->status === 'pending' ? 'Belum Bayar' : ($p->status === 'rejected' ? 'Gagal' : 'Dibatalkan')),
+            'metode_pembayaran' => $p->bukti_transfer ? 'Transfer Bank' : 'QRIS',
+            'kode_kupon'        => '-',
+            'tanggal'           => $p->created_at?->format('d M Y H:i'),
+            'resi'              => 'Lihat',
+        ]);
+
+        return Inertia::render('PaymentLink/Show', [
+            'link' => $this->formatLink($paymentLink),
+            'analisis' => $analisis,
+            'transaksi' => $transaksi,
+        ]);
+    }
 
 public function update(Request $request, PaymentLink $paymentLink)
 {
+    if ($paymentLink->user_id !== Auth::id()) {
+        abort(403);
+    }
+
     $validated = $request->validate([
         'nama'                => 'sometimes|required|string|max:150',
         'harga'               => 'sometimes|required|integer|min:0',
@@ -151,6 +230,10 @@ public function update(Request $request, PaymentLink $paymentLink)
 
 public function destroy(PaymentLink $paymentLink)
 {
+    if ($paymentLink->user_id !== Auth::id()) {
+        abort(403);
+    }
+
     $paymentLink->delete();
 
     return redirect()->route('payment-link.index')
@@ -219,6 +302,7 @@ public function destroy(PaymentLink $paymentLink)
             'status'              => $l->status,
             'slug'                => $l->slug,
             'created_at'          => $l->created_at->format('d M Y'),
+            'user_id'             => $l->user_id,
         ];
     }
 }

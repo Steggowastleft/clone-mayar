@@ -20,12 +20,14 @@ use App\Models\Pendaftaran;
 use App\Models\Rating;
 use App\Models\Peserta;
 use App\Models\KelasOnline;
+use App\Models\Bundling;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $timeRange = request('timeRange', '30');
+        $userId = auth()->id();
+        $timeRange = request('timeRange', '7');
         $days      = (int) $timeRange;
 
         $now       = Carbon::now();
@@ -34,103 +36,191 @@ class DashboardController extends Controller
         $endPrev   = $now->copy()->subDays($days)->endOfDay();
 
         // ── Total Pendapatan (dari Pembayaran confirmed) ─────────────────
-        $revenueCurr = Pembayaran::where('status', 'confirmed')
+        $revenueCurr = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
             ->whereBetween('confirmed_at', [$startCurr, $now])
             ->sum('jumlah');
 
-        $revenuePrev = Pembayaran::where('status', 'confirmed')
+        $revenuePrev = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
             ->whereBetween('confirmed_at', [$startPrev, $endPrev])
             ->sum('jumlah');
 
         $revenueTrend = $this->calcTrend($revenuePrev, $revenueCurr);
 
         // ── Total Transaksi (Pendaftaran aktif + pending) ─────────────────
-        $transaksiCurr = Pendaftaran::whereBetween('created_at', [$startCurr, $now])->count();
-        $transaksiPrev = Pendaftaran::whereBetween('created_at', [$startPrev, $endPrev])->count();
+        $transaksiCurr = $this->queryUserPendaftaran($userId)->whereBetween('created_at', [$startCurr, $now])->count()
+            + \App\Models\KelasOnlinePeserta::whereIn('kelas_online_id', KelasOnline::where('user_id', $userId)->pluck('id'))
+                ->whereBetween('created_at', [$startCurr, $now])
+                ->count();
+                
+        $transaksiPrev = $this->queryUserPendaftaran($userId)->whereBetween('created_at', [$startPrev, $endPrev])->count()
+            + \App\Models\KelasOnlinePeserta::whereIn('kelas_online_id', KelasOnline::where('user_id', $userId)->pluck('id'))
+                ->whereBetween('created_at', [$startPrev, $endPrev])
+                ->count();
+                
         $transaksiTrend = $this->calcTrend($transaksiPrev, $transaksiCurr);
 
         // ── Pembayaran Belum Dikonfirmasi ─────────────────────────────────
-        $pendingPayment = Pembayaran::where('status', 'pending')->sum('jumlah');
+        $pendingPayment = $this->queryUserPembayaran($userId)->where('status', 'pending')->sum('jumlah');
 
-        // ── Saldo Akun (semua pembayaran confirmed tanpa batas waktu) ─────
-        $totalBalance = Pembayaran::where('status', 'confirmed')->sum('jumlah');
+        // ── Saldo Akun (semua pembayaran confirmed dikurangi withdrawal) ─
+        $totalPayments = $this->queryUserPembayaran($userId)->where('status', 'confirmed')->sum('jumlah');
+        $totalWithdrawn = \App\Models\Withdrawal::where('user_id', $userId)
+            ->whereIn('status', ['approved', 'completed', 'pending'])
+            ->sum('jumlah');
+        $totalBalance = max(0, $totalPayments - $totalWithdrawn);
 
         // ── Total Produk (semua tabel) ────────────────────────────────────
-        $totalProduk = Bootcamp::count()
-            + Webinar::count()
-            + Event::count()
-            + Ebook::count()
-            + ProdukDigital::count()
-            + CoachingMentoring::count()
-            + PenggalanganDana::count()
-            + PaymentLink::count()
-            + Tulisan::count();
+        $totalProduk = Bootcamp::where('user_id', $userId)->count()
+            + Webinar::where('user_id', $userId)->count()
+            + Event::where('user_id', $userId)->count()
+            + Ebook::where('user_id', $userId)->count()
+            + ProdukDigital::where('user_id', $userId)->count()
+            + CoachingMentoring::where('user_id', $userId)->count()
+            + PenggalanganDana::where('user_id', $userId)->count()
+            + PaymentLink::where('user_id', $userId)->count()
+            + Tulisan::where('user_id', $userId)->count()
+            + KelasOnline::where('user_id', $userId)->count();
 
         // ── Total Pelanggan unik ──────────────────────────────────────────
-        $totalPelanggan = Peserta::count();
+        $userPesertaIds = $this->queryUserPendaftaran($userId)->pluck('peserta_id')
+            ->concat(
+                \App\Models\KelasOnlinePeserta::whereIn(
+                    'kelas_online_id',
+                    KelasOnline::where('user_id', $userId)->pluck('id')
+                )->pluck('peserta_id')
+            )
+            ->unique()
+            ->filter();
+        
+        $totalPelanggan = $userPesertaIds->count();
 
         // ── Chart Data (pendapatan & transaksi per hari) ──────────────────
-        $chartData = $this->buildChartData($days, $now);
+        $chartData = $this->buildChartData($days, $now, $userId);
 
         // ── Produk Terlaris (dari Pendaftaran, group by registrable_type+id) ─
-        $topProducts = $this->getTopProducts();
+        $topProducts = $this->getTopProducts($userId);
 
         // ── Transaksi Terbaru (Pembayaran terbaru, 5 data) ───────────────
-        $recentTransaksi = Pembayaran::with('bootcamp.user')
+        $recentTransaksi = $this->queryUserPembayaran($userId)->with(['bootcamp.user', 'peserta'])
             ->latest()
             ->limit(10)
             ->get()
             ->map(function ($p) {
+                $buyer = $p->nama_pembeli ?: ($p->peserta?->nama ?: 'Pengguna');
+                $productName = $p->bootcamp ? $p->bootcamp->name : ('Pembayaran #' . $p->order_id);
+                $action = "Membeli Bootcamp " . $productName;
                 return [
-                    'id'      => $p->id,
-                    'type'    => $p->status === 'rejected' ? 'refund' : 'income',
-                    'title'   => $p->bootcamp ? 'Penjualan ' . $p->bootcamp->name : 'Pembayaran #' . $p->order_id,
-                    'amount'  => (float) $p->jumlah,
-                    'date'    => $p->created_at->locale('id')->diffForHumans(),
-                    'penjual' => $p->bootcamp?->user?->name ?? 'Admin',
+                    'id'          => $p->id,
+                    'type'        => $p->status === 'rejected' ? 'refund' : 'income',
+                    'buyerName'   => $buyer,
+                    'actionText'  => $action,
+                    'avatar'      => $p->peserta?->foto_url,
+                    'amount'      => (float) $p->jumlah,
+                    'date'        => $p->created_at->locale('id')->diffForHumans(),
+                    'timestamp'   => $p->created_at->timestamp,
                 ];
             });
 
         // Tambahkan dari Pendaftaran (non-bootcamp) jika ada harga_bayar > 0
-        $recentPendaftaran = Pendaftaran::with('registrable.user')
-            ->where('harga_bayar', '>', 0)
+        $recentPendaftaran = $this->queryUserPendaftaran($userId)->with(['registrable.user', 'peserta'])
             ->whereNotIn('registrable_type', ['App\\Models\\Bootcamp']) // Bootcamp sudah dari Pembayaran
             ->latest()
-            ->limit(5)
+            ->limit(10)
             ->get()
             ->map(function ($p) {
+                $buyer = $p->peserta?->nama ?: 'Pengguna';
                 $productName = 'Produk';
-                $penjual = 'Admin';
+                $type = 'Produk';
                 if ($p->registrable) {
                     $productName = $p->registrable->nama
                         ?? $p->registrable->name
                         ?? class_basename($p->registrable_type);
-                    $penjual = $p->registrable->user?->name ?? 'Admin';
+                    $type = class_basename($p->registrable_type);
                 }
+                
+                // Format action text based on class type to match screenshot
+                if ($type === 'PenggalanganDana') {
+                    $action = 'Menyumbang di Penggalangan Dana "' . $productName . '"';
+                } elseif ($type === 'Event') {
+                    $action = "Membeli Tiket Event " . $productName;
+                } elseif ($type === 'KelasOnline' || $type === 'kelasonline') {
+                    $action = "Membeli Kelas " . $productName;
+                } elseif ($type === 'Webinar') {
+                    $action = "Membeli Webinar " . $productName;
+                } elseif ($type === 'ProdukDigital' || $type === 'Produkdigital') {
+                    $action = "Membeli Produk " . $productName;
+                } else {
+                    $action = "Membeli " . $productName;
+                }
+
                 return [
-                    'id'      => 'p_' . $p->id,
-                    'type'    => 'income',
-                    'title'   => 'Penjualan ' . $productName,
-                    'amount'  => (float) $p->harga_bayar,
-                    'date'    => $p->created_at->locale('id')->diffForHumans(),
-                    'penjual' => $penjual,
+                    'id'          => 'p_' . $p->id,
+                    'type'        => 'income',
+                    'buyerName'   => $buyer,
+                    'actionText'  => $action,
+                    'avatar'      => $p->peserta?->foto_url,
+                    'amount'      => (float) $p->harga_bayar,
+                    'date'        => $p->created_at->locale('id')->diffForHumans(),
+                    'timestamp'   => $p->created_at->timestamp,
                 ];
             });
 
         $allTransaksi = $recentTransaksi->concat($recentPendaftaran)
-            ->sortByDesc(fn($t) => $t['date'])
+            ->sortByDesc(fn($t) => $t['timestamp'])
             ->values()
             ->take(10);
 
         // ── Ulasan / Rating Terbaru ───────────────────────────────────────
-        $recentReviews = Rating::with(['bootcamp', 'peserta'])
+        $recentReviews = Rating::where(function ($query) use ($userId) {
+            $query->whereIn('bootcamp_id', Bootcamp::where('user_id', $userId)->pluck('id'))
+                  ->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Bootcamp::class)
+                        ->whereIn('rateable_id', Bootcamp::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Webinar::class)
+                        ->whereIn('rateable_id', Webinar::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Event::class)
+                        ->whereIn('rateable_id', Event::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Ebook::class)
+                        ->whereIn('rateable_id', Ebook::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', ProdukDigital::class)
+                        ->whereIn('rateable_id', ProdukDigital::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', CoachingMentoring::class)
+                        ->whereIn('rateable_id', CoachingMentoring::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Tulisan::class)
+                        ->whereIn('rateable_id', Tulisan::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', Bundling::class)
+                        ->whereIn('rateable_id', Bundling::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', PaymentLink::class)
+                        ->whereIn('rateable_id', PaymentLink::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', PenggalanganDana::class)
+                        ->whereIn('rateable_id', PenggalanganDana::where('user_id', $userId)->pluck('id'));
+                  })->orWhere(function ($q) use ($userId) {
+                      $q->where('rateable_type', KelasOnline::class)
+                        ->whereIn('rateable_id', KelasOnline::where('user_id', $userId)->pluck('id'));
+                  });
+        })->with(['bootcamp', 'peserta'])
             ->latest()
             ->limit(5)
             ->get()
             ->map(function ($r) {
+                $productName = 'Produk';
+                if ($r->bootcamp) {
+                    $productName = $r->bootcamp->name;
+                } elseif ($r->rateable) {
+                    $productName = $r->rateable->nama ?? $r->rateable->name ?? class_basename($r->rateable_type);
+                }
                 return [
                     'id'          => $r->id,
-                    'productName' => $r->bootcamp ? $r->bootcamp->name : 'Produk',
+                    'productName' => $productName,
                     'reviewer'    => $r->peserta
                         ? ($r->tampil_anonim ? 'Anonim' : $r->peserta->nama)
                         : 'Pengguna',
@@ -149,19 +239,66 @@ class DashboardController extends Controller
             $verificationStatus = $verification ? $verification->status : 'unverified';
         }
 
+        // ── Dynamic Trend Calculations for Summary Cards ──
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $startOfLastMonth = Carbon::now()->startOfMonth()->subMonth();
+        $endOfLastMonth = Carbon::now()->startOfMonth()->subMonth()->endOfMonth();
+        $startOfToday = Carbon::now()->startOfDay();
+
+        // 1. Saldo Akun Trend (Cumulative balance at end of last month vs current balance)
+        $paymentsLastMonthCumulative = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
+            ->where('confirmed_at', '<=', $endOfLastMonth)
+            ->sum('jumlah');
+        $withdrawnLastMonthCumulative = \App\Models\Withdrawal::where('user_id', $userId)
+            ->whereIn('status', ['approved', 'completed', 'pending'])
+            ->where('created_at', '<=', $endOfLastMonth)
+            ->sum('jumlah');
+        $balLastMonthCumulative = max(0, $paymentsLastMonthCumulative - $withdrawnLastMonthCumulative);
+
+        $balanceTrendVal = $this->calcTrend($balLastMonthCumulative, $totalBalance);
+
+        // 2. Total Pendapatan Trend (This month revenue vs last month revenue)
+        $revCurrMonth = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
+            ->whereBetween('confirmed_at', [$startOfMonth, $now])
+            ->sum('jumlah');
+        $revLastMonth = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
+            ->whereBetween('confirmed_at', [$startOfLastMonth, $endOfLastMonth])
+            ->sum('jumlah');
+        $revenueTrendVal = $this->calcTrend($revLastMonth, $revCurrMonth);
+
+        // 3. Transactions Today (Today's count)
+        $transactionsTodayCount = $this->queryUserPendaftaran($userId)
+            ->where('created_at', '>=', $startOfToday)
+            ->count()
+            + \App\Models\KelasOnlinePeserta::whereIn('kelas_online_id', KelasOnline::where('user_id', $userId)->pluck('id'))
+                ->where('created_at', '>=', $startOfToday)
+                ->count();
+
+        // 4. Pending Payments Today (Today's count)
+        $pendingPaymentsTodayCount = $this->queryUserPembayaran($userId)
+            ->where('status', 'pending')
+            ->where('created_at', '>=', $startOfToday)
+            ->count();
+
+        $totalTransactionsAllTime = $this->queryUserPendaftaran($userId)->count()
+            + \App\Models\KelasOnlinePeserta::whereIn('kelas_online_id', KelasOnline::where('user_id', $userId)->pluck('id'))->count();
+
         return Inertia::render('dashboard/index', [
             'dashboardData' => [
-                'balance'           => (float) $totalBalance,
-                'totalRevenue'      => (float) $revenueCurr,
-                'totalTransactions' => (int) $transaksiCurr,
-                'pendingPayment'    => (float) $pendingPayment,
-                'revenueTrend'      => $revenueTrend,
-                'transaksiTrend'    => $transaksiTrend,
-                'chartData'         => $chartData,
-                'products'          => $topProducts,
-                'allProducts'       => $this->getAllProducts(),
-                'transactions'      => $allTransaksi->values()->toArray(),
-                'reviews'           => $recentReviews->toArray(),
+                'balance'              => (float) $totalBalance,
+                'totalRevenue'         => (float) $totalPayments,
+                'totalTransactions'    => (int) $totalTransactionsAllTime,
+                'pendingPayment'       => (float) $pendingPayment,
+                'pendingPaymentCount'  => (int) $this->queryUserPembayaran($userId)->where('status', 'pending')->count(),
+                'balanceTrend'         => $balanceTrendVal,
+                'revenueTrend'         => $revenueTrendVal,
+                'transactionsToday'    => (int) $transactionsTodayCount,
+                'pendingPaymentsToday' => (int) $pendingPaymentsTodayCount,
+                'chartData'            => $chartData,
+                'products'             => $topProducts,
+                'allProducts'          => $this->getAllProducts(),
+                'transactions'         => $allTransaksi->values()->toArray(),
+                'reviews'              => $recentReviews->toArray(),
             ],
             'user' => [
                 'name' => $user?->name ?? 'Pengguna',
@@ -181,12 +318,12 @@ class DashboardController extends Controller
     }
 
     // ── Build chart data per hari ──────────────────────────────────────────
-    private function buildChartData(int $days, Carbon $now): array
+    private function buildChartData(int $days, Carbon $now, $userId): array
     {
         $start = $now->copy()->subDays($days - 1)->startOfDay();
 
-        // Ambil pendapatan per hari dari Pembayaran confirmed
-        $pembayaranPerHari = Pembayaran::where('status', 'confirmed')
+        // Ambil pendapatan per hari dari Pembayaran confirmed milik user
+        $pembayaranPerHari = $this->queryUserPembayaran($userId)->where('status', 'confirmed')
             ->where('confirmed_at', '>=', $start)
             ->select(
                 DB::raw('DATE(confirmed_at) as tanggal'),
@@ -195,8 +332,8 @@ class DashboardController extends Controller
             ->groupBy('tanggal')
             ->pluck('total', 'tanggal');
 
-        // Ambil transaksi per hari dari Pendaftaran
-        $transaksiPerHari = Pendaftaran::where('created_at', '>=', $start)
+        // Ambil transaksi per hari dari Pendaftaran milik user
+        $pendaftaranPerHari = $this->queryUserPendaftaran($userId)->where('created_at', '>=', $start)
             ->select(
                 DB::raw('DATE(created_at) as tanggal'),
                 DB::raw('COUNT(*) as total')
@@ -204,15 +341,46 @@ class DashboardController extends Controller
             ->groupBy('tanggal')
             ->pluck('total', 'tanggal');
 
+        // Ambil transaksi per hari dari KelasOnlinePeserta milik user
+        $kelasPesertaPerHari = \App\Models\KelasOnlinePeserta::whereIn(
+            'kelas_online_id',
+            KelasOnline::where('user_id', $userId)->pluck('id')
+        )->where('created_at', '>=', $start)
+            ->select(
+                DB::raw('DATE(created_at) as tanggal'),
+                DB::raw('COUNT(*) as total')
+            )
+            ->groupBy('tanggal')
+            ->pluck('total', 'tanggal');
+
+        $dayMap = [
+            0 => 'Mingg',
+            1 => 'Sen',
+            2 => 'Sel',
+            3 => 'Rab',
+            4 => 'Kam',
+            5 => 'Jum',
+            6 => 'Sab',
+        ];
+
         $chartData = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date = $now->copy()->subDays($i)->format('Y-m-d');
-            $label = $now->copy()->subDays($i)->format('d/m');
+            $carbonDate = $now->copy()->subDays($i);
+            $date = $carbonDate->format('Y-m-d');
+            
+            if ($days === 7) {
+                $label = $dayMap[$carbonDate->dayOfWeek];
+            } else {
+                $label = $carbonDate->format('d/m');
+            }
+
+            $pendaftaranCount = (int) ($pendaftaranPerHari[$date] ?? 0);
+            $kelasCount = (int) ($kelasPesertaPerHari[$date] ?? 0);
 
             $chartData[] = [
                 'date'       => $label,
                 'pendapatan' => (float) ($pembayaranPerHari[$date] ?? 0),
-                'transaksi'  => (int) ($transaksiPerHari[$date] ?? 0),
+                'transaksi'  => $pendaftaranCount + $kelasCount,
             ];
         }
 
@@ -220,12 +388,13 @@ class DashboardController extends Controller
     }
 
     // ── Ambil produk terlaris ──────────────────────────────────────────────
-    private function getTopProducts(): array
+    private function getTopProducts($userId): array
     {
         $products = [];
 
         // Bootcamp: hitung dari Pendaftaran
-        $bootcamps = Bootcamp::with('user')
+        $bootcamps = Bootcamp::where('user_id', $userId)
+            ->with('user')
             ->withCount([
                 'pendaftaran as total_terjual' => function ($q) {
                     $q->where('status', 'aktif');
@@ -254,7 +423,8 @@ class DashboardController extends Controller
         }
 
         // Ebook: hitung dari field terjual
-        $ebooks = Ebook::with('user')
+        $ebooks = Ebook::where('user_id', $userId)
+            ->with('user')
             ->where('terjual', '>', 0)
             ->orderByDesc('terjual')
             ->limit(3)
@@ -273,7 +443,8 @@ class DashboardController extends Controller
         }
 
         // ProdukDigital: hitung dari field total_penjualan
-        $produkDigitals = ProdukDigital::with('user')
+        $produkDigitals = ProdukDigital::where('user_id', $userId)
+            ->with('user')
             ->where('total_penjualan', '>', 0)
             ->orderByDesc('total_penjualan')
             ->limit(3)
@@ -295,6 +466,97 @@ class DashboardController extends Controller
         usort($products, fn($a, $b) => $b['sold'] - $a['sold']);
 
         return array_slice($products, 0, 10);
+    }
+
+    // ── Helper query pembayaran & pendaftaran user ────────────────────────
+    private function queryUserPembayaran($userId)
+    {
+        $bootcampIds = \App\Models\Bootcamp::where('user_id', $userId)->pluck('id');
+        
+        $kelasOrderIds = \App\Models\KelasOnlinePeserta::whereIn(
+            'kelas_online_id',
+            \App\Models\KelasOnline::where('user_id', $userId)->pluck('id')
+        )->pluck('order_id')->filter();
+
+        $pendaftaranOrderIds = \App\Models\Pendaftaran::where(function ($query) use ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Bootcamp::class)
+                  ->whereIn('registrable_id', \App\Models\Bootcamp::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Webinar::class)
+                  ->whereIn('registrable_id', \App\Models\Webinar::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Event::class)
+                  ->whereIn('registrable_id', \App\Models\Event::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Ebook::class)
+                  ->whereIn('registrable_id', \App\Models\Ebook::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Produkdigital::class)
+                  ->whereIn('registrable_id', \App\Models\Produkdigital::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\CoachingMentoring::class)
+                  ->whereIn('registrable_id', \App\Models\CoachingMentoring::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Tulisan::class)
+                  ->whereIn('registrable_id', \App\Models\Tulisan::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Bundling::class)
+                  ->whereIn('registrable_id', \App\Models\Bundling::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\PaymentLink::class)
+                  ->whereIn('registrable_id', \App\Models\PaymentLink::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\PenggalanganDana::class)
+                  ->whereIn('registrable_id', \App\Models\PenggalanganDana::where('user_id', $userId)->pluck('id'));
+            });
+        })->pluck('order_id')->filter();
+
+        $orderIds = $kelasOrderIds->concat($pendaftaranOrderIds)->unique()->toArray();
+
+        return \App\Models\Pembayaran::where(function ($q) use ($bootcampIds, $orderIds) {
+            $q->whereIn('bootcamp_id', $bootcampIds);
+            if (!empty($orderIds)) {
+                $q->orWhereIn('order_id', $orderIds);
+            }
+        });
+    }
+
+    private function queryUserPendaftaran($userId)
+    {
+        return \App\Models\Pendaftaran::where(function ($query) use ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Bootcamp::class)
+                  ->whereIn('registrable_id', \App\Models\Bootcamp::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Webinar::class)
+                  ->whereIn('registrable_id', \App\Models\Webinar::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Event::class)
+                  ->whereIn('registrable_id', \App\Models\Event::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Ebook::class)
+                  ->whereIn('registrable_id', \App\Models\Ebook::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Produkdigital::class)
+                  ->whereIn('registrable_id', \App\Models\Produkdigital::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\CoachingMentoring::class)
+                  ->whereIn('registrable_id', \App\Models\CoachingMentoring::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Tulisan::class)
+                  ->whereIn('registrable_id', \App\Models\Tulisan::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\Bundling::class)
+                  ->whereIn('registrable_id', \App\Models\Bundling::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\PaymentLink::class)
+                  ->whereIn('registrable_id', \App\Models\PaymentLink::where('user_id', $userId)->pluck('id'));
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('registrable_type', \App\Models\PenggalanganDana::class)
+                  ->whereIn('registrable_id', \App\Models\PenggalanganDana::where('user_id', $userId)->pluck('id'));
+            });
+        });
     }
 
     // ── Ambil semua produk untuk sidebar ───────────────────────────────────

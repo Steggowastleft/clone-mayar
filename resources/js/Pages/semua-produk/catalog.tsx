@@ -21,8 +21,15 @@ type Produk = {
   cover_url?: string | null;
 };
 
+type Creator = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 type Props = {
   produk: Produk[];
+  creator?: Creator | null;
 };
 
 type TypeConfig = {
@@ -201,7 +208,7 @@ const getProductPublicUrl = (p: Produk) => {
   }
 };
 
-export default function Katalog({ produk }: Props) {
+export default function Katalog({ produk, creator }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
 
@@ -233,7 +240,7 @@ export default function Katalog({ produk }: Props) {
 
   return (
     <>
-      <Head title="Katalog Produk" />
+      <Head title={creator ? `Katalog ${creator.name}` : "Katalog Produk"} />
 
       <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white relative overflow-hidden font-sans pb-24">
         
@@ -250,10 +257,12 @@ export default function Katalog({ produk }: Props) {
               <Sparkles size={12} className="text-indigo-400" /> Catalog Platform
             </div>
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-indigo-100 to-slate-100 bg-clip-text text-transparent leading-none">
-              Jelajahi Karya & Produk Terbaik
+              {creator ? `Katalog ${creator.name}` : "Jelajahi Karya & Produk Terbaik"}
             </h1>
             <p className="text-slate-300 text-sm max-w-xl mx-auto leading-relaxed font-medium">
-              Temukan berbagai kelas online, webinar interaktif, produk digital premium, dan program pembelajaran terbaik kami yang siap membantumu berkembang.
+              {creator 
+                ? `Temukan berbagai kelas online, webinar, produk digital, dan program pembelajaran terbaik dari ${creator.name}.`
+                : "Temukan berbagai kelas online, webinar interaktif, produk digital premium, dan program pembelajaran terbaik kami yang siap membantumu berkembang."}
             </p>
           </div>
         </div>

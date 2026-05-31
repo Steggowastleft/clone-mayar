@@ -1,5 +1,5 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
-import { router } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import {
   Heart,
   Clock,
   Globe,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ type Produk = {
   terkumpul: number;
   harga: number;
   cover: string | null;
+  created_at?: string;
 };
 
 type IndexProps = {
@@ -144,7 +146,7 @@ function DateTimePickerField({
 
 // ─── Default form values ───
 const defaultForm = {
-  tipe: "donasi" as const,
+  tipe: "donasi" as "donasi" | "wakaf",
   nama: "",
   deskripsi: "",
   kategori: "",
@@ -192,12 +194,6 @@ export default function Index({ produk = [] }: IndexProps) {
     setCreateOpen(true);
   };
 
-  const filteredProduk = (produk ?? []).filter((p) => {
-    const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchTipe = tipeFilter === "all" || p.tipe === tipeFilter;
-    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchTipe && matchSearch;
-  });
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -299,145 +295,98 @@ export default function Index({ produk = [] }: IndexProps) {
     });
   };
 
+  const totalProduk = (produk ?? []).length;
+  const publikCount = (produk ?? []).filter((p) => p.status === "published").length;
+  const tidakPublikCount = totalProduk - publikCount;
+  const totalPendapatan = (produk ?? []).reduce((acc, p) => acc + p.terkumpul, 0);
+
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+
+  const filteredProduk = (produk ?? []).filter((p) => {
+    const matchStatus = statusFilter === "all" || p.status === statusFilter;
+    const matchTipe = tipeFilter === "all" || p.tipe === tipeFilter;
+    const matchSearch = p.nama.toLowerCase().includes(search.toLowerCase());
+    let matchDate = true;
+    if (dateFilter) {
+      const formattedFilterDate = format(dateFilter, "yyyy-MM-dd");
+      matchDate = p.created_at ? p.created_at.startsWith(formattedFilterDate) : (p.tanggal_mulai_jual ? p.tanggal_mulai_jual.startsWith(formattedFilterDate) : false);
+    }
+    return matchStatus && matchTipe && matchSearch && matchDate;
+  });
+
   return (
     <DashboardLayout title="Penggalangan Dana">
-      <div className="flex gap-0 min-h-screen">
-        {/* ── MAIN CONTENT ── */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            PROJEK
-          </p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Penggalangan Dana
-            </h1>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}
-              >
-                PRODUK
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openCreate}>
-                + BUAT
-              </Button>
+      <Head title="Penggalangan Dana" />
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Penggalangan Dana</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Projek: <span className="font-bold text-slate-800">{totalProduk}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Total Dana Terkumpul: <span className="font-bold text-slate-800">Rp {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">
-                Semua Penggalangan Dana
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Filter Halaman"
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Printer className="h-5 w-5" />
-                </button>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Download className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <div className="p-6">
-              {filteredProduk.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">
-                  There are no records to display
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredProduk.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-gray-800">{p.nama}</p>
-                          {tipeBadge(p.tipe)}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {p.tanggal_mulai_jual
-                            ? format(
-                                new Date(p.tanggal_mulai_jual),
-                                "dd MMM yyyy HH:mm",
-                                { locale: idLocale }
-                              )
-                            : "Tanggal belum diset"}
-                          {" · "}
-                          Rp {p.terkumpul.toLocaleString("id-ID")} / Rp{" "}
-                          {p.harga.toLocaleString("id-ID")}
-                          {" · "}
-                          {p.pembeli} pembeli
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {statusBadge(p.status)}
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            router.visit(
-                              `/penggalangan-dana/${p.id}`
-                            )
-                          }
-                        >
-                          Detail
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/penggalangan-dana/catalog", "_blank")}
+            >
+              Katalog Publik
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={openCreate}
+            >
+              + Tambah Projek
+            </Button>
           </div>
         </div>
 
-        {/* ── RIGHT SIDEBAR ── */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold text-gray-600 uppercase">
-              Filter Status
-            </Label>
-            {statusButtons.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                {btn.label}
-              </button>
-            ))}
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <Input
+              placeholder="Cari Nama Projek..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <div className="space-y-2 border-t pt-3">
-            <Label className="text-xs font-semibold text-gray-600 uppercase">
-              Filter Tipe
-            </Label>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Tipe Select */}
             <Select value={tipeFilter} onValueChange={setTipeFilter}>
-              <SelectTrigger className="bg-white border-gray-200">
-                <SelectValue placeholder="Pilih tipe..." />
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Tipe" />
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 <SelectItem value="all">Semua Tipe</SelectItem>
@@ -445,21 +394,154 @@ export default function Index({ produk = [] }: IndexProps) {
                 <SelectItem value="wakaf">Wakaf</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter */}
+            <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-350 transition text-slate-600",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-455 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateFilterOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateFilterOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
+        </div>
 
-          <Input
-            placeholder="Cari Penggalangan"
-            className="bg-white text-sm mt-3"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <button
-            onClick={() => router.visit("/penggalangan-dana/catalog")}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition mt-4"
-          >
-            Lihat Katalog
-          </button>
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tipe</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Projek</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Target</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Donatur</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terkumpul</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredProduk.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProduk.map((p, index) => {
+                    const statusIsPublik = p.status === "published";
+                    const formattedDate = p.created_at ? format(new Date(p.created_at), "dd MMM yyyy", { locale: idLocale }) : "-";
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {p.cover ? (
+                            <img
+                              src={`/storage/${p.cover}`}
+                              alt={p.nama}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-slate-655 capitalize">
+                          {p.tipe}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[200px] truncate">
+                          {p.nama}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold whitespace-nowrap">
+                          Rp {new Intl.NumberFormat("id-ID").format(p.harga)}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{p.pembeli}</td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-bold whitespace-nowrap">
+                          Rp {new Intl.NumberFormat("id-ID").format(p.terkumpul)}
+                        </td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-755 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-450 font-semibold whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => router.visit(`/penggalangan-dana/${p.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -621,23 +703,6 @@ export default function Index({ produk = [] }: IndexProps) {
               </div>
             )}
 
-            {/* Stok (untuk Qurban) */}
-            {formData.tipe === "qurban" && (
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
-                  Stok Hewan Tersedia (ekor){" "}
-                  <span className="text-gray-400 font-normal">(Opsional)</span>
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="Tidak perlu diisi untuk stok tidak terbatas"
-                  value={formData.stok}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stok: e.target.value })
-                  }
-                />
-              </div>
-            )}
 
             {/* Tujuan */}
             <div className="space-y-1">

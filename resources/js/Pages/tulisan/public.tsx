@@ -1,4 +1,6 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   PenLine, 
   ShoppingBag, 
@@ -25,6 +27,7 @@ type Tulisan = {
   bahasa: string | null;
   created_at: string;
   redirect_url?: string | null;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -32,20 +35,25 @@ type Props = {
 };
 
 export default function TulisanPublic({ tulisan }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   return (
-    <PublicProductLayout
-      productId={`tulisan:${tulisan.id}`}
-      title={tulisan.nama}
-      harga={tulisan.harga}
-      hargaCoret={null}
-      redirectUrl={tulisan.redirect_url}
-      themeColorClass="bg-amber-600 hover:bg-amber-700"
-      textColorClass="text-amber-600"
-      badgeText="Tulisan"
-      navTitle="Mayar Tulisan"
-      navIcon={<PenLine className="text-white h-5 w-5" />}
-    >
-      <div className="space-y-8">
+    <>
+      <PublicProductLayout
+        productId={`tulisan:${tulisan.id}`}
+        title={tulisan.nama}
+        harga={tulisan.harga}
+        hargaCoret={null}
+        redirectUrl={tulisan.redirect_url}
+        themeColorClass="bg-amber-600 hover:bg-amber-700"
+        textColorClass="text-amber-600"
+        badgeText="Tulisan"
+        navTitle="Mayar Tulisan"
+        navIcon={<PenLine className="text-white h-5 w-5" />}
+        onCheckout={() => setCheckoutOpen(true)}
+        creatorId={tulisan.user_id}
+      >
+        <div className="space-y-8">
         
         {/* Cover and Top Info */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
@@ -171,5 +179,14 @@ export default function TulisanPublic({ tulisan }: Props) {
 
       </div>
     </PublicProductLayout>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="tulisan"
+        productId={tulisan.id}
+        productName={tulisan.nama}
+        harga={tulisan.harga}
+      />
+    </>
   );
 }

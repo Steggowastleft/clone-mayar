@@ -37,6 +37,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'peserta/bootcamp/*/sertifikat',
             // Daftar bootcamp
             'bootcamps/*/daftar',
+            // Checkout & Midtrans Webhook
+            'checkout/process',
+            'checkout/validate',
+            'checkout/notification',
             // Soal quiz (penjual)
             'assignments/*/soal',
             'assignments/*/soal/*',

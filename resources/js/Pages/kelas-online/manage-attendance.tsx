@@ -179,10 +179,10 @@ export default function ManageAttendance({ sesi, kelas, attendances: initialAtte
     const interval = setInterval(() => {
       router.reload({ 
         preserveScroll: true,
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
             setAttendances((page.props.attendances as any).data);
         }
-      });
+      } as any);
     }, 30000);
     return () => clearInterval(interval);
   }, []);

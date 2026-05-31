@@ -514,7 +514,6 @@ export default function Index({ produk = [], createOpen: initialCreateOpen = fal
                   <SelectContent className="z-[200]">
                     <SelectItem value="per_chapter">Per Chapter</SelectItem>
                     <SelectItem value="semua_chapter">Semua Chapter</SelectItem>
-                    <SelectItem value="sekali_bayar">Sekali Bayar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

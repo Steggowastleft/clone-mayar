@@ -156,6 +156,48 @@ class PesertaAuthController extends Controller
 
         $redirectTo = $request->input('redirect_to', '/peserta/dashboard');
         return redirect($redirectTo);
+      }
+
+    /**
+     * Tampilkan halaman register untuk peserta/user.
+     */
+    public function showRegister(Request $request)
+    {
+        return Inertia::render('Peserta/auth/register', [
+            'redirectTo' => $request->query('redirect', '/peserta/dashboard'),
+        ]);
+    }
+
+    /**
+     * Proses register peserta/user.
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email|unique:peserta,email',
+            'nama'     => 'required|string|max:255',
+            'password' => ['required', Password::min(8)],
+        ], [
+            'email.required'   => 'Email wajib diisi.',
+            'email.email'      => 'Format email tidak valid.',
+            'email.unique'     => 'Email ini sudah terdaftar.',
+            'nama.required'    => 'Nama lengkap wajib diisi.',
+            'nama.max'         => 'Nama tidak boleh lebih dari 255 karakter.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min'     => 'Password minimal harus 8 karakter.',
+        ]);
+
+        $peserta = Peserta::create([
+            'nama'     => $request->nama,
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        Auth::guard('peserta')->login($peserta);
+        $request->session()->regenerate();
+
+        $redirectTo = $request->input('redirect_to', '/peserta/dashboard');
+        return redirect($redirectTo);
     }
 
     /**

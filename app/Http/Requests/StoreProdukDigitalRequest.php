@@ -27,6 +27,8 @@ class StoreProdukDigitalRequest extends FormRequest
             // File/Content
             'sumber_file'       => 'required|in:upload,file_lama,link',
             'file'              => 'nullable|file|max:1048576', // 1MB max
+            'page_files'        => 'nullable|array',
+            'page_files.*'      => 'file|max:1048576',
             'file_lama_id'      => 'nullable|string',
             'redirect_url'      => 'nullable|url',
 

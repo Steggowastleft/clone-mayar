@@ -1,5 +1,7 @@
 import { Head, router } from "@inertiajs/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   Package, 
   ArrowLeft, 
@@ -7,7 +9,9 @@ import {
   ShoppingCart,
   ShieldCheck,
   Zap,
-  Info
+  Info,
+  Users,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +33,7 @@ type Bundling = {
   cover_url?: string;
   items: BundlingItem[];
   jumlah_terjual: number;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -36,6 +41,7 @@ type Props = {
 };
 
 export default function PublicShow({ bundling }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const discountAmount = bundling.harga_coret ? Number(bundling.harga_coret) - Number(bundling.harga) : 0;
   const discountPercentage = bundling.harga_coret ? Math.round((discountAmount / Number(bundling.harga_coret)) * 100) : 0;
 
@@ -47,7 +53,13 @@ export default function PublicShow({ bundling }: Props) {
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <button 
-            onClick={() => router.visit('/bundling/catalog')}
+            onClick={() => {
+              if (document.referrer && document.referrer.includes('/catalog')) {
+                window.history.back();
+              } else {
+                window.location.href = bundling.user_id ? `/catalog?user_id=${bundling.user_id}` : "/catalog";
+              }
+            }}
             className="flex items-center text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -61,7 +73,10 @@ export default function PublicShow({ bundling }: Props) {
                 Rp {Number(bundling.harga).toLocaleString("id-ID")}
               </p>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200">
+            <Button 
+              onClick={() => setCheckoutOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
+            >
               Daftar Sekarang
             </Button>
           </div>
@@ -195,7 +210,10 @@ export default function PublicShow({ bundling }: Props) {
                     </div>
                   </div>
 
-                  <Button className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-xl shadow-blue-200 transition-all hover:-translate-y-1 active:translate-y-0">
+                  <Button 
+                    onClick={() => setCheckoutOpen(true)}
+                    className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-xl shadow-blue-200 transition-all hover:-translate-y-1 active:translate-y-0"
+                  >
                     Daftar Sekarang
                   </Button>
 
@@ -224,6 +242,14 @@ export default function PublicShow({ bundling }: Props) {
 
         </div>
       </main>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="bundling"
+        productId={bundling.id}
+        productName={bundling.nama}
+        harga={bundling.harga}
+      />
     </div>
   );
 }

@@ -24,7 +24,7 @@ const statusBgMap: Record<string, string> = {
   unlisted: "bg-gray-500 hover:bg-gray-600",
 };
 
-export function SidebarPanel({ webinar }: { webinar: Webinar }) {
+export function SidebarPanel({ webinar }: { webinar: any }) {
   const [statusOpen, setStatusOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);

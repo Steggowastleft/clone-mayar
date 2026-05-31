@@ -22,7 +22,9 @@ interface Product {
 interface Transaction {
   id: string | number;
   type: "income" | "expense" | "refund";
-  title: string;
+  buyerName: string;
+  actionText: string;
+  avatar?: string;
   amount: number;
   date: string;
 }
@@ -41,8 +43,12 @@ interface DashboardData {
   totalRevenue: number;
   totalTransactions: number;
   pendingPayment: number;
+  pendingPaymentCount?: number;
+  balanceTrend?: number | null;
   revenueTrend?: number | null;
   transaksiTrend?: number | null;
+  transactionsToday?: number;
+  pendingPaymentsToday?: number;
   chartData: ChartDataPoint[];
   products: Product[];
   allProducts: any[];

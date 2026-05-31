@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DateTimePicker } from "./components/DatePickers";
+import { DateTimePicker } from "./components/datepickers";
 import { MapPicker } from "@/components/ui/mappicker";
 
 // ─────────────────────────────────────────────
@@ -189,7 +189,7 @@ export default function TabSesiMeeting({
   const [waktuSelesai, setWaktuSelesai] = useState(emptyWaktu);
 
   // ── Sync sesiList dari props jika reload ──
-  const page = usePage<{ sesiList?: Sesi[] }>();
+  const page = usePage<any>();
   useEffect(() => {
     if (page.props.sesiList) setSesiList(page.props.sesiList);
   }, [page.props.sesiList]);

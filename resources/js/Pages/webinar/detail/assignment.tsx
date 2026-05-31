@@ -532,7 +532,7 @@ export default function TabAssignment({
   const [existingFiles, setExistingFiles] = useState<AssignmentFile[]>([]);
 
   // Sync dari Inertia reload
-  const page = usePage<{ assignmentList?: Assignment[] }>();
+  const page = usePage<any>();
   useEffect(() => {
     if (page.props.assignmentList) setAssignmentList(page.props.assignmentList);
   }, [page.props.assignmentList]);

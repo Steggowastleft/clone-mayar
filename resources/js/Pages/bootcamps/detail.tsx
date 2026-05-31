@@ -51,35 +51,38 @@ export default function BootcampDetail(props: Props) {
     <DashboardLayout>
       <Head title={bootcamp?.name || "Bootcamp Detail"} />
 
-      <div className="p-6">
+      <div className="p-6 bg-slate-50/20 min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs text-gray-400 mb-1">
+            <p className="text-xs text-slate-450 font-semibold mb-1">
               PROJEK ·{" "}
               <button
                 onClick={() => router.visit("/bootcamps")}
-                className="hover:text-blue-600"
+                className="hover:text-blue-600 transition"
               >
                 Bootcamp
               </button>
             </p>
 
-            <h1 className="text-xl font-bold text-gray-800">
+            <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
               {bootcamp?.name}
             </h1>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             <Button
               variant="outline"
-              className="border-blue-500 text-blue-600 hover:bg-blue-50 text-sm"
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-xs font-bold"
               onClick={() => window.open(`/bootcamp/${bootcamp.id}`, "_blank")}
             >
               PRODUK
             </Button>
 
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+              onClick={() => router.visit("/semua-produk/create")}
+            >
               + BUAT
             </Button>
           </div>

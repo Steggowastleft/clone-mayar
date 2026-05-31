@@ -39,6 +39,9 @@ interface Props {
 }
 
 export default function Withdrawals({ withdrawals }: Props) {
+  const csrf = typeof document !== 'undefined' ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') : null;
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+
   // Dialog States
   const [confirmApproveOpen, setConfirmApproveOpen] = useState(false);
   const [selectedApproveId, setSelectedApproveId] = useState<number | null>(null);

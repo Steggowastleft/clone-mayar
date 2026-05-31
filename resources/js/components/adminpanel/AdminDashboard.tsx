@@ -103,7 +103,7 @@ export default function AdminDashboard({
       clean = "62" + clean;
     }
     return `https://wa.me/${clean}?text=${encodeURIComponent(
-      `Halo ${userName}, saya dari Admin platform AksaCart. Ada beberapa hal yang ingin kami koordinasikan.`
+      `Halo ${userName}, saya dari Admin platform BiinsCart. Ada beberapa hal yang ingin kami koordinasikan.`
     )}`;
   };
 

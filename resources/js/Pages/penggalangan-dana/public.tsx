@@ -1,5 +1,6 @@
 import { Head } from "@inertiajs/react";
 import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   Heart, 
   Share2, 
@@ -47,6 +48,7 @@ type PenggalanganDana = {
     deskripsi: string;
     created_at: string;
   }[];
+  user_id?: number | null;
 };
 
 type Props = {
@@ -70,6 +72,7 @@ export default function PenggalanganDanaPublic({ penggalangan_dana: p }: Props) 
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [doaSupport, setDoaSupport] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -98,13 +101,7 @@ export default function PenggalanganDanaPublic({ penggalangan_dana: p }: Props) 
       return;
     }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast.success("Terima kasih atas niat baik Anda! Pembayaran Anda akan segera diproses.");
-      // In a real environment, we would redirect to a checkout route
-      alert(`Donasi sebesar ${formatHarga(Number(donationAmount))} dari ${isAnonymous ? "Hamba Allah" : donorName} berhasil disimulasikan.`);
-    }, 1500);
+    setCheckoutOpen(true);
   };
 
   // Mock comments / prayers to show social Proof
@@ -126,9 +123,18 @@ export default function PenggalanganDanaPublic({ penggalangan_dana: p }: Props) 
       <nav className="border-b border-rose-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/catalog" className="inline-flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <button 
+              onClick={() => {
+                if (document.referrer && document.referrer.includes('/catalog')) {
+                  window.history.back();
+                } else {
+                  window.location.href = p.user_id ? `/catalog?user_id=${p.user_id}` : "/catalog";
+                }
+              }}
+              className="inline-flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
               <ArrowLeft className="h-5 w-5" />
-            </a>
+            </button>
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 bg-rose-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-rose-500/20">
                 <Heart className="text-white h-5 w-5 fill-current" />
@@ -415,6 +421,15 @@ export default function PenggalanganDanaPublic({ penggalangan_dana: p }: Props) 
           <p className="text-xs text-slate-400">&copy; 2026 Mayar Peduli. Program kemanusiaan & donasi terpercaya.</p>
         </div>
       </footer>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="penggalangan-dana"
+        productId={p.id}
+        productName={p.nama}
+        harga={Number(donationAmount)}
+        prefilledName={isAnonymous ? "Hamba Allah" : donorName}
+      />
     </div>
   );
 }

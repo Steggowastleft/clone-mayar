@@ -19,42 +19,131 @@ class PesertaDashboardController extends Controller
     {
         $peserta = Auth::guard('peserta')->user();
 
-        $pendaftaran = Pendaftaran::with(['bootcamp'])
+        // 1. Fetch Bootcamps
+        $pendaftaranBootcamp = Pendaftaran::with(['registrable'])
             ->where('peserta_id', $peserta->id)
+            ->where('registrable_type', \App\Models\Bootcamp::class)
+            ->whereIn('status', ['active', 'aktif', 'completed'])
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Load Kelas Online peserta
-        $kelasOnlinePeserta = \App\Models\KelasOnlinePeserta::with(['kelasOnline.owner'])
-            ->where('peserta_id', $peserta->id)
-            ->where('status', 'aktif')
-            ->orderBy('mendaftar_pada', 'desc')
-            ->get();
-
-        // Load ratings peserta
         $myRatings = Rating::where('peserta_id', $peserta->id)
             ->pluck('bintang', 'bootcamp_id');
 
-        $bootcamps = $pendaftaran->map(fn($p) => [
-            'id'             => $p->bootcamp->id,
-            'name'           => $p->bootcamp->name,
-            'batch'          => $p->bootcamp->batch,
-            'cover_url'      => $p->bootcamp->cover_url,
-            'kategori'       => $p->bootcamp->kategori,
+        $bootcamps = $pendaftaranBootcamp->map(fn($p) => [
+            'id'             => $p->registrable->id,
+            'name'           => $p->registrable->name,
+            'cover_url'      => $p->registrable->cover_url,
+            'kategori'       => 'Bootcamp',
+            'type'           => 'bootcamp',
             'status'         => $p->status,
-            'tanggal_aktif'  => $p->tanggal_aktif?->format('d M Y'),
-            'tanggal_expired'=> $p->tanggal_expired?->format('d M Y'),
-            'rating'         => $myRatings->get($p->bootcamp->id),
+            'tanggal_aktif'  => $p->tanggal_aktif?->format('d M Y') ?? $p->created_at->format('d M Y'),
+            'rating'         => $myRatings->get($p->registrable->id),
+            'download_url'   => "/peserta/kelas/" . $p->registrable->id,
+            'batch'          => $p->registrable->batch ?? 'Batch 1',
         ]);
+
+        // 2. Fetch Kelas Online
+        $kelasOnlinePeserta = \App\Models\KelasOnlinePeserta::with(['kelasOnline.owner'])
+            ->where('peserta_id', $peserta->id)
+            ->whereIn('status', ['aktif', 'active', 'completed'])
+            ->orderBy('mendaftar_pada', 'desc')
+            ->get();
 
         $kelasOnlines = $kelasOnlinePeserta->map(fn($p) => [
             'id'            => $p->kelasOnline->id,
             'name'          => $p->kelasOnline->nama,
             'cover_url'     => $p->kelasOnline->thumbnail ? asset('storage/' . $p->kelasOnline->thumbnail) : null,
-            'owner_name'    => $p->kelasOnline->owner->name,
-            'tanggal_aktif' => $p->mendaftar_pada?->format('d M Y'),
+            'kategori'      => 'Kelas Online',
+            'type'          => 'kelas-online',
             'status'        => $p->status,
+            'tanggal_aktif' => $p->mendaftar_pada?->format('d M Y') ?? $p->created_at->format('d M Y'),
+            'download_url'  => "/peserta/kelas-online/" . $p->kelasOnline->id,
+            'owner_name'    => $p->kelasOnline->owner->name ?? 'Admin',
         ]);
+
+        // 3. Fetch Other Polymorphic Products
+        $otherPendaftaran = Pendaftaran::with(['registrable'])
+            ->where('peserta_id', $peserta->id)
+            ->whereIn('status', ['active', 'aktif', 'completed'])
+            ->where('registrable_type', '!=', \App\Models\Bootcamp::class)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($p) {
+                if (!$p->registrable) return null;
+
+                $downloadUrl = null;
+                $productType = 'other';
+                $kategori = 'Produk';
+                $coverUrl = null;
+
+                $type = class_basename($p->registrable_type);
+                if ($type === 'Ebook') {
+                    $downloadUrl = $p->registrable->file_url;
+                    if ($downloadUrl && !str_starts_with($downloadUrl, 'http')) {
+                        $downloadUrl = asset('storage/' . $downloadUrl);
+                    }
+                    $productType = 'ebook';
+                    $kategori = 'E-Book';
+                    $coverUrl = $p->registrable->cover ? asset('storage/' . $p->registrable->cover) : null;
+                } elseif ($type === 'Webinar') {
+                    $downloadUrl = $p->registrable->link_webinar;
+                    $productType = 'webinar';
+                    $kategori = 'Webinar';
+                } elseif ($type === 'Event') {
+                    $downloadUrl = $p->registrable->redirect_url;
+                    $productType = 'event';
+                    $kategori = 'Event';
+                } elseif ($type === 'Produkdigital' || $type === 'ProdukDigital') {
+                    $downloadUrl = $p->registrable->file_url;
+                    if ($downloadUrl && !str_starts_with($downloadUrl, 'http')) {
+                        $downloadUrl = asset('storage/' . $downloadUrl);
+                    }
+                    $productType = 'produk-digital';
+                    $kategori = 'Produk Digital';
+                    $coverUrl = $p->registrable->cover_url ? asset('storage/' . $p->registrable->cover_url) : null;
+                } elseif ($type === 'CoachingMentoring') {
+                    $downloadUrl = $p->registrable->booking_url;
+                    $productType = 'coaching-mentoring';
+                    $kategori = 'Coaching / Mentoring';
+                } elseif ($type === 'Tulisan') {
+                    $downloadUrl = '/tulisan/' . $p->registrable->id . '/p';
+                    $productType = 'tulisan';
+                    $kategori = 'Tulisan / Artikel';
+                    $coverUrl = $p->registrable->cover ? asset('storage/' . $p->registrable->cover) : null;
+                } elseif ($type === 'Bundling') {
+                    $productType = 'bundling';
+                    $kategori = 'Bundling';
+                }
+
+                if (in_array($productType, ['ebook', 'tulisan', 'webinar', 'event', 'coaching-mentoring', 'produk-digital', 'bundling'])) {
+                    $downloadUrl = "/peserta/produk/" . $productType . "/" . $p->registrable->id;
+                }
+
+                return [
+                    'id'            => $p->registrable->id,
+                    'name'          => $p->registrable->nama ?? $p->registrable->name,
+                    'cover_url'     => $coverUrl,
+                    'status'        => $p->status,
+                    'tanggal_aktif' => $p->tanggal_aktif?->format('d M Y') ?? $p->created_at->format('d M Y'),
+                    'type'          => $productType,
+                    'kategori'      => $kategori,
+                    'download_url'  => $downloadUrl,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        // 4. Merge all together
+        $purchasedProducts = collect([])
+            ->concat($bootcamps)
+            ->concat($kelasOnlines)
+            ->concat($otherPendaftaran)
+            ->sortByDesc(function($item) {
+                return strtotime($item['tanggal_aktif']);
+            })
+            ->values()
+            ->toArray();
 
         return Inertia::render('Peserta/dashboard', [
             'peserta'   => [
@@ -64,8 +153,7 @@ class PesertaDashboardController extends Controller
                 'no_hp'    => $peserta->no_hp,
                 'foto_url' => $peserta->foto_url,
             ],
-            'bootcamps'    => $bootcamps,
-            'kelasOnlines' => $kelasOnlines,
+            'purchasedProducts' => $purchasedProducts,
         ]);
     }
 
@@ -74,16 +162,17 @@ class PesertaDashboardController extends Controller
         $peserta = Auth::guard('peserta')->user();
 
         // Cek akses
-        $pendaftaran = Pendaftaran::where('bootcamp_id', $bootcampId)
+        $pendaftaran = Pendaftaran::where('registrable_id', $bootcampId)
+            ->where('registrable_type', \App\Models\Bootcamp::class)
             ->where('peserta_id', $peserta->id)
             ->whereNotIn('status', ['ditolak', 'rejected'])
             ->with([
-                'bootcamp.babs.materis',
-                'bootcamp.assignments.soals',
+                'registrable.babs.materis',
+                'registrable.assignments.soals',
             ])
             ->firstOrFail();
 
-        $bootcamp = $pendaftaran->bootcamp;
+        $bootcamp = $pendaftaran->registrable;
 
         // Load progress materi milik peserta ini
         $myProgress = ProgressMateri::where('peserta_id', $peserta->id)
@@ -195,6 +284,235 @@ class PesertaDashboardController extends Controller
             'materi'  => [
                 'file' => $kelas->materi_file ? asset('storage/' . $kelas->materi_file) : null,
                 'name' => $kelas->materi_nama_asli,
+            ],
+        ]);
+    }
+
+    public function updateProfile(\Illuminate\Http\Request $request)
+    {
+        $peserta = Auth::guard('peserta')->user();
+
+        $request->validate([
+            'nama'     => 'required|string|max:255',
+            'no_hp'    => 'nullable|string|max:20',
+            'email'    => 'required|email|unique:peserta,email,' . $peserta->id,
+            'password' => 'nullable|string|min:8',
+            'foto'     => 'nullable|image|max:2048',
+        ]);
+
+        $data = [
+            'nama'  => $request->nama,
+            'email' => $request->email,
+            'no_hp' => $request->no_hp,
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+        }
+
+        if ($request->hasFile('foto')) {
+            // Delete old photo if exists
+            if ($peserta->foto) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($peserta->foto);
+            }
+            $path = $request->file('foto')->store('peserta', 'public');
+            $data['foto'] = $path;
+        }
+
+        $peserta->update($data);
+
+        return back();
+    }
+
+    public function viewProduct($type, $id)
+    {
+        $peserta = Auth::guard('peserta')->user();
+
+        $typeMapping = [
+            'ebook' => \App\Models\Ebook::class,
+            'tulisan' => \App\Models\Tulisan::class,
+            'webinar' => \App\Models\Webinar::class,
+            'event' => \App\Models\Event::class,
+            'coaching-mentoring' => \App\Models\CoachingMentoring::class,
+            'produk-digital' => \App\Models\Produkdigital::class,
+            'bundling' => \App\Models\Bundling::class,
+        ];
+
+        if (!array_key_exists($type, $typeMapping)) {
+            abort(404, 'Tipe produk tidak didukung');
+        }
+
+        $class = $typeMapping[$type];
+
+        // Cek pendaftaran aktif
+        if ($type === 'bundling') {
+            $pendaftaran = Pendaftaran::where('peserta_id', $peserta->id)
+                ->where('registrable_type', $class)
+                ->where('registrable_id', $id)
+                ->whereIn('status', ['active', 'aktif', 'completed'])
+                ->first();
+
+            if (!$pendaftaran) {
+                $pendaftaran = \App\Models\BundlingRegistration::where('peserta_id', $peserta->id)
+                    ->where('bundling_id', $id)
+                    ->whereIn('status_pembayaran', ['success', 'paid', 'completed', 'active'])
+                    ->first();
+            }
+
+            if (!$pendaftaran) {
+                abort(404, 'Pendaftaran bundling tidak ditemukan');
+            }
+
+            $product = $pendaftaran->registrable ?? ($pendaftaran->bundling ?? null);
+        } else {
+            $pendaftaran = Pendaftaran::where('peserta_id', $peserta->id)
+                ->where('registrable_type', $class)
+                ->where('registrable_id', $id)
+                ->whereIn('status', ['active', 'aktif', 'completed'])
+                ->first();
+
+            if ($pendaftaran) {
+                $product = $pendaftaran->registrable;
+            } else {
+                // Cek apakah ada akses melalui pembelian bundling
+                $bundlingIdsDirect = Pendaftaran::where('peserta_id', $peserta->id)
+                    ->where('registrable_type', \App\Models\Bundling::class)
+                    ->whereIn('status', ['active', 'aktif', 'completed'])
+                    ->pluck('registrable_id');
+
+                $bundlingIdsReg = \App\Models\BundlingRegistration::where('peserta_id', $peserta->id)
+                    ->whereIn('status_pembayaran', ['success', 'paid', 'completed', 'active'])
+                    ->pluck('bundling_id');
+
+                $allBundlingIds = $bundlingIdsDirect->concat($bundlingIdsReg)->unique();
+
+                $isPartOfPurchasedBundle = \App\Models\BundlingItem::whereIn('bundling_id', $allBundlingIds)
+                    ->where('itemable_type', $class)
+                    ->where('itemable_id', $id)
+                    ->exists();
+
+                if ($isPartOfPurchasedBundle) {
+                    $product = $class::find($id);
+                    $pendaftaran = new Pendaftaran([
+                        'peserta_id' => $peserta->id,
+                        'registrable_type' => $class,
+                        'registrable_id' => $id,
+                        'status' => 'active',
+                        'tanggal_aktif' => now(),
+                        'created_at' => now(),
+                    ]);
+                    $pendaftaran->id = 0; // dummy id
+                } else {
+                    abort(404, 'Anda belum membeli produk ini atau akses Anda telah berakhir.');
+                }
+            }
+        }
+
+        if (!$product) {
+            abort(404, 'Data produk tidak ditemukan');
+        }
+
+        // Map data agar standard di frontend
+        $mappedProduct = [
+            'id' => $product->id,
+            'nama' => $product->nama ?? $product->name,
+            'cover' => $type === 'ebook'
+                ? ($product->cover ? asset('storage/' . $product->cover) : null)
+                : ($type === 'tulisan'
+                    ? ($product->cover ? asset('storage/' . $product->cover) : null)
+                    : ($type === 'webinar'
+                        ? ($product->cover ? asset('storage/' . $product->cover) : null)
+                        : ($type === 'event'
+                            ? ($product->cover ? asset('storage/' . $product->cover) : null)
+                            : ($type === 'produk-digital'
+                                ? ($product->cover_url ? asset('storage/' . $product->cover_url) : null)
+                                : ($type === 'bundling'
+                                    ? ($product->cover ? asset('storage/' . $product->cover) : null)
+                                    : null))))),
+            'deskripsi' => $product->deskripsi,
+            'created_at' => $product->created_at->format('d M Y'),
+        ];
+
+        // Tambahkan detail spesifik berdasarkan tipe
+        if ($type === 'ebook') {
+            $mappedProduct['file_url'] = $product->file_url ? (str_starts_with($product->file_url, 'http') ? $product->file_url : asset('storage/' . $product->file_url)) : null;
+            $mappedProduct['author'] = $product->author ?? 'Anonim';
+            $mappedProduct['isbn'] = $product->isbn;
+            $mappedProduct['format'] = $product->format ?? 'PDF';
+            $mappedProduct['bahasa'] = $product->bahasa ?? 'Indonesia';
+            $mappedProduct['jumlah_halaman'] = $product->jumlah_halaman;
+            $mappedProduct['bisa_didownload'] = $product->bisa_didownload ?? true;
+        } elseif ($type === 'tulisan') {
+            $mappedProduct['tipe_tulisan'] = $product->tipe_tulisan ?? 'one_shot';
+            $mappedProduct['genre'] = $product->genre ?? 'General';
+            $mappedProduct['author'] = $product->author ?? 'Anonim';
+            $mappedProduct['bahasa'] = $product->bahasa ?? 'Indonesia';
+            $wordCount = str_word_count(strip_tags($product->deskripsi ?? ''));
+            $mappedProduct['reading_time'] = max(1, ceil($wordCount / 200)); // 200 wpm
+        } elseif ($type === 'webinar') {
+            $mappedProduct['link_zoom'] = $product->redirect_url ?? $product->url ?? null;
+            $mappedProduct['tanggal_mulai'] = $product->tanggal_mulai ? $product->tanggal_mulai->format('d M Y H:i') : null;
+            $mappedProduct['tanggal_selesai'] = $product->tanggal_selesai ? $product->tanggal_selesai->format('d M Y H:i') : null;
+            $mappedProduct['instruksi'] = $product->instruksi;
+            $mappedProduct['syarat_ketentuan'] = $product->syarat_ketentuan;
+            $mappedProduct['timezone'] = $product->timezone ?? 'Asia/Jakarta';
+            $product->load('pembicaras');
+            $mappedProduct['pembicaras'] = $product->pembicaras->map(fn($pem) => [
+                'nama' => $pem->nama,
+                'pekerjaan' => $pem->pekerjaan,
+                'profil' => $pem->profil,
+                'foto' => $pem->foto ? asset('storage/' . $pem->foto) : null,
+            ])->toArray();
+        } elseif ($type === 'event') {
+            $mappedProduct['redirect_url'] = $product->redirect_url;
+            $mappedProduct['lokasi'] = $product->lokasi ?? 'Online';
+            $mappedProduct['tanggal_event'] = $product->waktu_mulai ? $product->waktu_mulai->format('d M Y H:i') : null;
+            $mappedProduct['instruksi'] = $product->instruksi ?? $product->catatan ?? null;
+        } elseif ($type === 'coaching-mentoring') {
+            $mappedProduct['booking_url'] = $product->booking_url;
+            $mappedProduct['jumlah_sesi'] = $product->jumlah_sesi ?? 1;
+            $mappedProduct['durasi_menit'] = $product->durasi_menit ?? 60;
+        } elseif ($type === 'produk-digital') {
+            $mappedProduct['file_url'] = $product->file_url ? (str_starts_with($product->file_url, 'http') ? $product->file_url : asset('storage/' . $product->file_url)) : null;
+            $mappedProduct['instruksi'] = $product->instruksi ?? $product->catatan ?? null;
+        } elseif ($type === 'bundling') {
+            $mappedProduct['pesan_setelah_bayar'] = $product->pesan_setelah_bayar;
+            $product->load('items.itemable');
+            $items = [];
+            foreach ($product->items as $item) {
+                if ($item->itemable) {
+                    $itemType = strtolower(class_basename($item->itemable_type));
+                    if ($itemType === 'produkdigital') {
+                        $itemType = 'produk-digital';
+                    } elseif ($itemType === 'coachingmentoring') {
+                        $itemType = 'coaching-mentoring';
+                    }
+                    $items[] = [
+                        'id' => $item->itemable->id,
+                        'name' => $item->itemable->nama ?? $item->itemable->name,
+                        'type' => $itemType,
+                        'url' => "/peserta/produk/" . $itemType . "/" . $item->itemable->id,
+                    ];
+                }
+            }
+            $mappedProduct['bundle_items'] = $items;
+        }
+
+        return Inertia::render('Peserta/ProductViewer', [
+            'peserta' => [
+                'id'       => $peserta->id,
+                'nama'     => $peserta->nama,
+                'email'    => $peserta->email,
+                'no_hp'    => $peserta->no_hp,
+                'foto_url' => $peserta->foto_url,
+            ],
+            'product' => $mappedProduct,
+            'productType' => $type,
+            'registration' => [
+                'id' => $pendaftaran->id,
+                'tanggal_aktif' => $pendaftaran->tanggal_aktif?->format('d M Y') ?? $pendaftaran->created_at->format('d M Y'),
+                'status' => $pendaftaran->status,
+                'order_id' => $pendaftaran->order_id ?? null,
             ],
         ]);
     }

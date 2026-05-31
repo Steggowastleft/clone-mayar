@@ -165,6 +165,9 @@ Route::get('/bundling/catalog', [BundlingController::class, 'catalog'])->name('b
 Route::get('/bundling/katalog', [BundlingController::class, 'catalog']);
 Route::get('/p/{bundling}/bundling', [BundlingController::class, 'publicShow'])->name('bundlings.public');
 
+Route::get('/semua-produk/catalog', [SemuaProdukController::class, 'catalog'])->name('semua-produk.catalog');
+Route::get('/catalog', [SemuaProdukController::class, 'catalog'])->name('catalog.index');
+
 Route::get('/webinar/{webinar}', [WebinarCatalogController::class, 'show'])->name('webinar.show');
 Route::get('/p/{webinar}/webinar', [WebinarCatalogController::class, 'show'])->name('webinar.public');
 Route::get('/webinar/{webinar}/detail', [WebinarCatalogController::class, 'show'])->name('webinar.show.detail');
@@ -178,6 +181,18 @@ Route::get('/webinar/confirmation', function () {
     ]);
 })->name('webinar.confirmation');
 Route::post('/webinar/payment/notification', [WebinarPaymentController::class, 'notification'])->name('webinar.payment.notification');
+
+// ── Unified Checkout Routes ─────────────────────────────
+Route::post('/checkout/process', [\App\Http\Controllers\CheckoutController::class, 'processPayment'])->name('checkout.process');
+Route::post('/checkout/validate', [\App\Http\Controllers\CheckoutController::class, 'validatePayment'])->name('checkout.validate');
+Route::get('/checkout/confirmation', function () {
+    return Inertia::render('checkout/confirmation', [
+        'order_id' => request('order_id'),
+        'status' => request('status'),
+    ]);
+})->name('checkout.confirmation');
+Route::post('/checkout/notification', [\App\Http\Controllers\CheckoutController::class, 'notification'])->name('checkout.notification');
+
 
 // ══════════════════════════════════════════════════════════════
 // AUTH ADMIN
@@ -218,6 +233,8 @@ Route::post('/peserta/register-checkout', [PesertaAuthController::class, 'regist
 Route::middleware('guest.peserta')->group(function () {
     Route::get('/peserta/login',  [PesertaAuthController::class, 'showLogin'])->name('peserta.login');
     Route::post('/peserta/login', [PesertaAuthController::class, 'login']);
+    Route::get('/peserta/register',  [PesertaAuthController::class, 'showRegister'])->name('peserta.register');
+    Route::post('/peserta/register', [PesertaAuthController::class, 'register']);
 });
 
 // Logout peserta
@@ -232,6 +249,7 @@ Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(fu
 
     // Dashboard & Kelas Bootcamp
     Route::get('/dashboard',        [PesertaDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/profile/update',   [PesertaDashboardController::class, 'updateProfile'])->name('profile.update');
     Route::get('/kelas/{bootcamp}', [PesertaDashboardController::class, 'kelas'])->name('kelas');
     // KELAS ONLINE — Sertifikat (Peserta)
     Route::get('/kelas-online/sertifikat',                           [KelasOnlineController::class, 'showCertificates'])->name('kelas-online.sertifikat.index');
@@ -259,6 +277,9 @@ Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(fu
     Route::get('/sesi/{sesi}/attendance/status',   [KelasOnlineController::class, 'getAttendanceStatus'])->name('kelas-online.attendance.status');
 
     Route::get('/kelas-online/{kelasOnline}/sertifikat/check',       [KelasOnlineController::class, 'checkCertificateStatus'])->name('kelas-online.sertifikat.check');
+
+    // Viewer produk digital non-bootcamp & non-kelas online
+    Route::get('/produk/{type}/{id}', [PesertaDashboardController::class, 'viewProduct'])->name('produk.view');
 });
 
 // Pendaftaran bootcamp (peserta terautentikasi)
@@ -278,6 +299,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/transaksi', [TransaksiController::class, 'index'])->name('transaksi.index');
+    Route::get('/transaksi/{id}', [TransaksiController::class, 'show'])->name('transaksi.show');
 
     // ----------------------------------------------------------
     // BOOTCAMP
@@ -292,6 +314,8 @@ Route::middleware('auth')->group(function () {
         // CRUD utama
         Route::get('/',           [ProdukDigitalController::class, 'index'])->name('index');
         Route::post('/',          [ProdukDigitalController::class, 'store'])->name('store');
+        // Specific actions MUST be defined BEFORE wildcards
+        Route::post('/upload-image',               [ProdukDigitalController::class, 'uploadEditorImage'])->name('upload-image');
         Route::get('/{produkDigital}',    [ProdukDigitalController::class, 'show'])->name('show');
         Route::post('/{produkDigital}',   [ProdukDigitalController::class, 'update'])->name('update');   // POST karena FormData (file upload)
         Route::delete('/{produkDigital}', [ProdukDigitalController::class, 'destroy'])->name('destroy');
@@ -332,9 +356,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/webinars/{webinar}/status', [WebinarController::class, 'toggleStatus'])->name('webinar.toggle-status');
     Route::post('/webinars/{webinar}/duplicate', [WebinarController::class, 'duplicate'])->name('webinar.duplicate');
     Route::post('/webinars/{webinar}/pembicara', [WebinarController::class, 'storePembicara'])->name('webinar.pembicara.store');
-
-    Route::get('/semua-produk/catalog', [SemuaProdukController::class, 'catalog'])->name('semua-produk.catalog');
-    Route::get('/catalog', [SemuaProdukController::class, 'catalog'])->name('catalog.index');
 
     // ── Event ─────────────────────────────────────────────────
     Route::get('/event',                  [EventController::class, 'index'])->name('event.index');
@@ -422,10 +443,14 @@ Route::middleware('auth')->group(function () {
                 'bank_provider' => $user->bank_provider,
                 'bank_account_number' => $user->bank_account_number,
                 'bank_account_name' => $user->bank_account_name,
+                'created_at' => $user->created_at ? $user->created_at->locale('id')->translatedFormat('d M Y H:i') : null,
             ],
             'verification' => $verification,
         ]);
     })->name('pengaturan.akun');
+
+    Route::get('/pengaturan/withdrawal', [\App\Http\Controllers\CreatorWithdrawalController::class, 'index'])->name('pengaturan.withdrawal.index');
+    Route::post('/pengaturan/withdrawal', [\App\Http\Controllers\CreatorWithdrawalController::class, 'store'])->name('pengaturan.withdrawal.store');
 
     // Admin-specific pages (role:admin)
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
@@ -507,6 +532,10 @@ Route::middleware('auth')->group(function () {
     Route::post('permintaan-bayar',          [PermintaanBayarController::class, 'store'])->name('permintaan-bayar.store');
     Route::get('permintaan-bayar/{id}',      [PermintaanBayarController::class, 'show'])->name('permintaan-bayar.show');
     Route::delete('permintaan-bayar/{id}',   [PermintaanBayarController::class, 'destroy'])->name('permintaan-bayar.destroy');
+
+    // ── Pembayaran Tagihan ────────────────────────────────────
+    Route::get('pembayaran-tagihan',         [PermintaanBayarController::class, 'index'])->name('pembayaran-tagihan.index');
+    Route::post('pembayaran-tagihan/remind', [PermintaanBayarController::class, 'sendReminder'])->name('pembayaran-tagihan.remind');
 
     // ─────────────────────────────────────────────────────────
     // ── Semua Produk ──────────────────────────────────────────

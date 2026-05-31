@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Webinar;
+use App\Models\Pendaftaran;
+use Illuminate\Support\Facades\Auth;
 
 class WebinarCatalogController extends Controller
 {
@@ -12,10 +14,22 @@ class WebinarCatalogController extends Controller
      */
     public function index()
     {
-        $webinars = Webinar::query()
+        $query = Webinar::query()
             ->where('status', 'published')
-            ->latest()
-            ->get()
+            ->latest();
+
+        $peserta = Auth::guard('peserta')->user();
+        if ($peserta) {
+            $registeredIds = Pendaftaran::where('peserta_id', $peserta->id)
+                ->where('registrable_type', Webinar::class)
+                ->whereIn('status', ['aktif', 'active', 'completed'])
+                ->pluck('registrable_id')
+                ->toArray();
+            
+            $query->whereNotIn('id', $registeredIds);
+        }
+
+        $webinars = $query->get()
             ->map(fn($w) => [
                 'id' => "webinar:{$w->id}",
                 'product_id' => $w->id,
@@ -60,6 +74,7 @@ class WebinarCatalogController extends Controller
             'status'        => $webinar->status,
             'is_full'       => $webinar->isFull(),
             'is_registration_open' => $webinar->isRegistrationOpen(),
+            'user_id'       => $webinar->user_id,
         ];
 
         return Inertia::render('webinar/checkout', [

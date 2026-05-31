@@ -77,6 +77,10 @@ class BootcampController extends Controller
 
     public function show(Bootcamp $bootcamp)
     {
+        if ($bootcamp->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         // ── Load semua relasi ────────────────────────────────────
         $bootcamp->load([
             'sesis',
@@ -296,6 +300,10 @@ class BootcampController extends Controller
 
     public function update(Request $request, Bootcamp $bootcamp)
     {
+        if ($bootcamp->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'judul'                    => 'required|string|max:255',
             'kategori'                 => 'nullable|string|max:255',
@@ -349,6 +357,10 @@ class BootcampController extends Controller
 
     public function updateStatus(Request $request, Bootcamp $bootcamp)
     {
+        if ($bootcamp->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $request->validate([
             'status' => 'required|in:published,unpublished,unlisted',
         ]);
@@ -360,6 +372,10 @@ class BootcampController extends Controller
 
     public function duplicate(Bootcamp $bootcamp)
     {
+        if ($bootcamp->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $new         = $bootcamp->replicate();
         $new->name   = 'DUPLICATE - ' . $bootcamp->name;
         $new->status = 'unpublished';
@@ -370,6 +386,10 @@ class BootcampController extends Controller
 
     public function destroy(Bootcamp $bootcamp)
     {
+        if ($bootcamp->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         if ($bootcamp->cover) {
             Storage::disk('public')->delete($bootcamp->cover);
         }

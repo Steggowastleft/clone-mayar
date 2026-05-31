@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Copy, Code2, ChevronDown, Download, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type ProdukDigitalData } from "../show";
+import { type ProdukDigitalData } from "../../produk-digital/show";
 
 function formatRupiah(value: number): string {
   return "Rp " + new Intl.NumberFormat("id-ID").format(value);
@@ -95,27 +95,85 @@ export default function TabDetail({ produk }: { produk: ProdukDigitalData }) {
     },
     {
       label: "File / Konten",
-      value: produk.file_url ? (
-        <a
-          href={produk.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 underline text-sm flex items-center gap-1"
-        >
-          <Download className="h-3 w-3" /> Download File
-        </a>
-      ) : produk.redirect_url ? (
-        <a
-          href={produk.redirect_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 underline text-sm flex items-center gap-1"
-        >
-          <ExternalLink className="h-3 w-3" /> {produk.redirect_url}
-        </a>
-      ) : (
-        <span className="text-gray-400 text-sm">-</span>
-      ),
+      value: (() => {
+        if (!produk.file_url) {
+          return produk.redirect_url ? (
+            <a
+              href={produk.redirect_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline text-sm flex items-center gap-1"
+            >
+              <ExternalLink className="h-3 w-3" /> {produk.redirect_url}
+            </a>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          );
+        }
+
+        // Check if JSON array
+        let isJson = false;
+        let pageUrls: string[] = [];
+        try {
+          if (produk.file_url.startsWith('[') || produk.file_url.startsWith('{')) {
+            const parsed = JSON.parse(produk.file_url);
+            if (Array.isArray(parsed)) {
+              isJson = true;
+              pageUrls = parsed;
+            }
+          }
+        } catch (e) {}
+
+        if (isJson) {
+          return (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold text-gray-700">File Halaman Komik ({pageUrls.length} Halaman):</p>
+              <div className="grid grid-cols-2 gap-2 max-w-md">
+                {pageUrls.map((url, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 border rounded-md bg-gray-50">
+                    <span className="text-xs font-semibold text-gray-600">Halaman {idx + 1}</span>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-xs font-medium underline flex items-center gap-0.5"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Lihat Gambar
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <a
+                href={produk.file_url}
+                download
+                className="text-blue-600 underline text-sm flex items-center gap-1 font-semibold w-fit"
+              >
+                <Download className="h-3.5 w-3.5" /> Download File
+              </a>
+              {(produk.file_url.toLowerCase().endsWith(".pdf") || (produk.format && produk.format.toUpperCase() === "PDF")) && (
+                <a
+                  href={produk.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-600 underline text-sm flex items-center gap-1 font-semibold w-fit"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Lihat PDF
+                </a>
+              )}
+            </div>
+            <span className="text-xs text-gray-500 font-mono select-all">
+              Sumber: {basename(produk.file_url)} {produk.file_lama_id ? `(File Lama ID: ${produk.file_lama_id})` : ""}
+            </span>
+          </div>
+        );
+      })(),
     },
     {
       label: "Cover",
@@ -144,18 +202,6 @@ export default function TabDetail({ produk }: { produk: ProdukDigitalData }) {
         : "Unlimited",
     },
     { label: "Catatan", value: produk.catatan || "-" },
-    {
-      label: "Bisa Affiliate",
-      value: produk.bisa_affiliate ? (
-        <Badge className="bg-green-100 text-green-700 border border-green-200">
-          Ya
-        </Badge>
-      ) : (
-        <Badge className="bg-gray-100 text-gray-600 border border-gray-200">
-          Tidak
-        </Badge>
-      ),
-    },
     {
       label: "Total Penjualan",
       value: (
@@ -248,11 +294,19 @@ export default function TabDetail({ produk }: { produk: ProdukDigitalData }) {
             <DialogTitle>Deskripsi</DialogTitle>
             <DialogDescription>Deskripsi lengkap produk digital ini.</DialogDescription>
           </DialogHeader>
-          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
-            {produk.deskripsi || "Tidak ada deskripsi."}
+          <div className="text-sm text-gray-700 leading-relaxed max-h-96 overflow-y-auto prose prose-slate">
+            {produk.deskripsi ? (
+              <div dangerouslySetInnerHTML={{ __html: produk.deskripsi }} />
+            ) : (
+              "Tidak ada deskripsi."
+            )}
           </div>
         </DialogContent>
       </Dialog>
     </>
   );
+}
+
+function basename(path: string) {
+  return path.split(/[\\/]/).pop() || "";
 }

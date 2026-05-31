@@ -1,4 +1,6 @@
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 import { 
   Users, 
   CheckCircle2, 
@@ -23,6 +25,7 @@ type CoachingMentoring = {
   instruksi: string | null;
   syarat_ketentuan: string | null;
   status: string;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -30,20 +33,25 @@ type Props = {
 };
 
 export default function CoachingMentoringPublic({ coaching }: Props) {
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   return (
-    <PublicProductLayout
-      productId={`coaching-mentoring:${coaching.id}`}
-      title={coaching.nama}
-      harga={coaching.harga}
-      hargaCoret={coaching.harga_coret}
-      redirectUrl={coaching.booking_url}
-      themeColorClass="bg-teal-600 hover:bg-teal-700"
-      textColorClass="text-teal-600"
-      badgeText="Coaching & Mentoring"
-      navTitle="Mayar Coaching"
-      navIcon={<UserCheck className="text-white h-5 w-5" />}
-    >
-      <div className="space-y-8">
+    <>
+      <PublicProductLayout
+        productId={`coaching-mentoring:${coaching.id}`}
+        title={coaching.nama}
+        harga={coaching.harga}
+        hargaCoret={coaching.harga_coret}
+        redirectUrl={coaching.booking_url}
+        themeColorClass="bg-teal-600 hover:bg-teal-700"
+        textColorClass="text-teal-600"
+        badgeText="Coaching & Mentoring"
+        navTitle="Mayar Coaching"
+        navIcon={<UserCheck className="text-white h-5 w-5" />}
+        onCheckout={() => setCheckoutOpen(true)}
+        creatorId={coaching.user_id}
+      >
+        <div className="space-y-8">
         
         {/* Cover and Top Info */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
@@ -157,5 +165,14 @@ export default function CoachingMentoringPublic({ coaching }: Props) {
 
       </div>
     </PublicProductLayout>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="coaching-mentoring"
+        productId={coaching.id}
+        productName={coaching.nama}
+        harga={coaching.harga}
+      />
+    </>
   );
 }

@@ -73,7 +73,8 @@ class PesertaProgressController extends Controller
     {
         if ($progress < 100) return;
 
-        $updated = Pendaftaran::where('bootcamp_id', $bootcamp->id)
+        $updated = Pendaftaran::where('registrable_id', $bootcamp->id)
+            ->where('registrable_type', Bootcamp::class)
             ->where('peserta_id', $pesertaId)
             ->where('status', 'active')
             ->update([

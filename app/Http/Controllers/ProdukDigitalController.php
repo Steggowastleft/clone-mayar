@@ -29,6 +29,7 @@ class ProdukDigitalController extends Controller
                 'sumber_file'     => $p->sumber_file,
                 'cover_url'       => $p->cover_url,
                 'total_penjualan' => $p->total_penjualan,
+                'kategori'        => $p->kategori,
                 'created_at'      => $p->created_at?->format('d M Y'),
             ]);
 
@@ -85,7 +86,7 @@ class ProdukDigitalController extends Controller
             'tanggal_kadaluarsa'=> $validated['tanggal_kadaluarsa'] ?? null,
             'catatan'           => $validated['catatan'] ?? null,
             'max_pembayaran'    => $validated['max_pembayaran'] ?? null,
-            'bisa_affiliate'    => $validated['bisa_affiliate'] ?? false,
+            'bisa_affiliate'    => false,
             'status'            => 'unpublished',
             
             // Specific Fields
@@ -112,8 +113,18 @@ class ProdukDigitalController extends Controller
             $data['file_lama_id'] = $validated['file_lama_id'];
         }
 
-        // Handle file upload
-        if ($request->hasFile('file')) {
+        // Handle page files upload (multiple images for comic)
+        if ($request->hasFile('page_files')) {
+            $paths = [];
+            $urls = [];
+            foreach ($request->file('page_files') as $file) {
+                $path = $file->store('produk-digital/files', 'public');
+                $paths[] = $path;
+                $urls[] = Storage::url($path);
+            }
+            $data['file_path'] = json_encode($paths);
+            $data['file_url']  = json_encode($urls);
+        } elseif ($request->hasFile('file')) {
             $path = $request->file('file')->store('produk-digital/files', 'public');
             $data['file_path'] = $path;
             $data['file_url']  = Storage::url($path);
@@ -153,9 +164,87 @@ class ProdukDigitalController extends Controller
             ->unique('id')
             ->values();
 
+        // ── Analytics: query real data from pembayarans ──────────────
+        $prefix = 'PD-' . $produk->id . '-';
+
+        // All payments for this product (order_id starts with PD-{id}-)
+        $allPayments = \App\Models\Pembayaran::where('order_id', 'LIKE', $prefix . '%')->get();
+
+        $totalTransaksi   = $allPayments->count();
+        $transaksiSukses  = $allPayments->where('status', 'confirmed')->count();
+        $transaksiPending = $allPayments->where('status', 'pending')->count();
+        $transaksiGagal   = $allPayments->where('status', 'rejected')->count();
+        $nominalTransaksi = $allPayments->where('status', 'confirmed')->sum('jumlah');
+
+        // Also count from Pendaftaran for checkout funnel (how many reached checkout)
+        $checkoutCount = \App\Models\Pendaftaran::where('registrable_type', 'App\\Models\\ProdukDigital')
+            ->where('registrable_id', $produk->id)
+            ->count();
+
+        // Weekly chart data (last 7 days)
+        $chartData = [];
+        $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $dayLabel = $dayNames[$date->dayOfWeek];
+            $dateStr = $date->toDateString();
+
+            $dayPayments = $allPayments->filter(function ($p) use ($dateStr) {
+                return $p->created_at->toDateString() === $dateStr;
+            });
+
+            $chartData[] = [
+                'day'        => $dayLabel,
+                'date'       => $date->format('d M'),
+                'Pendapatan' => (float) $dayPayments->where('status', 'confirmed')->sum('jumlah'),
+                'Transaksi'  => $dayPayments->count(),
+            ];
+        }
+
+        // Calculate week-over-week growth
+        $thisWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $lastWeekRevenue = $allPayments->where('status', 'confirmed')
+            ->filter(fn($p) => $p->created_at->gte(Carbon::now()->subDays(14)) && $p->created_at->lt(Carbon::now()->subDays(7)))
+            ->sum('jumlah');
+        $growthPercent = $lastWeekRevenue > 0
+            ? round((($thisWeekRevenue - $lastWeekRevenue) / $lastWeekRevenue) * 100)
+            : ($thisWeekRevenue > 0 ? 100 : 0);
+
+        // Find busiest day of the week
+        $busiestDay = collect($chartData)->sortByDesc('Transaksi')->first();
+
+        $analisis = [
+            'total_transaksi'    => $totalTransaksi,
+            'transaksi_sukses'   => $transaksiSukses,
+            'transaksi_pending'  => $transaksiPending,
+            'transaksi_gagal'    => $transaksiGagal,
+            'nominal_transaksi'  => (float) $nominalTransaksi,
+            'checkout_count'     => $checkoutCount,
+            'chart_data'         => $chartData,
+            'growth_percent'     => $growthPercent,
+            'busiest_day'        => $busiestDay['day'] ?? '-',
+        ];
+
+        $transaksi = $allPayments->map(fn($p) => [
+            'id'                => $p->id,
+            'pelanggan'         => $p->nama_pembeli,
+            'email'             => $p->email_pembeli,
+            'no_hp'             => $p->no_hp_pembeli,
+            'status'            => $p->status === 'confirmed' ? 'Lunas' : ($p->status === 'pending' ? 'Belum Bayar' : ($p->status === 'rejected' ? 'Gagal' : 'Dibatalkan')),
+            'metode_pembayaran' => $p->bukti_transfer ? 'Transfer Bank' : 'QRIS',
+            'kode_kupon'        => '-',
+            'tanggal'           => $p->created_at?->format('d M Y H:i'),
+            'resi'              => 'Lihat',
+        ]);
+
         return Inertia::render('produk-digital/Show', [
-            'produk' => $this->formatProdukDetail($produk),
-            'oldFiles' => $oldFiles,
+            'produk'    => $this->formatProdukDetail($produk),
+            'oldFiles'  => $oldFiles,
+            'analisis'  => $analisis,
+            'transaksi' => $transaksi,
         ]);
     }
 
@@ -180,7 +269,7 @@ class ProdukDigitalController extends Controller
             'tanggal_kadaluarsa'=> $validated['tanggal_kadaluarsa'] ?? $produk->tanggal_kadaluarsa,
             'catatan'           => $validated['catatan'] ?? $produk->catatan,
             'max_pembayaran'    => $validated['max_pembayaran'] ?? $produk->max_pembayaran,
-            'bisa_affiliate'    => $validated['bisa_affiliate'] !== null ? $validated['bisa_affiliate'] : $produk->bisa_affiliate,
+            'bisa_affiliate'    => false,
             
             // Specific Fields
             'author'            => $validated['author'] ?? $produk->author,
@@ -227,10 +316,39 @@ class ProdukDigitalController extends Controller
         }
 
         // Handle file upload/replacement
-        if ($request->hasFile('file')) {
+        if ($request->hasFile('page_files')) {
+            // Delete old files if they exist
+            if ($produk->file_path) {
+                $oldPaths = json_decode($produk->file_path, true);
+                if (is_array($oldPaths)) {
+                    foreach ($oldPaths as $oldPath) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                } else {
+                    Storage::disk('public')->delete($produk->file_path);
+                }
+            }
+
+            $paths = [];
+            $urls = [];
+            foreach ($request->file('page_files') as $file) {
+                $path = $file->store('produk-digital/files', 'public');
+                $paths[] = $path;
+                $urls[] = Storage::url($path);
+            }
+            $data['file_path'] = json_encode($paths);
+            $data['file_url']  = json_encode($urls);
+        } elseif ($request->hasFile('file')) {
             // Delete old file if exists
             if ($produk->file_path) {
-                Storage::disk('public')->delete($produk->file_path);
+                $oldPaths = json_decode($produk->file_path, true);
+                if (is_array($oldPaths)) {
+                    foreach ($oldPaths as $oldPath) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                } else {
+                    Storage::disk('public')->delete($produk->file_path);
+                }
             }
 
             $path = $request->file('file')->store('produk-digital/files', 'public');
@@ -334,7 +452,7 @@ class ProdukDigitalController extends Controller
             'deskripsi'          => $p->deskripsi,
             'kategori'           => $p->kategori,
             'sumber_file'        => $p->sumber_file,
-            'file_url'           => $p->file_url,
+            'file_url'           => $p->sumber_file === 'file_lama' && $p->file_lama_id ? Storage::url($p->file_lama_id) : $p->file_url,
             'file_lama_id'       => $p->file_lama_id,
             'redirect_url'       => $p->redirect_url,
             'cover_url'          => $p->cover_url,
@@ -432,6 +550,19 @@ class ProdukDigitalController extends Controller
             abort(404);
         }
 
+        $hasAccess = false;
+        $peserta = Auth::guard('peserta')->user();
+        if ($peserta) {
+            $hasAccess = \App\Models\Pendaftaran::where('peserta_id', $peserta->id)
+                ->where('registrable_id', $produkDigital->id)
+                ->where(function($q) {
+                    $q->where('registrable_type', 'produkdigital')
+                      ->orWhere('registrable_type', ProdukDigital::class);
+                })
+                ->whereIn('status', ['active', 'aktif', 'completed', 'selesai'])
+                ->exists();
+        }
+
         return Inertia::render('produk-digital/public', [
             'produk' => [
                 'id' => $produkDigital->id,
@@ -451,7 +582,25 @@ class ProdukDigitalController extends Controller
                 'tanggal_kadaluarsa' => $produkDigital->tanggal_kadaluarsa
                     ? Carbon::parse($produkDigital->tanggal_kadaluarsa)->format('d M Y')
                     : null,
+                'user_id' => $produkDigital->user_id,
             ],
+            'hasAccess' => $hasAccess,
         ]);
+    }
+
+    public function uploadEditorImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|max:10240', // max 10MB
+        ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('produk-digital/editor-images', 'public');
+            return response()->json([
+                'url' => Storage::url($path),
+            ]);
+        }
+
+        return response()->json(['error' => 'No image uploaded'], 400);
     }
 }

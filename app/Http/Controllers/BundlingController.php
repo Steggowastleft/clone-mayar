@@ -13,6 +13,8 @@ use App\Models\CoachingMentoring;
 use App\Models\Tulisan;
 use App\Models\KelasOnline;
 use App\Models\PaymentLink;
+use App\Models\Pendaftaran;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -104,7 +106,9 @@ class BundlingController extends Controller
 
     public function show(Bundling $bundling)
     {
-      
+        if ($bundling->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $bundling->load(['items', 'registrations']);
 
@@ -143,7 +147,9 @@ class BundlingController extends Controller
 
     public function edit(Bundling $bundling)
     {
-        
+        if ($bundling->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $bundling->load('items');
         $products = $this->getAvailableProducts();
@@ -187,7 +193,9 @@ class BundlingController extends Controller
 
     public function update(Request $request, Bundling $bundling)
     {
-        
+        if ($bundling->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $request->validate([
             'nama' => 'required|string|max:255',
@@ -238,7 +246,9 @@ class BundlingController extends Controller
 
     public function destroy(Bundling $bundling)
     {
-      
+        if ($bundling->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         if ($bundling->cover) {
             Storage::disk('public')->delete($bundling->cover);
@@ -251,6 +261,9 @@ class BundlingController extends Controller
 
     public function updateStatus(Request $request, Bundling $bundling)
     {
+        if ($bundling->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $bundling->update([
             'status' => $request->status ?? ($bundling->status === 'published' ? 'unpublished' : 'published'),
@@ -264,10 +277,22 @@ class BundlingController extends Controller
 
     public function catalog()
     {
-        $bundlings = Bundling::published()
+        $query = Bundling::published()
             ->with('items')
-            ->orderBy('created_at', 'desc')
-            ->get()
+            ->orderBy('created_at', 'desc');
+
+        $peserta = Auth::guard('peserta')->user();
+        if ($peserta) {
+            $registeredIds = Pendaftaran::where('peserta_id', $peserta->id)
+                ->where('registrable_type', Bundling::class)
+                ->whereIn('status', ['aktif', 'active', 'completed'])
+                ->pluck('registrable_id')
+                ->toArray();
+            
+            $query->whereNotIn('id', $registeredIds);
+        }
+
+        $bundlings = $query->get()
             ->map(function ($bundling) {
                 return [
                     'id' => $bundling->id,
@@ -316,6 +341,7 @@ class BundlingController extends Controller
                 'cover_url' => $bundling->cover_url,
                 'items' => $items,
                 'jumlah_terjual' => $bundling->jumlah_terjual,
+                'user_id' => $bundling->user_id,
             ],
         ]);
     }
@@ -340,6 +366,10 @@ class BundlingController extends Controller
 
         $product = $modelClass::find($id);
         if (!$product) {
+            return;
+        }
+
+        if ($product->user_id !== auth()->id()) {
             return;
         }
 

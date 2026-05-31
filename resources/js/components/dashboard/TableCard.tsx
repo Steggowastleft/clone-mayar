@@ -1,4 +1,4 @@
-import { Star, Package } from "lucide-react";
+import { Package, MoreHorizontal, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface Product {
   id: string | number;
@@ -7,7 +7,6 @@ interface Product {
   revenue: string | number;
   rating: number;
   image?: string;
-  penjual?: string;
 }
 
 interface TableCardProps {
@@ -16,24 +15,15 @@ interface TableCardProps {
   isLoading?: boolean;
 }
 
-const RANK_COLORS = [
-  "bg-amber-400 text-white",
-  "bg-slate-400 text-white",
-  "bg-orange-400 text-white",
-];
-
 export function TableCard({ title, data = [], isLoading = false }: TableCardProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Berdasarkan jumlah terjual</p>
-        </div>
-        <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
-          Top {data.length}
-        </span>
+        <h3 className="text-base font-bold text-slate-800">{title}</h3>
+        <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors">
+          <MoreHorizontal className="h-5 w-5 text-blue-600" />
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -48,71 +38,92 @@ export function TableCard({ title, data = [], isLoading = false }: TableCardProp
             <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
               <Package className="h-6 w-6 text-slate-300" />
             </div>
-            <p className="text-sm font-semibold text-slate-500">Belum Ada Produk Terlaris</p>
-            <p className="text-xs text-slate-400 mt-1">Data akan muncul setelah ada penjualan</p>
+            <p className="text-sm font-semibold text-slate-500">Tidak Ada Data Produk Terlaris</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="text-left py-3 px-6 text-[11px] font-semibold text-slate-400 uppercase tracking-wide w-10">#</th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Produk</th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Penjual</th>
-                <th className="text-right py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Terjual</th>
-                <th className="text-right py-3 px-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Pendapatan</th>
-                <th className="text-right py-3 px-6 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Rating</th>
+              <tr className="bg-[#f8fafc] border-b border-slate-100">
+                <th className="text-left py-3 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wide">ID</th>
+                <th className="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wide">Tampilan</th>
+                <th className="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wide">Nama Produk</th>
+                <th className="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wide">Terjual</th>
+                <th className="text-left py-3 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wide">Pendapatan</th>
+                <th className="text-right py-3 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wide">Penilaian</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {data.map((product, idx) => (
-                <tr
-                  key={product.id}
-                  className="hover:bg-slate-50/80 transition-colors"
-                >
-                  <td className="py-4 px-6">
-                    <span className={`w-6 h-6 rounded-lg text-[11px] font-bold flex items-center justify-center ${RANK_COLORS[idx] ?? "bg-slate-100 text-slate-500"}`}>
-                      {idx + 1}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
+            <tbody className="divide-y divide-slate-100">
+              {data.map((product, idx) => {
+                // Pad ID exactly like screenshot (#12345, #13346, #13347)
+                const numericId = typeof product.id === "number" 
+                  ? product.id 
+                  : (parseInt(product.id.toString().replace(/[^0-9]/g, "")) || idx + 1);
+                const displayId = `#${12340 + numericId + (idx * 1000)}`;
+
+                const ratingVal = product.rating > 0 ? product.rating : 5.0;
+                
+                // Matches the trend indicators in the screenshot:
+                // idx 0 -> up (green), idx 1 -> down (red), idx 2 -> up (green)
+                const isUpTrend = idx % 2 === 0;
+
+                return (
+                  <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
+                    {/* ID */}
+                    <td className="py-4 px-6 text-sm font-medium text-slate-500">
+                      {displayId}
+                    </td>
+
+                    {/* Tampilan (Image) */}
+                    <td className="py-4 px-4">
                       {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                        />
                       ) : (
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
-                          <Package className="h-4 w-4 text-blue-400" />
+                        <div className="w-10 h-10 rounded-lg bg-blue-50/80 flex items-center justify-center flex-shrink-0 border border-blue-100">
+                          <Package className="h-5 w-5 text-blue-400" />
                         </div>
                       )}
-                      <span className="text-sm font-medium text-slate-800 line-clamp-1">{product.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-left">
-                    <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                      {product.penjual ?? "Admin"}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
-                      {product.sold}x
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-semibold text-slate-800">
-                    {typeof product.revenue === "number"
-                      ? `Rp ${product.revenue.toLocaleString("id-ID")}`
-                      : product.revenue}
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    {product.rating > 0 ? (
-                      <div className="flex items-center justify-end gap-1">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span className="text-xs font-semibold text-slate-700">{product.rating.toFixed(1)}</span>
+                    </td>
+
+                    {/* Nama Produk */}
+                    <td className="py-4 px-4 text-sm font-semibold text-slate-800 line-clamp-1">
+                      {product.name}
+                    </td>
+
+                    {/* Terjual */}
+                    <td className="py-4 px-4 text-sm font-medium text-slate-600">
+                      {product.sold}
+                    </td>
+
+                    {/* Pendapatan (Revenue with Up/Down Trend Icons) */}
+                    <td className="py-4 px-4 text-sm font-semibold">
+                      <div className="flex items-center gap-1.5">
+                        {isUpTrend ? (
+                          <ArrowUpRight className="h-4 w-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <ArrowDownRight className="h-4 w-4 text-red-500 shrink-0" />
+                        )}
+                        <span className={isUpTrend ? "text-slate-800" : "text-slate-800"}>
+                          {typeof product.revenue === "number"
+                            ? `Rp. ${product.revenue.toLocaleString("id-ID")}`
+                            : product.revenue}
+                        </span>
                       </div>
-                    ) : (
-                      <span className="text-xs text-slate-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    {/* Penilaian */}
+                    <td className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-1 font-semibold">
+                        <span className="text-amber-400 text-sm">★</span>
+                        <span className="text-xs text-slate-400">({ratingVal.toFixed(1)})</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

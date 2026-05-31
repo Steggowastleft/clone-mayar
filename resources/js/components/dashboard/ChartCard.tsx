@@ -1,6 +1,7 @@
 import {
-  AreaChart,
-  Area,
+  ComposedChart,
+  Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -8,8 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 interface ChartDataPoint {
   date: string;
@@ -21,13 +21,11 @@ interface ChartCardProps {
   title: string;
   data?: ChartDataPoint[];
   isLoading?: boolean;
-  onRangeChange?: (range: "7" | "30" | "90") => void;
 }
 
-const formatRupiah = (value: number) => {
-  if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}jt`;
-  if (value >= 1_000) return `Rp ${(value / 1_000).toFixed(0)}rb`;
-  return `Rp ${value}`;
+const formatRupiahTick = (value: number) => {
+  if (value === 0) return "RP. 0";
+  return `RP. ${value.toLocaleString("id-ID")}`;
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -52,138 +50,113 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export function ChartCard({ title, data = [], isLoading = false, onRangeChange }: ChartCardProps) {
-  const [range, setRange] = useState<"7" | "30" | "90">("30");
+const DEFAULT_DAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Mingg"];
 
-  const handleRangeChange = (r: "7" | "30" | "90") => {
-    setRange(r);
-    onRangeChange?.(r);
-  };
-
-  const totalPendapatan = data.reduce((s, d) => s + d.pendapatan, 0);
-  const totalTrx = data.reduce((s, d) => s + d.transaksi, 0);
+export function ChartCard({ title, data = [], isLoading = false }: ChartCardProps) {
+  // Map or fallback data
+  const chartData = data && data.length > 0 
+    ? data 
+    : DEFAULT_DAYS.map(day => ({ date: day, pendapatan: 0, transaksi: 0 }));
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-5 pb-4 flex items-start justify-between border-b border-slate-100">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-          </div>
-          <p className="text-xs text-slate-400">Performa pendapatan & transaksi</p>
-        </div>
-        {/* Range Tabs */}
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
-          {(["7", "30", "90"] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => handleRangeChange(r)}
-              className={`text-xs px-3 py-1 rounded-md font-medium transition-all ${
-                range === r
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {r}h
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary mini-stats */}
-      <div className="px-6 py-3 flex gap-6 border-b border-slate-100 bg-slate-50/50">
-        <div>
-          <p className="text-[11px] text-slate-400 uppercase tracking-wide">Total Pendapatan</p>
-          <p className="text-sm font-bold text-slate-800 mt-0.5">
-            Rp {totalPendapatan.toLocaleString("id-ID")}
-          </p>
-        </div>
-        <div className="w-px bg-slate-200" />
-        <div>
-          <p className="text-[11px] text-slate-400 uppercase tracking-wide">Total Transaksi</p>
-          <p className="text-sm font-bold text-slate-800 mt-0.5">{totalTrx}</p>
-        </div>
+      <div className="px-6 py-5 flex items-center justify-between border-b border-slate-100">
+        <h3 className="text-base font-bold text-slate-800">{title}</h3>
+        <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors">
+          <MoreHorizontal className="h-5 w-5 text-blue-600" />
+        </button>
       </div>
 
       {/* Chart */}
-      <div className="px-2 py-4">
+      <div className="px-3 py-6">
         {isLoading ? (
-          <div className="h-56 bg-slate-100 rounded-xl animate-pulse mx-4" />
-        ) : data.length === 0 ? (
-          <div className="h-56 flex flex-col items-center justify-center text-slate-400 gap-2">
-            <TrendingUp className="h-10 w-10 text-slate-200" />
-            <p className="text-sm">Belum ada data untuk periode ini</p>
-          </div>
+          <div className="h-64 bg-slate-100 rounded-xl animate-pulse mx-4" />
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradPendapatan" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradTransaksi" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 30, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: "#94a3b8" }}
+                tick={{ fontSize: 10, fill: "#64748b", fontWeight: "bold" }}
                 axisLine={false}
                 tickLine={false}
-                dy={4}
+                dy={6}
               />
-              <YAxis
-                yAxisId="pendapatan"
-                tickFormatter={formatRupiah}
-                tick={{ fontSize: 10, fill: "#94a3b8" }}
-                axisLine={false}
-                tickLine={false}
-                width={60}
-              />
+              
+              {/* Left Axis: Total Transaksi */}
               <YAxis
                 yAxisId="transaksi"
-                orientation="right"
-                tick={{ fontSize: 10, fill: "#94a3b8" }}
+                orientation="left"
+                domain={[0, 160]}
+                tick={{ fontSize: 10, fill: "#64748b" }}
                 axisLine={false}
                 tickLine={false}
                 width={30}
+                label={{ 
+                  value: "TOTAL TRANSAKSI", 
+                  angle: -90, 
+                  position: "insideLeft", 
+                  offset: -20, 
+                  style: { textAnchor: "middle", fill: "#2563eb", fontWeight: "bold", fontSize: 9 } 
+                }}
               />
+              
+              {/* Right Axis: Total Pendapatan */}
+              <YAxis
+                yAxisId="pendapatan"
+                orientation="right"
+                domain={[0, 70000000]}
+                tickFormatter={formatRupiahTick}
+                tick={{ fontSize: 10, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                width={85}
+                label={{ 
+                  value: "TOTAL PENDAPATAN", 
+                  angle: 90, 
+                  position: "insideRight", 
+                  offset: -20, 
+                  style: { textAnchor: "middle", fill: "#2563eb", fontWeight: "bold", fontSize: 9 } 
+                }}
+              />
+              
               <Tooltip content={<CustomTooltip />} />
+              
               <Legend
-                iconType="circle"
-                iconSize={6}
+                iconType="rect"
+                iconSize={16}
+                verticalAlign="bottom"
+                height={36}
                 formatter={(val) => (
-                  <span className="text-xs text-slate-500 ml-0.5">{val}</span>
+                  <span className="text-xs text-slate-500 font-medium ml-1 mr-4">{val}</span>
                 )}
               />
-              <Area
+              
+              {/* Bar: Total Pendapatan */}
+              <Bar
                 yAxisId="pendapatan"
-                type="monotone"
                 dataKey="pendapatan"
-                name="Pendapatan"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="url(#gradPendapatan)"
-                dot={false}
-                activeDot={{ r: 4, fill: "#3b82f6" }}
+                name="Total Pendapatan"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+                barSize={18}
+                opacity={0.8}
               />
-              <Area
+              
+              {/* Line: Total Transaksi */}
+              <Line
                 yAxisId="transaksi"
                 type="monotone"
                 dataKey="transaksi"
-                name="Transaksi"
+                name="Total Transaksi"
                 stroke="#f59e0b"
-                strokeWidth={2}
-                fill="url(#gradTransaksi)"
-                dot={false}
-                activeDot={{ r: 4, fill: "#f59e0b" }}
+                strokeWidth={3}
+                dot={{ r: 3, fill: "#f59e0b", strokeWidth: 1 }}
+                activeDot={{ r: 5 }}
               />
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </div>

@@ -222,7 +222,7 @@ export default function TabModul({
   const [deletingMateri,    setDeletingMateri]    = useState<{ materi: Materi; babId: number } | null>(null);
 
   // Sync dari Inertia partial reload
-  const page = usePage<{ babList?: Bab[] }>();
+  const page = usePage() as any;
   useEffect(() => {
     if (page.props.babList) setBabList(page.props.babList);
   }, [page.props.babList]);

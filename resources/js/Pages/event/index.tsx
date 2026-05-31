@@ -38,6 +38,7 @@ import {
   CalendarDays,
   MapPin,
   Clock,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,8 @@ type Event = {
   location: string;
   participants: number;
   tipe: "online" | "offline";
+  cover_url?: string | null;
+  created_at?: string | null;
 };
 
 type IndexProps = {
@@ -132,11 +135,13 @@ const defaultForm = {
   instruksi: "",
   syaratKetentuan: "",
   maxTiketPerTransaksi: "1",
+  redirectUrl: "",
 };
 
 // ─── Main ───
 export default function Index({ events }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [tipeFilter, setTipeFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dateOpen, setDateOpen] = useState(false);
@@ -166,50 +171,16 @@ export default function Index({ events }: IndexProps) {
   };
 
   const filteredEvents = events.filter((e) => {
-    const matchStatus =
-      statusFilter === "all" || e.status === statusFilter;
-    const matchSearch = e.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "published":
-        return (
-          <Badge className="bg-green-500 text-white">Published</Badge>
-        );
-      case "unpublished":
-        return (
-          <Badge className="bg-yellow-500 text-white">Unpublished</Badge>
-        );
-      case "unlisted":
-        return (
-          <Badge className="bg-gray-500 text-white">Unlisted</Badge>
-        );
-      default:
-        return <Badge>Unknown</Badge>;
+    const matchStatus = statusFilter === "all" || e.status === statusFilter;
+    const matchTipe = tipeFilter === "all" || e.tipe === tipeFilter;
+    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase());
+    let matchDate = true;
+    if (dateFilter) {
+      const formattedFilterDate = format(dateFilter, "yyyy-MM-dd");
+      matchDate = e.created_at ? e.created_at.startsWith(formattedFilterDate) : false;
     }
-  };
-
-  const tipeBadge = (tipe: string) =>
-    tipe === "online" ? (
-      <Badge className="bg-blue-100 text-blue-700 border border-blue-200">
-        Online
-      </Badge>
-    ) : (
-      <Badge className="bg-orange-100 text-orange-700 border border-orange-200">
-        Offline
-      </Badge>
-    );
-
-  const filterButtons = [
-    { label: "SEMUA", value: "all" },
-    { label: "PUBLISHED", value: "published" },
-    { label: "UNPUBLISHED", value: "unpublished" },
-    { label: "UNLISTED", value: "unlisted" },
-  ];
+    return matchStatus && matchTipe && matchSearch && matchDate;
+  });
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -300,216 +271,230 @@ export default function Index({ events }: IndexProps) {
 
   const tiketOptions = Array.from({ length: 50 }, (_, i) => i + 1);
 
+  const totalEvents = events.length;
+  const publikCount = events.filter((e) => e.status === "published").length;
+  const tidakPublikCount = totalEvents - publikCount;
+
   return (
     <DashboardLayout title="Event & Acara">
-      <div className="flex gap-0 min-h-screen">
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            PROJEK
-          </p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Event & Acara
-            </h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() =>
-                  window.open("/event/catalog", "_blank")
-                }
-              >
-                PRODUK
-              </Button>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={openCreate}
-              >
-                + BUAT
-              </Button>
+      <Head title="Event & Acara" />
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Event & Acara</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Event: <span className="font-bold text-slate-800">{totalEvents}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">
-                Semua Event & Acara
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Filter Halaman"
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <svg
-                    className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Printer className="h-5 w-5" />
-                </button>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Download className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <div className="p-6">
-              {filteredEvents.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">
-                  There are no records to display
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-50 rounded-lg p-2 mt-0.5">
-                          <CalendarDays className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {event.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {event.date}
-                            </span>
-                            {event.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {event.location}
-                              </span>
-                            )}
-                            <span>{event.participants} peserta</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {tipeBadge(event.tipe)}
-                        {statusBadge(event.status)}
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            router.visit(`/event/${event.id}`)
-                          }
-                        >
-                          Detail
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/event/catalog", "_blank")}
+            >
+              Katalog Publik
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={openCreate}
+            >
+              + Buat Event
+            </Button>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <Popover open={dateOpen} onOpenChange={setDateOpen}>
-            <PopoverTrigger asChild>
-              <button
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left text-gray-500 hover:border-gray-300 transition",
-                  dateFilter && "text-gray-800"
-                )}
-              >
-                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
-                {dateFilter
-                  ? format(dateFilter, "dd MMM yyyy")
-                  : "Filter Berdasarkan Tanggal..."}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={dateFilter}
-                onSelect={(date) => {
-                  setDateFilter(date);
-                  setDateOpen(false);
-                }}
-                initialFocus
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-              {dateFilter && (
-                <div className="p-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs text-gray-500"
-                    onClick={() => {
-                      setDateFilter(undefined);
-                      setDateOpen(false);
-                    }}
-                  >
-                    Reset Tanggal
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-
-          <Input
-            placeholder="Cari Event & Acara"
-            className="bg-white text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="space-y-2">
-            {filterButtons.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                {btn.label}
-              </button>
-            ))}
+            </svg>
+            <Input
+              placeholder="Cari Nama Event..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <button
-            onClick={() =>
-              window.open("/event/catalog", "_blank")
-            }
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2"
-          >
-            KATALOG EVENT & ACARA
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            Katalog Event adalah halaman katalog online dimana semua
-            event anda yang aktif ditampilkan.
-          </p>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Tipe Select */}
+            <Select value={tipeFilter} onValueChange={setTipeFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Tipe" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Tipe</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <button
-            onClick={openCreate}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition"
-          >
-            + Buat Event Baru
-          </button>
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter */}
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-350 transition text-slate-600",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-455 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tipe</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Event</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lokasi / Link</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredEvents.map((e, index) => {
+                    const statusIsPublik = e.status === "published";
+                    const formattedDate = e.created_at ? format(new Date(e.created_at), "dd MMM yyyy", { locale: idLocale }) : "-";
+                    return (
+                      <tr key={e.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {e.cover_url ? (
+                            <img
+                              src={e.cover_url}
+                              alt={e.name}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-slate-655 capitalize">
+                          {e.tipe}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[200px] truncate">
+                          {e.name}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold select-all max-w-[180px] truncate">
+                          {e.location || "-"}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{e.participants}</td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-755 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-450 font-semibold whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => router.visit(`/event/${e.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

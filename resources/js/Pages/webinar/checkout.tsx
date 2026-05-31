@@ -27,6 +27,7 @@ type Webinar = {
   tanggal_selesai?: string;
   instruksi?: string;
   syarat_ketentuan?: string;
+  user_id?: number | null;
 };
 
 type Props = {
@@ -163,6 +164,7 @@ export default function CheckoutWebinar({ webinar }: Props) {
       badgeText="Webinar"
       navTitle="Mayar Webinar"
       navIcon={<Award className="text-white h-5 w-5" />}
+      creatorId={webinar.user_id}
       onCheckout={() => setCheckoutOpen(true)}
     >
       <div className="space-y-8">

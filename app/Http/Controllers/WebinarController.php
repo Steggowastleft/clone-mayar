@@ -19,16 +19,19 @@ class WebinarController extends Controller
 
         $webinars = Webinar::where('user_id', $userId)
             ->orderByDesc('created_at')
-            ->get([
-                'id',
-                'nama',
-                'status',
-                'tanggal_mulai',
-                'tanggal_selesai',
-                'peserta',
-                'max_peserta',
-                'harga',
-                'url',
+            ->get()
+            ->map(fn($w) => [
+                'id'              => $w->id,
+                'nama'            => $w->nama,
+                'status'          => $w->status,
+                'tanggal_mulai'   => $w->tanggal_mulai ? $w->tanggal_mulai->format('Y-m-d H:i:s') : null,
+                'tanggal_selesai' => $w->tanggal_selesai ? $w->tanggal_selesai->format('Y-m-d H:i:s') : null,
+                'peserta'         => $w->peserta,
+                'max_peserta'     => $w->max_peserta,
+                'harga'           => $w->harga,
+                'url'             => $w->url,
+                'cover_url'       => $w->cover_url,
+                'created_at'      => $w->created_at ? $w->created_at->format('Y-m-d H:i:s') : null,
             ]);
 
         return Inertia::render('webinar/index', [

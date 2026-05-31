@@ -18,6 +18,7 @@ export default function DashboardLayout({ title, children }: Props) {
       <div className="flex min-h-screen bg-gray-50">
         <DashboardSidebar
           user={{
+            id:    auth?.user?.id,
             name:  auth?.user?.name  || "Penjual",
             email: auth?.user?.email || "",
             role:  auth?.user?.role,

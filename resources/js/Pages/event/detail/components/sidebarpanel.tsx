@@ -26,7 +26,8 @@ import {
 
 type Event = {
   id: number;
-  nama: string;
+  nama?: string;
+  name?: string;
   status: "published" | "unpublished" | "unlisted";
 };
 

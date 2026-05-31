@@ -13,7 +13,7 @@ import {
 import {
     Printer, Download, MessageCircle, ChevronLeft,
     ChevronRight, ChevronsLeft, ChevronsRight, Loader2,
-    FileText, CheckCircle2,
+    FileText, CheckCircle2, Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";

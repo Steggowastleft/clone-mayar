@@ -95,6 +95,10 @@ class TulisanController extends Controller
 
     public function edit(Tulisan $tulisan): Response
     {
+        if ($tulisan->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         return Inertia::render('tulisan/detail', [
             'tulisan' => $tulisan,
             'isEdit' => true

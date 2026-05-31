@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { CalendarIcon, Upload, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 import {
   Dialog,
@@ -36,6 +37,25 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   produk: any;
   oldFiles?: any[];
+};
+
+function formatRupiah(value: number): string {
+  return new Intl.NumberFormat("id-ID").format(value);
+}
+
+const getFileAcceptAttribute = (kategori: string, format: string) => {
+  if (kategori === "video") {
+    if (format === "MP4") return "video/mp4";
+    return "video/*";
+  }
+  if (kategori === "komik") {
+    if (format === "PDF") return "application/pdf";
+    if (format === "JPG") return "image/jpeg,image/jpg";
+    if (format === "JPEG") return "image/jpeg";
+    if (format === "PNG") return "image/png";
+    return "application/pdf,image/png,image/jpeg,image/jpg";
+  }
+  return "application/pdf";
 };
 
 const KATEGORI_OPTIONS = [
@@ -245,6 +265,7 @@ export function EditProdukDigitalDialog({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [kontenFile, setKontenFile] = useState<File | null>(null);
+  const [pageFiles, setPageFiles] = useState<(File | string | null)[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -287,6 +308,25 @@ export function EditProdukDigitalDialog({
       setCoverPreview(produk.cover_url || "");
       setCoverFile(null);
       setKontenFile(null);
+
+      let initialPages: (string | null)[] = [];
+      if (produk.kategori === "komik" && produk.format !== "PDF" && produk.sumber_file === "upload") {
+        try {
+          if (produk.file_url && (produk.file_url.startsWith('[') || produk.file_url.startsWith('{'))) {
+            initialPages = JSON.parse(produk.file_url);
+          } else if (produk.file_url) {
+            initialPages = [produk.file_url];
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      const numPages = parseInt(produk.jumlah_halaman) || initialPages.length || 0;
+      const pages = [];
+      for (let i = 0; i < numPages; i++) {
+        pages.push(initialPages[i] || null);
+      }
+      setPageFiles(pages);
     }
   }, [produk]);
 
@@ -328,7 +368,39 @@ export function EditProdukDigitalDialog({
       setCoverPreview(produk.cover_url || "");
       setCoverFile(null);
       setKontenFile(null);
+      setPageFiles([]);
     }
+  };
+
+  useEffect(() => {
+    if (
+      formData.kategori === "komik" &&
+      formData.format !== "PDF" &&
+      formData.sumberFile === "upload"
+    ) {
+      const count = parseInt(formData.jumlahHalaman) || 0;
+      setPageFiles((prev) => {
+        const next = [...prev];
+        if (next.length < count) {
+          while (next.length < count) {
+            next.push(null);
+          }
+        } else if (next.length > count) {
+          next.splice(count);
+        }
+        return next;
+      });
+    } else {
+      setPageFiles([]);
+    }
+  }, [formData.jumlahHalaman, formData.kategori, formData.format, formData.sumberFile]);
+
+  const handlePageFileChange = (index: number, file: File) => {
+    setPageFiles((prev) => {
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
   };
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,7 +415,54 @@ export function EditProdukDigitalDialog({
 
   const handleKontenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setKontenFile(file);
+    if (file) {
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+      
+      if (formData.kategori === "video") {
+        if (!fileType.startsWith("video/")) {
+          toast.error("Format file harus berupa video");
+          return;
+        }
+        if (formData.format === "MP4" && !fileName.endsWith(".mp4")) {
+          toast.error("File harus berupa MP4");
+          return;
+        }
+      } else if (formData.kategori === "komik") {
+        if (formData.format === "PDF" && !fileName.endsWith(".pdf") && fileType !== "application/pdf") {
+          toast.error("File harus berupa PDF");
+          return;
+        }
+        if (formData.format === "PNG" && !fileName.endsWith(".png") && fileType !== "image/png") {
+          toast.error("File harus berupa PNG");
+          return;
+        }
+        if ((formData.format === "JPG" || formData.format === "JPEG") && 
+            !fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && 
+            fileType !== "image/jpeg" && fileType !== "image/jpg") {
+          toast.error("File harus berupa JPG/JPEG");
+          return;
+        }
+        if (!formData.format) {
+          const isValid = fileType === "application/pdf" || 
+                          fileType.startsWith("image/") || 
+                          fileName.endsWith(".pdf") || 
+                          fileName.endsWith(".png") || 
+                          fileName.endsWith(".jpg") || 
+                          fileName.endsWith(".jpeg");
+          if (!isValid) {
+            toast.error("File komik harus berupa PDF atau Gambar (PNG, JPG, JPEG)");
+            return;
+          }
+        }
+      } else {
+        if (!fileName.endsWith(".pdf") && fileType !== "application/pdf") {
+          toast.error("File harus berupa PDF");
+          return;
+        }
+      }
+      setKontenFile(file);
+    }
   };
 
   const handleSave = () => {
@@ -359,13 +478,38 @@ export function EditProdukDigitalDialog({
       toast.error("Harga harus diisi untuk produk berbayar");
       return;
     }
-    if (formData.sumberFile === "file_lama" && !formData.redirectUrl) {
+    if (formData.sumberFile === "file_lama" && !formData.redirectUrl && formData.kategori !== "tulisan") {
       toast.error("File lama harus dipilih");
       return;
     }
-    if (formData.sumberFile === "link" && !formData.redirectUrl) {
+    if (formData.sumberFile === "link" && !formData.redirectUrl && formData.kategori !== "tulisan") {
       toast.error("URL redirect harus diisi");
       return;
+    }
+
+    let hasNewFile = pageFiles.some((f) => f instanceof File);
+    let initialPagesCount = 0;
+    try {
+      if (produk && produk.file_url && (produk.file_url.startsWith('[') || produk.file_url.startsWith('{'))) {
+        initialPagesCount = JSON.parse(produk.file_url).length;
+      } else if (produk && produk.file_url) {
+        initialPagesCount = 1;
+      }
+    } catch(e) {}
+
+    const count = parseInt(formData.jumlahHalaman) || 0;
+    if (count !== initialPagesCount && count > 0 && formData.kategori === "komik" && formData.format !== "PDF" && formData.sumberFile === "upload") {
+      hasNewFile = true;
+    }
+
+    if (formData.sumberFile === "upload" && formData.kategori === "komik" && formData.format !== "PDF") {
+      if (hasNewFile) {
+        const missingFiles = pageFiles.some((f) => !(f instanceof File));
+        if (missingFiles) {
+          toast.error("Jika Anda mengubah file komik, Anda harus mengupload file gambar untuk semua halaman.");
+          return;
+        }
+      }
     }
 
     setIsSubmitting(true);
@@ -396,7 +540,7 @@ export function EditProdukDigitalDialog({
     if (formData.bahasa) payload.append("bahasa", formData.bahasa);
     if (formData.jumlahHalaman) payload.append("jumlah_halaman", formData.jumlahHalaman);
     payload.append("bisa_didownload", formData.bisaDidownload ? "1" : "0");
-    if (formData.kategori === "tulisan" || formData.kategori === "komik") {
+    if (formData.kategori === "novel" || formData.kategori === "komik") {
       payload.append("tipe_tulisan", formData.tipeTulisan);
       if (formData.tipeTulisan === "chapter") {
         payload.append("mekanisme_bayar", formData.mekanismeBayar);
@@ -427,7 +571,17 @@ export function EditProdukDigitalDialog({
     }
 
     if (coverFile) payload.append("cover", coverFile);
-    if (kontenFile) payload.append("file", kontenFile);
+    if (formData.kategori === "komik" && formData.format !== "PDF" && formData.sumberFile === "upload") {
+      if (hasNewFile) {
+        pageFiles.forEach((file) => {
+          if (file instanceof File) {
+            payload.append("page_files[]", file);
+          }
+        });
+      }
+    } else {
+      if (kontenFile) payload.append("file", kontenFile);
+    }
 
     // method spoofing Laravel
     payload.append("_method", "POST");
@@ -452,7 +606,7 @@ export function EditProdukDigitalDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent aria-describedby={undefined} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className={cn("p-6 text-white rounded-t-lg", theme.bgHeader)}>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -503,8 +657,8 @@ export function EditProdukDigitalDialog({
                 <p className="text-xs text-gray-400 text-right">{formData.nama.length}/200</p>
               </div>
 
-              {/* Tipe Penulisan & Mekanisme Pembayaran (Khusus Komik dan Tulisan/Artikel) */}
-              {(formData.kategori === "komik" || formData.kategori === "tulisan") && (
+              {/* Tipe Penulisan & Mekanisme Pembayaran (Khusus Komik dan Novel) */}
+              {(formData.kategori === "komik" || formData.kategori === "novel") && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium text-gray-700">Tipe Penulisan *</Label>
@@ -516,17 +670,8 @@ export function EditProdukDigitalDialog({
                         <SelectValue placeholder="Pilih tipe penulisan..." />
                       </SelectTrigger>
                       <SelectContent className="z-[300]">
-                        {formData.kategori === "tulisan" ? (
-                          <>
-                            <SelectItem value="one_shot">One-Shot (Cerpen,Blog,Essay)</SelectItem>
-                            <SelectItem value="chapter">Chapter (Buku, Antologi)</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="one_shot">One-Shot</SelectItem>
-                            <SelectItem value="chapter">Chapter</SelectItem>
-                          </>
-                        )}
+                        <SelectItem value="one_shot">One-Shot</SelectItem>
+                        <SelectItem value="chapter">Chapter</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -541,7 +686,6 @@ export function EditProdukDigitalDialog({
                         <SelectValue placeholder="Pilih mekanisme..." />
                       </SelectTrigger>
                       <SelectContent className="z-[300]">
-                        <SelectItem value="sekali_bayar">Sekali Bayar</SelectItem>
                         <SelectItem value="per_chapter">Bayar Per-chapter</SelectItem>
                         <SelectItem value="semua_chapter">Semua Chapter(paket)</SelectItem>
                       </SelectContent>
@@ -579,11 +723,10 @@ export function EditProdukDigitalDialog({
                       <span className="absolute left-3 top-2 text-sm text-gray-500 font-semibold text-blue-600">RP.</span>
                       <Input
                         className="pl-9"
-                        type="number"
-                        min={0}
+                        type="text"
                         placeholder="50.000"
-                        value={formData.harga}
-                        onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                        value={formData.harga ? formatRupiah(Number(formData.harga)) : ""}
+                        onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                       />
                     </div>
                   </div>
@@ -598,11 +741,10 @@ export function EditProdukDigitalDialog({
                         <span className="absolute left-3 top-2 text-sm text-gray-500 font-semibold text-blue-600">RP.</span>
                         <Input
                           className="pl-9"
-                          type="number"
-                          min={0}
+                          type="text"
                           placeholder="75.000"
-                          value={formData.hargaCoret}
-                          onChange={(e) => setFormData({ ...formData, hargaCoret: e.target.value })}
+                          value={formData.hargaCoret ? formatRupiah(Number(formData.hargaCoret)) : ""}
+                          onChange={(e) => setFormData({ ...formData, hargaCoret: e.target.value.replace(/\D/g, "") })}
                         />
                       </div>
                     </div>
@@ -616,12 +758,19 @@ export function EditProdukDigitalDialog({
                   {formData.kategori === "novel" || formData.kategori === "komik" ? "Deskripsi/Sinopsis" : "Deskripsi"}{" "}
                   <span className="text-red-500">*</span>
                 </Label>
-                <Textarea
-                  placeholder="Tuliskan deskripsi produk digital..."
-                  rows={4}
-                  value={formData.deskripsi}
-                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                />
+                {formData.kategori === "tulisan" ? (
+                  <RichTextEditor
+                    value={formData.deskripsi}
+                    onChange={(val) => setFormData({ ...formData, deskripsi: val })}
+                  />
+                ) : (
+                  <Textarea
+                    placeholder="Tuliskan deskripsi produk digital..."
+                    rows={4}
+                    value={formData.deskripsi}
+                    onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                  />
+                )}
               </div>
 
               {/* Transkrip (khusus video/podcast) */}
@@ -754,25 +903,7 @@ export function EditProdukDigitalDialog({
                 </div>
               )}
 
-              {/* Kategori Produk (Khusus Ebook) */}
-              {formData.kategori === "e-book" && (
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">Kategori Produk</Label>
-                  <Select
-                    value={formData.kategori_produk}
-                    onValueChange={(value) => setFormData({ ...formData, kategori_produk: value })}
-                  >
-                    <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                      <SelectValue placeholder="Pilih Kategori Produk..." />
-                    </SelectTrigger>
-                    <SelectContent className="z-[300]">
-                      <SelectItem value="Buku Programmer">Buku Programmer</SelectItem>
-                      <SelectItem value="Buku Soal SMA">Buku Soal SMA</SelectItem>
-                      <SelectItem value="Resep Masak">Resep Masak</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+
 
               {/* Switch untuk Ebook saja */}
               {formData.kategori === "e-book" && (
@@ -802,7 +933,7 @@ export function EditProdukDigitalDialog({
                 </div>
               ) : (
                 /* Jika Pakai Upload/File (Novel, Komik, Ebook, Video/Podcast semuanya butuh file jika bukan link) */
-                (formData.kategori === "novel" || formData.kategori === "e-book" || formData.kategori === "video") && (
+                (formData.kategori === "novel" || formData.kategori === "e-book" || formData.kategori === "video" || formData.kategori === "komik" || formData.kategori === "tulisan") && (
                   <div className="space-y-4 p-4 border border-gray-100 rounded-lg bg-gray-50/50">
                     {/* File Digital Type */}
                     <div className="space-y-1">
@@ -818,22 +949,42 @@ export function EditProdukDigitalDialog({
                           {formData.kategori === "video" ? (
                             <>
                               <SelectItem value="MP4">MP4</SelectItem>
-                              <SelectItem value="WAV">WAV</SelectItem>
-                              <SelectItem value="MP3">MP3</SelectItem>
+                            </>
+                          ) : formData.kategori === "komik" ? (
+                            <>
+                              <SelectItem value="PDF">PDF</SelectItem>
+                              <SelectItem value="JPG">JPG</SelectItem>
+                              <SelectItem value="PNG">PNG</SelectItem>
+                              <SelectItem value="JPEG">JPEG</SelectItem>
                             </>
                           ) : (
                             <>
                               <SelectItem value="PDF">PDF</SelectItem>
-                              <SelectItem value="EPUB">EPUB</SelectItem>
                             </>
                           )}
                         </SelectContent>
                       </Select>
                     </div>
 
+                    {/* Jumlah Halaman (Khusus Komik) */}
+                    {formData.kategori === "komik" && (
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Jumlah Halaman <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Masukkan jumlah halaman..."
+                          value={formData.jumlahHalaman}
+                          onChange={(e) => setFormData({ ...formData, jumlahHalaman: e.target.value })}
+                        />
+                      </div>
+                    )}
+
                     {/* Sumber File */}
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Sumber File *</Label>
+                      <Label className="text-sm font-medium text-gray-700">Sumber File {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
                       <Select
                         value={formData.sumberFile}
                         onValueChange={(value) => setFormData({ ...formData, sumberFile: value as any })}
@@ -850,38 +1001,143 @@ export function EditProdukDigitalDialog({
 
                     {/* File Upload Zone */}
                     {formData.sumberFile === "upload" ? (
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">File/Konten (Biarkan kosong jika tidak ingin mengubah)</Label>
-                        <div
-                          className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
-                          onClick={() => kontenInputRef.current?.click()}
-                        >
-                          {kontenFile ? (
-                            <div className="space-y-1">
-                              <Package className="h-8 w-8 text-blue-500 mx-auto" />
-                              <p className="text-sm font-medium text-blue-600">{kontenFile.name}</p>
-                              <p className="text-xs text-gray-400">
-                                {(kontenFile.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
+                      formData.kategori === "komik" && formData.format !== "PDF" ? (
+                        pageFiles.length > 0 ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium text-gray-700">Upload Halaman Komik ({pageFiles.length} Halaman)</Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs flex items-center gap-1.5 py-1 px-2.5 h-auto bg-white hover:bg-gray-50 border-gray-200"
+                                onClick={() => document.getElementById('edit-bulk-upload-pages')?.click()}
+                              >
+                                <Upload className="h-3.5 w-3.5 text-gray-500" /> Upload Sekaligus
+                              </Button>
+                              <input
+                                id="edit-bulk-upload-pages"
+                                type="file"
+                                multiple
+                                accept={getFileAcceptAttribute("komik", formData.format)}
+                                className="hidden"
+                                onChange={(e) => {
+                                  const files = Array.from(e.target.files || []);
+                                  if (files.length === 0) return;
+                                  
+                                  // Sort alphabetically/numerically
+                                  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                                  
+                                  setPageFiles((prev) => {
+                                    const next = [...prev];
+                                    for (let i = 0; i < Math.min(files.length, next.length); i++) {
+                                      next[i] = files[i];
+                                    }
+                                    return next;
+                                  });
+                                  toast.success(`Berhasil memuat ${Math.min(files.length, pageFiles.length)} file halaman.`);
+                                }}
+                              />
                             </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                              {produk.file_url ? (
-                                <p className="text-xs text-green-600 font-medium">✓ File tersimpan: {basename(produk.file_url)}</p>
-                              ) : null}
-                              <p className="text-sm text-gray-500 font-semibold text-blue-600">Pilih file baru...</p>
-                              <p className="text-xs text-gray-400">Drag & drop file di sini</p>
+                            <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-md bg-white">
+                              {pageFiles.map((file, idx) => (
+                                <div
+                                  key={idx}
+                                  className="border border-gray-200 rounded-lg p-3 bg-gray-50/50 flex flex-col justify-between hover:border-blue-400 transition cursor-pointer relative"
+                                  onClick={() => {
+                                    const input = document.getElementById(`edit-page-input-${idx}`);
+                                    input?.click();
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-semibold text-gray-500">Halaman {idx + 1}</span>
+                                    {file ? (
+                                      <span className="text-xs text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded">
+                                        ✓ {file instanceof File ? "Baru" : "Tersimpan"}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-red-500 font-bold bg-red-50 px-1.5 py-0.5 rounded">
+                                        Belum diisi
+                                      </span>
+                                    )}
+                                  </div>
+                                  {file ? (
+                                    <p className="text-xs text-gray-600 truncate font-medium">
+                                      {file instanceof File ? file.name : basename(file)}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-gray-400 font-normal">Pilih gambar...</p>
+                                  )}
+                                  <input
+                                    id={`edit-page-input-${idx}`}
+                                    type="file"
+                                    accept={getFileAcceptAttribute("komik", formData.format)}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) {
+                                        const fileType = f.type;
+                                        const fileName = f.name.toLowerCase();
+                                        if (formData.format === "PNG" && !fileName.endsWith(".png") && fileType !== "image/png") {
+                                          toast.error(`File halaman ${idx + 1} harus berupa PNG`);
+                                          return;
+                                        }
+                                        if ((formData.format === "JPG" || formData.format === "JPEG") && 
+                                            !fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && 
+                                            fileType !== "image/jpeg" && fileType !== "image/jpg") {
+                                          toast.error(`File halaman ${idx + 1} harus berupa JPG/JPEG`);
+                                          return;
+                                        }
+                                        handlePageFileChange(idx, f);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ))}
                             </div>
-                          )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-xs text-gray-400 border border-dashed rounded-md bg-white">
+                            Masukkan jumlah halaman untuk menampilkan slot upload
+                          </div>
+                        )
+                      ) : (
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium text-gray-700">
+                            {formData.kategori === "tulisan" ? "File/Konten (opsional)" : "File/Konten (Biarkan kosong jika tidak ingin mengubah)"}
+                          </Label>
+                          <div
+                            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
+                            onClick={() => kontenInputRef.current?.click()}
+                          >
+                            {kontenFile ? (
+                              <div className="space-y-1">
+                                <Package className="h-8 w-8 text-blue-500 mx-auto" />
+                                <p className="text-sm font-medium text-blue-600">{kontenFile.name}</p>
+                                <p className="text-xs text-gray-400">
+                                  {(kontenFile.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                {produk.file_url ? (
+                                  <p className="text-xs text-green-600 font-medium">✓ File tersimpan: {basename(produk.file_url)}</p>
+                                ) : null}
+                                <p className="text-sm text-gray-500 font-semibold text-blue-600">Pilih file baru...</p>
+                                <p className="text-xs text-gray-400">Drag & drop file di sini</p>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            ref={kontenInputRef}
+                            type="file"
+                            accept={getFileAcceptAttribute(formData.kategori, formData.format)}
+                            className="hidden"
+                            onChange={handleKontenChange}
+                          />
                         </div>
-                        <input
-                          ref={kontenInputRef}
-                          type="file"
-                          className="hidden"
-                          onChange={handleKontenChange}
-                        />
-                      </div>
+                      )
                     ) : (
                       /* File Lama */
                       <div className="space-y-1">
@@ -972,14 +1228,42 @@ export function EditProdukDigitalDialog({
                         value={formData.isbn}
                         onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
                       />
+                      <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: fiksi, romance, bestseller)</p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
-                      <Input
-                        placeholder="SU"
-                        value={formData.format}
-                        onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 w-9 p-0 bg-white"
+                          onClick={() => {
+                            const val = parseInt(formData.format) || 0;
+                            if (val > 0) setFormData({ ...formData, format: String(val - 1) });
+                          }}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formData.format}
+                          onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+                          className="w-24 text-center bg-white"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 w-9 p-0 bg-white"
+                          onClick={() => {
+                            const val = parseInt(formData.format) || 0;
+                            setFormData({ ...formData, format: String(val + 1) });
+                          }}
+                        >
+                          +
+                        </Button>
+                        <span className="text-xs text-gray-500 font-medium">Tahun</span>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
@@ -988,21 +1272,6 @@ export function EditProdukDigitalDialog({
                         value={formData.bahasa}
                         onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Status</Label>
-                      <Select
-                        value={formData.tipeTulisan}
-                        onValueChange={(value) => setFormData({ ...formData, tipeTulisan: value as any })}
-                      >
-                        <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                          <SelectValue placeholder="Pilih status..." />
-                        </SelectTrigger>
-                        <SelectContent className="z-[300]">
-                          <SelectItem value="tamat">Tamat</SelectItem>
-                          <SelectItem value="ongoing">Ongoing</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 )}
@@ -1076,15 +1345,6 @@ export function EditProdukDigitalDialog({
                         onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Jumlah Halaman</Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={formData.jumlahHalaman}
-                        onChange={(e) => setFormData({ ...formData, jumlahHalaman: e.target.value })}
-                      />
-                    </div>
                   </div>
                 )}
 
@@ -1118,7 +1378,6 @@ export function EditProdukDigitalDialog({
                         </SelectTrigger>
                         <SelectContent className="z-[300]">
                           <SelectItem value="PDF">PDF</SelectItem>
-                          <SelectItem value="EPUB">EPUB</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1233,14 +1492,42 @@ export function EditProdukDigitalDialog({
                         value={formData.genre}
                         onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
                       />
+                      <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: video, tutorial, tips)</p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
-                      <Input
-                        placeholder="SU"
-                        value={formData.isbn}
-                        onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 w-9 p-0 bg-white"
+                          onClick={() => {
+                            const val = parseInt(formData.isbn) || 0;
+                            if (val > 0) setFormData({ ...formData, isbn: String(val - 1) });
+                          }}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={formData.isbn}
+                          onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
+                          className="w-24 text-center bg-white"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 w-9 p-0 bg-white"
+                          onClick={() => {
+                            const val = parseInt(formData.isbn) || 0;
+                            setFormData({ ...formData, isbn: String(val + 1) });
+                          }}
+                        >
+                          +
+                        </Button>
+                        <span className="text-xs text-gray-500 font-medium">Tahun</span>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
@@ -1249,21 +1536,6 @@ export function EditProdukDigitalDialog({
                         value={formData.bahasa}
                         onChange={(e) => setFormData({ ...formData, bahasa: e.target.value })}
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Status</Label>
-                      <Select
-                        value={formData.tipeTulisan}
-                        onValueChange={(value) => setFormData({ ...formData, tipeTulisan: value as any })}
-                      >
-                        <SelectTrigger className={cn("w-full bg-white", theme.borderClass)}>
-                          <SelectValue placeholder="Pilih status..." />
-                        </SelectTrigger>
-                        <SelectContent className="z-[300]">
-                          <SelectItem value="tamat">Tamat</SelectItem>
-                          <SelectItem value="ongoing">Ongoing</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 )}

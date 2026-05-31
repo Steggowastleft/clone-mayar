@@ -3,9 +3,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Download, Printer, ShoppingBag, ExternalLink } from "lucide-react";
+import { Download, CalendarIcon, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 
 type Produk = {
   id: string;
@@ -17,6 +32,7 @@ type Produk = {
   status: "published" | "unpublished" | "unlisted" | "aktif" | "draft" | "selesai" | "dibatalkan";
   terjual: number;
   tanggal: string;
+  cover_url?: string | null;
 };
 
 type Props = { produk?: Produk[] };
@@ -25,8 +41,10 @@ export default function SemuaProduk({ produk = [] }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
 
-  const categories = [...new Set(produk.map(p => p.kategori))];
+  const categories = [...new Set(produk.map((p) => p.kategori).filter(Boolean))];
 
   const filtered = produk.filter((p) => {
     const nama = p.nama ?? "";
@@ -34,199 +52,269 @@ export default function SemuaProduk({ produk = [] }: Props) {
 
     const matchSearch = nama.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchCategory =
-      categoryFilter === "all" || kategori === categoryFilter;
+    const matchCategory = categoryFilter === "all" || kategori === categoryFilter;
+    
+    let matchDate = true;
+    if (dateFilter) {
+      matchDate = p.tanggal.toLowerCase().includes(format(dateFilter, "d").toLowerCase());
+    }
 
-    return matchSearch && matchStatus && matchCategory;
+    return matchSearch && matchStatus && matchCategory && matchDate;
   });
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "published":
-        return <Badge className="bg-green-500 text-white">Published</Badge>;
-      case "unpublished":
-        return <Badge className="bg-yellow-500 text-white">Unpublished</Badge>;
-      case "unlisted":
-        return <Badge className="bg-gray-500 text-white">Unlisted</Badge>;
-      case "aktif":
-        return <Badge className="bg-green-500 text-white">Aktif</Badge>;
-      case "draft":
-        return <Badge className="bg-blue-500 text-white">Draft</Badge>;
-      case "selesai":
-        return <Badge className="bg-gray-500 text-white">Selesai</Badge>;
-      case "dibatalkan":
-        return <Badge className="bg-red-500 text-white">Dibatalkan</Badge>;
-      default:
-        return <Badge>-</Badge>;
-    }
-  };
-
   const formatRupiah = (value: number) =>
-    "Rp " + new Intl.NumberFormat("id-ID").format(value);
+    new Intl.NumberFormat("id-ID").format(value);
 
-  const statusFilterBtns = [
-    { label: "SEMUA", value: "all" },
-    { label: "PUBLISHED", value: "published" },
-    { label: "UNPUBLISHED", value: "unpublished" },
-    { label: "UNLISTED", value: "unlisted" },
-  ];
+  // Stats
+  const totalProduk = produk.length;
+  const publikCount = produk.filter((p) => p.status === "published" || p.status === "aktif").length;
+  const tidakPublikCount = totalProduk - publikCount;
+  const totalPendapatan = produk.reduce((acc, p) => acc + p.terjual * p.harga, 0);
 
   return (
     <DashboardLayout>
       <Head title="Semua Produk" />
 
-      <div className="flex min-h-screen">
-        {/* MAIN */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase mb-1">PROJEK</p>
-
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Semua Produk</h1>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => router.visit("/semua-produk/create")}
-            >
-              + BUAT
-            </Button>
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Semua Produk</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Produk: <span className="font-bold text-slate-800">{totalProduk}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(totalPendapatan)}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +6% Dari bulan kemarin
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* FILTER STATUS */}
-
-
-          {/* FILTER KATEGORI */}
-          {categories.length > 1 && (
-            <div className="bg-white border rounded-lg shadow-sm mb-6">
-              <div className="px-5 py-4 border-b">
-                <h2 className="font-semibold mb-4">Filter Kategori</h2>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => setCategoryFilter("all")}
-                    className={cn(
-                      "px-4 py-2 rounded-md text-sm",
-                      categoryFilter === "all"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100"
-                    )}
-                  >
-                    SEMUA
-                  </button>
-
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setCategoryFilter(cat)}
-                      className={cn(
-                        "px-4 py-2 rounded-md text-sm",
-                        categoryFilter === cat
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100"
-                      )}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LIST */}
-          <div className="bg-white border rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b flex justify-between">
-              <h2 className="font-semibold">
-                Semua Produk ({filtered.length})
-              </h2>
-
-              <div className="flex gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Cari produk..."
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <ShoppingBag className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                </div>
-
-                <Printer className="h-5 w-5 text-gray-400 cursor-pointer" />
-                <Download className="h-5 w-5 text-gray-400 cursor-pointer" />
-              </div>
-            </div>
-
-            <div className="p-6">
-              {filtered.length === 0 ? (
-                <p className="text-center text-gray-400 py-12">
-                  Tidak ada produk
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filtered.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.visit(`/semua-produk/${p.id}`)}
-                    >
-                      <div>
-                        <div className="flex gap-2 mb-1">
-                          <p className="font-semibold">{p.nama}</p>
-                          <Badge variant="outline">{p.kategori}</Badge>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {p.tanggal} • {p.terjual} terjual
-                        </p>
-                        <p className="text-blue-600 font-medium mt-1">
-                          {formatRupiah(p.harga)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {statusBadge(p.status)}
-                        <ExternalLink className="h-4 w-4" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+            >
+              <Download className="h-4 w-4" /> Ekspor Data
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => router.visit("/semua-produk/create")}
+            >
+              + Tambah Produk
+            </Button>
           </div>
         </div>
 
-        {/* SIDEBAR */}
-        <div className="w-72 border-l bg-gray-50 p-4 space-y-3">
-          <Input
-            placeholder="Cari Semua Produk"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="space-y-2">
-            {statusFilterBtns.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full py-2 rounded-md text-sm",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border"
-                )}
-              >
-                {btn.label}
-              </button>
-            ))}
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <Input
+              placeholder="Cari Produk..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <button
-            onClick={() => window.open("/semua-produk/catalog", "_blank")}
-            className="w-full bg-gray-800 text-white py-2 rounded-md flex justify-center gap-2"
-          >
-            KATALOG
-            <ExternalLink className="h-4 w-4" />
-          </button>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Kategori Select */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Kategori" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Button className="w-full bg-blue-600 text-white">
-            + Buat Produk Baru
-          </Button>
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-45 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik (Published)</SelectItem>
+                <SelectItem value="aktif">Publik (Aktif)</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="selesai">Selesai</SelectItem>
+                <SelectItem value="dibatalkan">Dibatalkan</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter */}
+            <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-355 transition text-slate-605",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-450 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateFilterOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateFilterOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Produk</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center text-slate-400 py-16 text-sm">
+                      Tidak ada produk
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((p, index) => {
+                    const statusIsPublik = p.status === "published" || p.status === "aktif";
+                    const itemRevenue = p.terjual * p.harga;
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {p.cover_url ? (
+                            <img
+                              src={p.cover_url}
+                              alt={p.nama}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-slate-655 capitalize">
+                          {p.kategori || "-"}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[200px] truncate">
+                          {p.nama}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold whitespace-nowrap">
+                          Rp. {formatRupiah(p.harga)}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{p.terjual}</td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-bold whitespace-nowrap">
+                          Rp. {formatRupiah(itemRevenue)}
+                        </td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : p.status === "draft"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-red-50 text-red-750 border-red-200"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full mr-1.5",
+                                statusIsPublik ? "bg-green-500" : p.status === "draft" ? "bg-blue-500" : "bg-red-500"
+                              )}
+                            />
+                            {statusIsPublik ? "Publik" : p.status === "draft" ? "Draft" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-400 font-semibold whitespace-nowrap">
+                          {p.tanggal}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => router.visit(`/semua-produk/${p.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </DashboardLayout>

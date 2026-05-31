@@ -20,7 +20,7 @@ export default function PesertaLogin({ redirectTo = "/peserta/dashboard" }: Prop
 
   return (
     <>
-      <Head title="Masuk Peserta — BiinsCart" />
+      <Head title="Masuk Member — BiinsCart" />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');
         .font-cabinet  { font-family: 'Cabinet Grotesk', sans-serif; }
@@ -53,16 +53,16 @@ export default function PesertaLogin({ redirectTo = "/peserta/dashboard" }: Prop
                 <Zap className="h-5 w-5 text-white" fill="currentColor" />
               </div>
               <span className="font-black text-gray-900 text-xl tracking-tight">BiinsCart</span>
-              <span className="text-xs bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">Peserta</span>
+              <span className="text-xs bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-full">Member</span>
             </div>
 
             <div className="anim-1 mb-8">
-              <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mb-2">Portal Peserta</p>
+              <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mb-2">Portal Member</p>
               <h2 className="text-gray-900 text-3xl font-black tracking-tight leading-tight">
-                Lanjutkan<br />
-                <span className="font-serif-in italic font-normal text-blue-600">belajar kamu.</span>
+                Masuk ke<br />
+                <span className="font-serif-in italic font-normal text-blue-600">akun kamu.</span>
               </h2>
-              <p className="text-gray-400 text-sm mt-2">Masuk untuk akses kelas bootcamp</p>
+              <p className="text-gray-400 text-sm mt-2">Akses konten dan produk digital yang telah dibeli</p>
             </div>
 
             <div className="space-y-4">
@@ -95,7 +95,7 @@ export default function PesertaLogin({ redirectTo = "/peserta/dashboard" }: Prop
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-55 text-white font-black text-sm py-3 px-6 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-200 flex items-center justify-center gap-2">
                   {loading
                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Masuk...</>
-                    : <>Masuk ke Kelas <ArrowRight className="h-4 w-4" /></>
+                    : <>Masuk Sekarang <ArrowRight className="h-4 w-4" /></>
                   }
                 </button>
               </div>
@@ -106,8 +106,15 @@ export default function PesertaLogin({ redirectTo = "/peserta/dashboard" }: Prop
                 <div className="flex-1 h-px bg-gray-100" />
               </div>
 
-              <p className="anim-4 text-center text-xs text-gray-300">
-                Mau jual bootcamp?{" "}
+              <p className="anim-4 text-center text-xs text-gray-400">
+                Belum punya akun?{" "}
+                <a href={`/peserta/register?redirect=${encodeURIComponent(redirectTo)}`} className="text-blue-600 hover:text-blue-700 font-bold underline transition">
+                  Daftar Sekarang
+                </a>
+              </p>
+
+              <p className="anim-4 text-center text-xs text-gray-300 pt-2">
+                Mau jual produk digital?{" "}
                 <a href="/login" className="text-gray-400 hover:text-blue-500 underline transition">
                   Masuk sebagai penjual
                 </a>

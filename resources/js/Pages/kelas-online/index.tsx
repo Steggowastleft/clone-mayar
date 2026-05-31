@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   Edit,
   Trash2,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Dialog } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface KelasOnline {
   id: number;
@@ -131,243 +139,249 @@ export default function KelasOnlineIndex({ produk }: Props) {
     { label: "UNLISTED", value: "unlisted" },
   ];
 
+  const totalKelas = produk.total;
+  const publikCount = produk.data.filter((k) => k.status === "published").length;
+  const tidakPublikCount = totalKelas - publikCount;
+
   return (
     <DashboardLayout title="Kelas Online">
-      <div className="flex gap-0 min-h-screen">
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            PROJEK
-          </p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Kelas Online</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/kelas-online/katalog")}
-              >
-                PRODUK
-              </Button>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setCreateOpen(true)}
-              >
-                + BUAT
-              </Button>
+      <Head title="Kelas Online" />
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kelas Online</h1>
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2">
+                <span>Total Kelas: <span className="font-bold text-slate-800">{totalKelas}</span></span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakPublikCount} Tidak Publik
+                </span>
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{publikCount} Publik
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">Semua Kelas Online</h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Filter Halaman"
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <svg
-                    className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Printer className="h-5 w-5" />
-                </button>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Download className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              {filteredKelas.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">
-                  There are no records to display
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredKelas.map((kelas) => (
-                    <div
-                      key={kelas.id}
-                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <div className="flex gap-4 items-center">
-                        <div className="w-16 h-12 bg-gray-100 rounded flex items-center justify-center overflow-hidden shrink-0">
-                          {kelas.thumbnail ? (
-                            <img src={`/storage/${kelas.thumbnail}`} alt={kelas.nama} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-xl">🎓</span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {kelas.nama}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {kelas.is_gratis ? "Gratis" : `Rp ${Number(kelas.harga).toLocaleString("id-ID")}`}
-                            {kelas.tanggal_mulai && ` · ${new Date(kelas.tanggal_mulai).toLocaleDateString("id-ID")}`} 
-                            {kelas.peserta_terdaftar_count > 0 && ` · ${kelas.peserta_terdaftar_count} peserta`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {statusBadge(kelas.status)}
-                        <Button
-                          size="sm"
-                          onClick={() => router.visit(`/kelas-online/${kelas.id}/manage`)}
-                        >
-                          Detail
-                        </Button>
-                        <button
-                          onClick={() => handleEdit(kelas)}
-                          className="text-gray-400 hover:text-blue-600 transition"
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(kelas)}
-                          className="text-gray-400 hover:text-red-600 transition"
-                          title="Hapus"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Pagination */}
-            {produk.last_page > 1 && (
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-center gap-2">
-                {Array.from({ length: produk.last_page }, (_, i) => i + 1).map(
-                  (page) => (
-                    <button
-                      key={page}
-                      onClick={() => router.get("/kelas-online", { page })}
-                      className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${
-                        page === produk.current_page
-                          ? "bg-blue-600 text-white"
-                          : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
-              </div>
-            )}
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/kelas-online/katalog", "_blank")}
+            >
+              Katalog Publik
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => setCreateOpen(true)}
+            >
+              + Buat Kelas Online
+            </Button>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <Popover open={dateOpen} onOpenChange={setDateOpen}>
-            <PopoverTrigger asChild>
-              <button
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left text-gray-500 hover:border-gray-300 transition",
-                  dateFilter && "text-gray-800"
-                )}
-              >
-                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
-                {dateFilter
-                  ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
-                  : "Filter Berdasarkan Tanggal..."}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={dateFilter}
-                onSelect={(date) => {
-                  setDateFilter(date);
-                  setDateOpen(false);
-                }}
-                initialFocus
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-              {dateFilter && (
-                <div className="p-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs text-gray-500"
-                    onClick={() => {
-                      setDateFilter(undefined);
-                      setDateOpen(false);
-                    }}
-                  >
-                    Reset Tanggal
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-
-          <Input
-            placeholder="Cari Kelas Online"
-            className="bg-white text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <div className="space-y-2">
-            {filterButtons.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                {btn.label}
-              </button>
-            ))}
+            </svg>
+            <Input
+              placeholder="Cari Nama Kelas..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <button
-            onClick={() => window.open("/kelas-online/katalog", "_blank")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2"
-          >
-            KATALOG KELAS ONLINE
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            Katalog Kelas adalah halaman katalog online dimana semua Kelas
-            Online anda yang published ditampilkan.
-          </p>
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Status Select */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+                <SelectItem value="unlisted">Tidak Publik (Unlisted)</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Dialog>
-            <button className="w-full px-4 py-2.5 border border-gray-200 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 transition bg-white">
-              INFO & TUTORIAL
-            </button>
-          </Dialog>
+            {/* Date Filter */}
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 border border-slate-250 rounded-lg bg-white text-xs font-semibold hover:border-slate-350 transition text-slate-600",
+                    dateFilter && "text-slate-800 border-slate-450"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 text-slate-455 shrink-0" />
+                  {dateFilter
+                    ? format(dateFilter, "dd MMM yyyy", { locale: idLocale })
+                    : "Pilih Tanggal"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(d) => {
+                    setDateFilter(d);
+                    setDateOpen(false);
+                  }}
+                  initialFocus
+                />
+                {dateFilter && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-slate-500"
+                      onClick={() => {
+                        setDateFilter(undefined);
+                        setDateOpen(false);
+                      }}
+                    >
+                      Hapus filter tanggal
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
 
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition"
-          >
-            + Buat Kelas Online Baru
-          </button>
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Kelas</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredKelas.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredKelas.map((kelas, index) => {
+                    const statusIsPublik = kelas.status === "published";
+                    const formattedDate = kelas.tanggal_mulai ? format(new Date(kelas.tanggal_mulai), "dd MMM yyyy", { locale: idLocale }) : "-";
+                    return (
+                      <tr key={kelas.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{(produk.current_page - 1) * 12 + index + 1}</td>
+                        <td className="px-5 py-5">
+                          {kelas.thumbnail ? (
+                            <img
+                              src={`/storage/${kelas.thumbnail}`}
+                              alt={kelas.nama}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[250px] truncate">
+                          {kelas.nama}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-semibold whitespace-nowrap">
+                          {kelas.is_gratis ? "Gratis" : `Rp ${new Intl.NumberFormat("id-ID").format(kelas.harga)}`}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">
+                          {kelas.peserta_terdaftar_count || 0}
+                        </td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-755 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Tidak Publik"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-xs text-slate-455 font-semibold whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                        <td className="px-5 py-5 text-right whitespace-nowrap space-x-2">
+                          <button
+                            onClick={() => router.visit(`/kelas-online/${kelas.id}/manage`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                          <button
+                            onClick={() => handleEdit(kelas)}
+                            className="text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(kelas)}
+                            className="text-xs font-semibold text-red-650 hover:text-red-800 border border-red-100 bg-red-50/50 px-2 py-1 rounded hover:bg-red-50 transition"
+                          >
+                            Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {produk.last_page > 1 && (
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-center gap-2 bg-slate-50/30">
+              {Array.from({ length: produk.last_page }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => router.get("/kelas-online", { page })}
+                    className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${
+                      page === produk.current_page
+                        ? "bg-blue-600 text-white"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+            </div>
+          )}
         </div>
       </div>
 
