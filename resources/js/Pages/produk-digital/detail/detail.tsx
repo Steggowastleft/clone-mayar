@@ -363,8 +363,8 @@ export default function TabDetail({ produk }: { produk: ProdukDigitalData }) {
     }
   ];
 
-  const linkPembayaran = `${baseUrl}/p/${produk.id}/digital`;
-  const linkHalamanProduk = `${baseUrl}/produk/${produk.slug}`;
+  const linkPembayaran = `${baseUrl}/produk-digital/${produk.id}/p`;
+  const linkHalamanProduk = `${baseUrl}/produk-digital/${produk.id}/p`;
 
   return (
     <div className="space-y-6">

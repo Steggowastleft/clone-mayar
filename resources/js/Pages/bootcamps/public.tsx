@@ -112,6 +112,8 @@ function ContentCard({ title, children }: { title: string; children: React.React
 export default function BootcampPublic(props: Props) {
   const { bootcamp, peserta = null } = props;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(bootcamp.harga ?? 0);
+  const [couponCode, setCouponCode] = useState("");
   const isBerbayar = (bootcamp.harga ?? 0) > 0;
 
   const sesiList   = ensureArray(props.sesiList);
@@ -134,7 +136,11 @@ export default function BootcampPublic(props: Props) {
     instruktur.length > 0 && { href: "#instruktur", label: "Instruktur" },
   ].filter(Boolean) as { href: string; label: string }[];
 
-  const handleCheckoutClick = () => {
+  const handleCheckoutClick = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
     setCheckoutOpen(true);
   };
 
@@ -434,7 +440,8 @@ export default function BootcampPublic(props: Props) {
         productType="bootcamp"
         productId={bootcamp.id}
         productName={bootcamp.name}
-        harga={bootcamp.harga ?? 0}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </PublicProductLayout>
   );

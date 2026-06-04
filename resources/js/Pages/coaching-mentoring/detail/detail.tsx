@@ -412,12 +412,12 @@ export default function DetailTab({ coaching, onUpdate }: Props) {
           {[
             {
               label: "COPY LINK PENDAFTARAN",
-              url: `${baseUrl}/p/${coaching.id}/coaching-mentoring`,
-              openable: false,
+              url: `${baseUrl}/coaching-mentoring/${coaching.id}/p`,
+              openable: true,
             },
             {
               label: "COPY HALAMAN",
-              url: `${baseUrl}/coaching-mentoring/${coaching.id}`,
+              url: `${baseUrl}/coaching-mentoring/${coaching.id}/p`,
               openable: true,
             },
           ].map((item) => (

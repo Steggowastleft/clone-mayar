@@ -87,24 +87,37 @@ class WebinarPaymentController extends Controller
         \Midtrans\Config::$isSanitized = true;
         \Midtrans\Config::$is3ds = true;
 
+        $finalPrice = $webinar->harga;
+        $itemDetails = [
+            [
+                'id'       => 'WEBINAR-' . $webinar->id,
+                'price'    => (int) $webinar->harga,
+                'quantity' => 1,
+                'name'     => substr($webinar->nama, 0, 50),
+            ]
+        ];
+
+        if ($webinar->harga > 0) {
+            $finalPrice = $webinar->harga + 5000;
+            $itemDetails[] = [
+                'id'       => 'admin-fee',
+                'price'    => 5000,
+                'quantity' => 1,
+                'name'     => 'Biaya Penanganan Admin',
+            ];
+        }
+
         $params = [
             'transaction_details' => [
                 'order_id'      => $orderId,
-                'gross_amount'  => (int) $webinar->harga,
+                'gross_amount'  => (int) $finalPrice,
             ],
             'customer_details' => [
                 'first_name'    => $validated['name'],
                 'email'         => $validated['email'],
                 'phone'         => $validated['phone'],
             ],
-            'item_details' => [
-                [
-                    'id'       => 'WEBINAR-' . $webinar->id,
-                    'price'    => (int) $webinar->harga,
-                    'quantity' => 1,
-                    'name'     => $webinar->nama,
-                ]
-            ]
+            'item_details' => $itemDetails
         ];
 
         try {
@@ -116,7 +129,7 @@ class WebinarPaymentController extends Controller
                 'user_email'    => $validated['email'],
                 'user_name'     => $validated['name'],
                 'user_phone'    => $validated['phone'],
-                'amount'        => $webinar->harga,
+                'amount'        => $finalPrice,
                 'status'        => 'pending',
                 'type'          => 'webinar',
                 'reference_id'  => $webinar->id,

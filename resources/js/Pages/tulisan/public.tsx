@@ -36,6 +36,8 @@ type Props = {
 
 export default function TulisanPublic({ tulisan }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(tulisan.harga);
+  const [couponCode, setCouponCode] = useState("");
 
   return (
     <>
@@ -50,7 +52,13 @@ export default function TulisanPublic({ tulisan }: Props) {
         badgeText="Tulisan"
         navTitle="Mayar Tulisan"
         navIcon={<PenLine className="text-white h-5 w-5" />}
-        onCheckout={() => setCheckoutOpen(true)}
+        onCheckout={(finalPrice?: number, coupon?: string) => {
+          if (typeof finalPrice === "number") {
+            setCheckoutPrice(finalPrice);
+          }
+          setCouponCode(coupon || "");
+          setCheckoutOpen(true);
+        }}
         creatorId={tulisan.user_id}
       >
         <div className="space-y-8">
@@ -185,7 +193,8 @@ export default function TulisanPublic({ tulisan }: Props) {
         productType="tulisan"
         productId={tulisan.id}
         productName={tulisan.nama}
-        harga={tulisan.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </>
   );

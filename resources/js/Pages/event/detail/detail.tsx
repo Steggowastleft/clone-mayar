@@ -230,11 +230,11 @@ export default function TabDetail({ event, pembicaraList = [] }: { event: EventD
           {[
             {
               label: "Tautan Pendaftaran (Checkout)",
-              url: `${baseUrl}/p/${event.id}/event`,
+              url: `${baseUrl}/event/${event.id}/p`,
             },
             {
               label: "Halaman Detail Event",
-              url: `${baseUrl}/event/${event.id}`,
+              url: `${baseUrl}/event/${event.id}/p`,
             },
           ].map((item) => (
             <div key={item.label} className="space-y-1.5">

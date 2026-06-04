@@ -189,11 +189,11 @@ export default function TabDetail({ produk }: { produk: PenggalanganDana }) {
           {[
             {
               label: `Tautan ${shareLabel} (Checkout)`,
-              url: `${baseUrl}/penggalangan-dana/${produk?.id}`,
+              url: `${baseUrl}/penggalangan-dana/${produk?.id}/p`,
             },
             {
               label: "Halaman Detail Produk",
-              url: `${baseUrl}/penggalangan-dana/${produk?.id}`,
+              url: `${baseUrl}/penggalangan-dana/${produk?.id}/p`,
             },
           ].map((item) => (
             <div key={item.label} className="space-y-1.5">

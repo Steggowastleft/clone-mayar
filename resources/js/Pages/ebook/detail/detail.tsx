@@ -545,12 +545,12 @@ export default function DetailTab({ ebook, onUpdate }: Props) {
           {[
             {
               label: "COPY LINK PENDAFTARAN",
-              url: `${baseUrl}/p/${ebook.id}/ebook`,
-              openable: false,
+              url: `${baseUrl}/ebook/${ebook.id}/p`,
+              openable: true,
             },
             {
               label: "COPY HALAMAN",
-              url: `${baseUrl}/ebook/${ebook.id}`,
+              url: `${baseUrl}/ebook/${ebook.id}/p`,
               openable: true,
             },
           ].map((item) => (

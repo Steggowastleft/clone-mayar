@@ -49,6 +49,8 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
   const { auth } = usePage().props as any;
   const isLoggedIn = !!auth?.user || !!auth?.peserta;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(produk.harga);
+  const [couponCode, setCouponCode] = useState("");
 
   // Parse file URLs if it is komik or has multiple files
   let fileUrls: string[] = [];
@@ -144,7 +146,11 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
     return "📖";
   };
 
-  const handleRealCheckout = () => {
+  const handleRealCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
     setCheckoutOpen(true);
   };
 
@@ -354,7 +360,7 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2.5 w-full pt-2">
                   <button
-                    onClick={handleRealCheckout}
+                    onClick={() => handleRealCheckout()}
                     className="flex-1 py-2.5 px-4 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-[1.02]"
                   >
                     Beli Sekarang
@@ -407,7 +413,8 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
         productType="produk-digital"
         productId={produk.id}
         productName={produk.nama}
-        harga={produk.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </>
   );

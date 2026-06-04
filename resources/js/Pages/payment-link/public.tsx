@@ -31,6 +31,16 @@ type Props = {
 
 export default function PaymentLinkPublic({ link }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(link.harga);
+  const [couponCode, setCouponCode] = useState("");
+
+  const handleCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
+    setCheckoutOpen(true);
+  };
 
   return (
     <>
@@ -46,7 +56,7 @@ export default function PaymentLinkPublic({ link }: Props) {
         navTitle="Mayar Payment"
         navIcon={<Link className="text-white h-5 w-5" />}
         hideCoupon={true}
-        onCheckout={() => setCheckoutOpen(true)}
+        onCheckout={handleCheckout}
         creatorId={link.user_id}
       >
         <div className="space-y-8">
@@ -99,11 +109,7 @@ export default function PaymentLinkPublic({ link }: Props) {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Tipe Layanan</p>
-                <p className="text-sm font-extrabold text-slate-800">Satu Kali Bayar</p>
-              </div>
+            <div className="grid grid-cols-1 gap-3 max-w-[150px]">
               <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Status</p>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-100 capitalize">
@@ -176,7 +182,8 @@ export default function PaymentLinkPublic({ link }: Props) {
         productType="payment-link"
         productId={link.id}
         productName={link.nama}
-        harga={link.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </>
   );

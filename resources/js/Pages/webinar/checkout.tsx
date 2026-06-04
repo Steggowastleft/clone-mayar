@@ -166,6 +166,7 @@ export default function CheckoutWebinar({ webinar }: Props) {
       navIcon={<Award className="text-white h-5 w-5" />}
       creatorId={webinar.user_id}
       onCheckout={() => setCheckoutOpen(true)}
+      hideCoupon={true}
     >
       <div className="space-y-8">
         

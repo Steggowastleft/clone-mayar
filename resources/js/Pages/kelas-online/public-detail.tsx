@@ -59,6 +59,16 @@ function ContentCard({ title, children }: { title: string; children: React.React
 // ─────────────────────────────────────────────
 export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(kelas.harga ?? 0);
+  const [couponCode, setCouponCode] = useState("");
+
+  const handleCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
+    setCheckoutOpen(true);
+  };
 
   // Nav items sticky
   const navItems = [
@@ -79,7 +89,7 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
       badgeText="Kelas Online"
       navTitle="Mayar Kelas Online"
       navIcon={<GraduationCap className="text-white h-5 w-5" />}
-      onCheckout={() => setCheckoutOpen(true)}
+      onCheckout={handleCheckout}
       creatorId={kelas.user_id}
     >
       <div className="space-y-8">
@@ -209,7 +219,8 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
         productType="kelas-online"
         productId={kelas.id}
         productName={kelas.nama}
-        harga={kelas.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </PublicProductLayout>
   );

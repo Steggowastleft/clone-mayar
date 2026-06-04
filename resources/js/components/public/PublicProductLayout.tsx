@@ -18,7 +18,7 @@ interface PublicProductLayoutProps {
   navIcon?: React.ReactNode;
   children: React.ReactNode; // left side content (details, specs, description)
   hideCoupon?: boolean;
-  onCheckout?: () => void;
+  onCheckout?: (finalPrice?: number, couponCode?: string) => void;
   creatorId?: number | null;
 }
 

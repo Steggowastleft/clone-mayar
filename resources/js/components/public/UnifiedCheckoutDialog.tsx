@@ -32,6 +32,7 @@ type Props = {
   prefilledName?: string;
   prefilledEmail?: string;
   prefilledPhone?: string;
+  couponCode?: string;
 };
 
 export default function UnifiedCheckoutDialog({
@@ -44,6 +45,7 @@ export default function UnifiedCheckoutDialog({
   prefilledName = "",
   prefilledEmail = "",
   prefilledPhone = "",
+  couponCode = "",
 }: Props) {
   const { props } = usePage();
   const authPeserta = (props.auth as any)?.peserta;
@@ -238,6 +240,7 @@ export default function UnifiedCheckoutDialog({
           email: submitEmail,
           phone: submitPhone,
           amount: harga,
+          coupon_code: couponCode || undefined,
         }),
       });
 
