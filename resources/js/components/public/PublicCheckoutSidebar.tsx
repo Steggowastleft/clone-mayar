@@ -20,7 +20,7 @@ type Props = {
   themeColorClass?: string; // e.g., "bg-sky-600 hover:bg-sky-700"
   buttonText?: string;
   hideCoupon?: boolean;
-  onCheckout?: () => void;
+  onCheckout?: (finalPrice?: number, couponCode?: string) => void;
 };
 
 export default function PublicCheckoutSidebar({
@@ -99,7 +99,7 @@ export default function PublicCheckoutSidebar({
 
   const handleCheckout = () => {
     if (onCheckout) {
-      onCheckout();
+      onCheckout(currentPrice, appliedCoupon ? appliedCoupon.kode : "");
     } else if (redirectUrl) {
       window.location.href = redirectUrl;
     } else {
@@ -108,6 +108,8 @@ export default function PublicCheckoutSidebar({
   };
 
   const currentPrice = appliedCoupon ? appliedCoupon.final_price : harga;
+  const adminFee = currentPrice > 0 ? 5000 : 0;
+  const totalPrice = currentPrice > 0 ? currentPrice + adminFee : 0;
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 sticky top-24 space-y-6">
@@ -119,14 +121,19 @@ export default function PublicCheckoutSidebar({
         </p>
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-3xl font-black text-gray-900">
-            {formatHarga(currentPrice)}
+            {formatHarga(totalPrice)}
           </span>
-          {hargaCoret && hargaCoret > currentPrice && (
+          {hargaCoret && hargaCoret > totalPrice && (
             <span className="text-sm text-gray-400 line-through font-medium">
               {formatHarga(hargaCoret)}
             </span>
           )}
         </div>
+        {harga > 0 && (
+          <p className="text-[10px] text-gray-400 font-semibold mt-1">
+            *Sudah termasuk biaya penanganan admin Rp 5.000
+          </p>
+        )}
       </div>
 
       <hr className="border-gray-100" />
@@ -191,10 +198,16 @@ export default function PublicCheckoutSidebar({
               <span className="font-semibold">- {formatHarga(appliedCoupon.discount_amount)}</span>
             </div>
           )}
+          {harga > 0 && (
+            <div className="flex justify-between">
+              <span>Biaya Penanganan Admin</span>
+              <span className="font-semibold text-gray-900">{formatHarga(5000)}</span>
+            </div>
+          )}
           <hr className="border-gray-200/50 my-1" />
           <div className="flex justify-between font-black text-gray-900 text-base">
             <span>Total Bayar</span>
-            <span>{formatHarga(currentPrice)}</span>
+            <span>{formatHarga(totalPrice)}</span>
           </div>
         </div>
       </div>

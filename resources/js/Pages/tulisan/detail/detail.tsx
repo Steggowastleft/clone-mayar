@@ -431,12 +431,12 @@ export default function DetailTab({ tulisan }: Props) {
           {[
             {
               label: "COPY LINK PENDAFTARAN",
-              url: `${baseUrl}/p/${tulisan.id}/tulisan`,
-              openable: false,
+              url: `${baseUrl}/tulisan/${tulisan.id}/p`,
+              openable: true,
             },
             {
               label: "COPY HALAMAN",
-              url: `${baseUrl}/tulisan/${tulisan.id}`,
+              url: `${baseUrl}/tulisan/${tulisan.id}/p`,
               openable: true,
             },
           ].map((item) => (

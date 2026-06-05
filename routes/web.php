@@ -27,6 +27,7 @@ use App\Http\Controllers\AccountSettingsController;
 use App\Http\Controllers\BerlanggananController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermintaanBayarController;
+use App\Http\Controllers\FakturController;
 use App\Http\Controllers\SemuaProdukController;
 use App\Http\Controllers\ProdukFisikController;
 use App\Http\Controllers\KelasOnlineController;
@@ -536,6 +537,14 @@ Route::middleware('auth')->group(function () {
     // ── Pembayaran Tagihan ────────────────────────────────────
     Route::get('pembayaran-tagihan',         [PermintaanBayarController::class, 'index'])->name('pembayaran-tagihan.index');
     Route::post('pembayaran-tagihan/remind', [PermintaanBayarController::class, 'sendReminder'])->name('pembayaran-tagihan.remind');
+
+    // ── Faktur (Permintaan Pembayaran) ───────────────────────
+    Route::get('faktur',                  [FakturController::class, 'index'])->name('faktur.index');
+    Route::post('faktur/settings',        [FakturController::class, 'saveSettings'])->name('faktur.settings.save');
+    Route::get('faktur/{id}',             [FakturController::class, 'show'])->name('faktur.show');
+
+    // ── Faktur Pembayaran (Pembayaran Tagihan) ────────────────
+    Route::get('faktur-pembayaran',       [FakturController::class, 'index'])->name('faktur-pembayaran.index');
 
     // ─────────────────────────────────────────────────────────
     // ── Semua Produk ──────────────────────────────────────────

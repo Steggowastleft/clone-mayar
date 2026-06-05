@@ -138,11 +138,11 @@ export default function TabDetail({ link }: { link: PaymentLinkData }) {
   const shareLinks = [
     {
       label: "Tautan Pembayaran (Checkout)",
-      url: `${baseUrl}/p/${link.slug}`,
+      url: `${baseUrl}/payment-link/${link.id}/p`,
     },
     {
       label: "Halaman Detail Link",
-      url: `${baseUrl}/payment-link/${link.id}`,
+      url: `${baseUrl}/payment-link/${link.id}/p`,
     },
   ];
 

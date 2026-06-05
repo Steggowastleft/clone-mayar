@@ -127,7 +127,7 @@ export default function TabDetail({ webinar }: { webinar: Webinar }) {
             },
             {
               label: "Halaman Detail Webinar",
-              url: `${baseUrl}/webinar/${webinar.id}`,
+              url: `${baseUrl}/p/${webinar.id}/webinar`,
             },
           ].map((item) => (
             <div key={item.label} className="space-y-1.5">

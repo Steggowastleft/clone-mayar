@@ -47,6 +47,7 @@ class CheckoutController extends Controller
             'email'        => 'required|email|max:255',
             'phone'        => 'required|string|max:20',
             'amount'       => 'nullable|numeric|min:1000',
+            'coupon_code'  => 'nullable|string',
         ]);
 
         $peserta = Auth::guard('peserta')->user();
@@ -92,6 +93,38 @@ class CheckoutController extends Controller
         } else {
             $productName = $product->nama;
             $price = (float) $product->harga;
+        }
+
+        if ($request->filled('coupon_code') && $productType !== 'penggalangan-dana') {
+            $kode = strtoupper($request->input('coupon_code'));
+            $diskon = \App\Models\Diskon::whereRaw('UPPER(kode_kupon) = ?', [$kode])->first();
+            if ($diskon && ($diskon->status === 'aktif' || $diskon->is_aktif)) {
+                $applies = true;
+                if ($diskon->untuk_produk === 'pilih') {
+                    $productIds = $diskon->produk_ids ?? [];
+                    if (!is_array($productIds)) {
+                        $productIds = json_decode($productIds, true) ?? [];
+                    }
+                    $normalizedProductId = strtolower($productType . ':' . $product->id);
+                    $normalizedProductIds = array_map('strtolower', $productIds);
+                    $applies = in_array($normalizedProductId, $normalizedProductIds);
+                }
+                
+                if ($applies) {
+                    $besaran = floatval($diskon->besaran);
+                    $discountAmount = 0;
+                    if ($diskon->tipe_diskon === 'persentase') {
+                        $discountAmount = ($besaran / 100) * $price;
+                    } else {
+                        $discountAmount = $besaran;
+                    }
+                    if ($discountAmount > $price) {
+                        $discountAmount = $price;
+                    }
+                    $price -= $discountAmount;
+                    $diskon->increment('jumlah_dipakai');
+                }
+            }
         }
 
         // Check if already registered

@@ -18,6 +18,7 @@ type NavItem = {
   href?: string;
   badge?: number;
   children?: NavItem[];
+  external?: boolean;
 };
  
 type BadgeCounts = {
@@ -248,7 +249,7 @@ function NavRow({
     );
   }
  
-  const isExternal = item.href?.startsWith('http://') || item.href?.startsWith('https://') || item.href?.startsWith('//');
+  const isExternal = item.external || item.href?.startsWith('http://') || item.href?.startsWith('https://') || item.href?.startsWith('//');
  
   if (isExternal) {
     return (
@@ -319,7 +320,11 @@ export function DashboardSidebar({ user, currentPath = "", badgeCounts }: Props)
   }, []);
  
   const isAdmin = user.role === 'admin';
-  const items = isAdmin ? ADMIN_MENU_ITEMS : MENU_ITEMS;
+  const creatorMenuItems: NavItem[] = [
+    { label: "Catalog", icon: <ShoppingCart className="h-4 w-4" />, href: `/catalog?user_id=${user.id}`, external: true },
+    ...MENU_ITEMS
+  ];
+  const items = isAdmin ? ADMIN_MENU_ITEMS : creatorMenuItems;
  
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
     return (

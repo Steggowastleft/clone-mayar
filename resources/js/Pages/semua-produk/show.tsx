@@ -144,36 +144,85 @@ const getCoverUrl = (product: Product) => {
 };
 
 const getCheckoutUrl = (type: string, id: number) => {
-  const typeMap: Record<string, string> = {
-    "produk-digital": "digital",
-    "webinar": "webinar",
-    "event": "event",
-    "bootcamp": "bootcamp",
-    "kelas-online": "kelas_online",
-    "payment-link": "payment_link",
-    "coaching-mentoring": "coaching_mentoring",
-    "penggalangan-dana": "penggalangan_dana",
-    "tulisan": "tulisan",
-  };
-  const typeKey = typeMap[type] || type;
-  return `${window.location.origin}/p/${id}/${typeKey}`;
+  switch (type) {
+    case "payment-link":
+      return `${window.location.origin}/payment-link/${id}/p`;
+    case "penggalangan-dana":
+      return `${window.location.origin}/penggalangan-dana/${id}/p`;
+    case "produk-digital":
+      return `${window.location.origin}/produk-digital/${id}/p`;
+    case "ebook":
+      return `${window.location.origin}/ebook/${id}/p`;
+    case "coaching-mentoring":
+      return `${window.location.origin}/coaching-mentoring/${id}/p`;
+    case "tulisan":
+      return `${window.location.origin}/tulisan/${id}/p`;
+    case "event":
+      return `${window.location.origin}/event/${id}/p`;
+    case "bundling":
+      return `${window.location.origin}/p/${id}/bundling`;
+    case "webinar":
+      return `${window.location.origin}/webinar/${id}/checkout`;
+    case "kelas-online":
+      return `${window.location.origin}/p/${id}/kelas-online`;
+    case "bootcamp":
+      return `${window.location.origin}/bootcamp/${id}`;
+    default:
+      const typeMap: Record<string, string> = {
+        "produk-digital": "digital",
+        "webinar": "webinar",
+        "event": "event",
+        "bootcamp": "bootcamp",
+        "kelas-online": "kelas_online",
+        "coaching-mentoring": "coaching_mentoring",
+        "penggalangan-dana": "penggalangan_dana",
+        "tulisan": "tulisan",
+      };
+      const typeKey = typeMap[type] || type;
+      return `${window.location.origin}/p/${id}/${typeKey}`;
+  }
 };
 
-const getProductPageUrl = (type: string, slug?: string) => {
-  if (!slug) return null;
-  const pathMap: Record<string, string> = {
-    "produk-digital": "produk",
-    "webinar": "webinar",
-    "event": "event",
-    "bootcamp": "bootcamp",
-    "kelas-online": "kelas-online",
-    "payment-link": "payment-link",
-    "coaching-mentoring": "coaching-mentoring",
-    "penggalangan-dana": "donasi",
-    "tulisan": "tulisan",
-  };
-  const path = pathMap[type] || type;
-  return `${window.location.origin}/${path}/${slug}`;
+const getProductPageUrl = (type: string, slug?: string, id?: number) => {
+  if (!id) return null;
+  switch (type) {
+    case "payment-link":
+      return `${window.location.origin}/payment-link/${id}/p`;
+    case "penggalangan-dana":
+      return `${window.location.origin}/penggalangan-dana/${id}/p`;
+    case "produk-digital":
+      return `${window.location.origin}/produk-digital/${id}/p`;
+    case "ebook":
+      return `${window.location.origin}/ebook/${id}/p`;
+    case "coaching-mentoring":
+      return `${window.location.origin}/coaching-mentoring/${id}/p`;
+    case "tulisan":
+      return `${window.location.origin}/tulisan/${id}/p`;
+    case "event":
+      return `${window.location.origin}/event/${id}/p`;
+    case "bundling":
+      return `${window.location.origin}/p/${id}/bundling`;
+    case "webinar":
+      return `${window.location.origin}/p/${id}/webinar`;
+    case "kelas-online":
+      return `${window.location.origin}/p/${id}/kelas-online`;
+    case "bootcamp":
+      return `${window.location.origin}/bootcamp/${id}`;
+    default:
+      if (!slug) return null;
+      const pathMap: Record<string, string> = {
+        "produk-digital": "produk",
+        "webinar": "webinar",
+        "event": "event",
+        "bootcamp": "bootcamp",
+        "kelas-online": "kelas-online",
+        "coaching-mentoring": "coaching-mentoring",
+        "penggalangan-dana": "donasi",
+        "tulisan": "tulisan",
+      };
+      const path = pathMap[type] || type;
+      return `${window.location.origin}/${path}/${slug}`;
+  }
 };
 
 export default function ProductShow({ product, type }: Props) {
@@ -189,7 +238,7 @@ export default function ProductShow({ product, type }: Props) {
   const coverUrl = getCoverUrl(product);
 
   const checkoutUrl = getCheckoutUrl(type, product.id);
-  const productPageUrl = getProductPageUrl(type, product.slug || product.name || product.nama);
+  const productPageUrl = getProductPageUrl(type, product.slug || product.name || product.nama, product.id);
 
   const handleDelete = () => {
     if (confirm("Apakah Anda yakin ingin menghapus produk ini?")) {

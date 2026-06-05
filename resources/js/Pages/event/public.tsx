@@ -68,6 +68,16 @@ const formatHarga = (n: number) => {
 
 export default function EventPublic({ event, tiketList = [], pembicaraList = [] }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(event.harga);
+  const [couponCode, setCouponCode] = useState("");
+
+  const handleCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
+    setCheckoutOpen(true);
+  };
 
   return (
     <>
@@ -82,7 +92,7 @@ export default function EventPublic({ event, tiketList = [], pembicaraList = [] 
         badgeText="Event"
         navTitle="Mayar Event"
         navIcon={<Calendar className="text-white h-5 w-5" />}
-        onCheckout={() => setCheckoutOpen(true)}
+        onCheckout={handleCheckout}
         creatorId={event.user_id}
       >
         <div className="space-y-8">
@@ -231,7 +241,8 @@ export default function EventPublic({ event, tiketList = [], pembicaraList = [] 
         productType="event"
         productId={event.id}
         productName={event.name}
-        harga={event.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </>
   );

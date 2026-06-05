@@ -35,6 +35,16 @@ type Props = {
 
 export default function EbookPublic({ ebook }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(ebook.harga);
+  const [couponCode, setCouponCode] = useState("");
+
+  const handleCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
+    }
+    setCouponCode(coupon || "");
+    setCheckoutOpen(true);
+  };
 
   return (
     <>
@@ -49,7 +59,7 @@ export default function EbookPublic({ ebook }: Props) {
         badgeText="E-Book"
         navTitle="Mayar Ebook"
         navIcon={<BookOpen className="text-white h-5 w-5" />}
-        onCheckout={() => setCheckoutOpen(true)}
+        onCheckout={handleCheckout}
         creatorId={ebook.user_id}
       >
         <div className="space-y-8">
@@ -172,7 +182,8 @@ export default function EbookPublic({ ebook }: Props) {
         productType="ebook"
         productId={ebook.id}
         productName={ebook.nama}
-        harga={ebook.harga}
+        harga={checkoutPrice}
+        couponCode={couponCode}
       />
     </>
   );
