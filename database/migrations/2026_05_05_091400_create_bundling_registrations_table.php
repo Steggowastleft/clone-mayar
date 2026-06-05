@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreign('bundling_id')
                 ->references('id')
                 ->on('bundlings')
-                ->cascadeOnDelete();+
+                ->cascadeOnDelete();
             $table->uuid('peserta_id');
             $table->foreign('peserta_id')
                 ->references('id')

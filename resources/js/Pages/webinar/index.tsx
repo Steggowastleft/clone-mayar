@@ -37,6 +37,8 @@ import {
   Clock,
   Globe,
   Package,
+  Minus,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -84,23 +86,25 @@ function DateTimePickerField({
   };
 
   return (
-    <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+    <div className="space-y-2">
+      <Label>
         {label}{" "}
-        {optional && <span className="text-gray-400 font-normal">(Opsional)</span>}
+        {optional && <span className="text-gray-400 font-normal">(opsional)</span>}
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-left hover:border-gray-300 transition",
-              value ? "text-gray-800" : "text-gray-400"
+              "w-full flex items-center justify-between gap-2 px-3.5 h-10 rounded-lg bg-[#eaedf0] text-sm text-left transition-all hover:bg-slate-200/70",
+              value ? "text-slate-800" : "text-slate-450"
             )}
           >
-            <CalendarIcon className="h-4 w-4 shrink-0 text-gray-400" />
-            {value
-              ? format(value, "dd MMMM yyyy HH:mm", { locale: idLocale })
-              : "Pilih tanggal & waktu..."}
+            <span className="truncate">
+              {value
+                ? format(value, "dd MMMM yyyy HH:mm", { locale: idLocale })
+                : "Pilih tanggal & waktu..."}
+            </span>
+            <CalendarIcon className="h-4 w-4 shrink-0 text-slate-450" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 z-[200]" align="start">
@@ -462,18 +466,10 @@ export default function Index({ webinars = [] }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <Video className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Webinar Baru
-              </DialogTitle>
-            </div>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Buat dan kelola webinar online Anda dengan mudah
-            </p>
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Webinar Baru
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
@@ -633,19 +629,26 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Cover Gambar</Label>
+            <div className="space-y-2">
+              <Label>Cover Gambar</Label>
               <div
-                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {coverPreview ? (
                   <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-500">Klik untuk unggah gambar cover</p>
-                    <p className="text-xs text-gray-400">PNG, JPG, WEBP (maks. 5MB)</p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <ImageIcon className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
               </div>
@@ -676,23 +679,59 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Max Peserta */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Jumlah Maksimum Peserta</Label>
-              <Input
-                type="number"
-                placeholder="Kosongkan untuk unlimited"
-                min={1}
-                value={formData.max_peserta}
-                onChange={(e) => setFormData({ ...formData, max_peserta: e.target.value })}
-              />
+            <div className="space-y-2">
+              <Label>Jumlah Maksimum Peserta <span className="text-gray-400 font-normal">(opsional)</span></Label>
+              <div className="flex items-center bg-[#eaedf0] rounded-lg h-10 w-full overflow-hidden px-1">
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-slate-200 text-slate-600 transition"
+                  onClick={() => {
+                    const current = parseInt(formData.max_peserta) || 0;
+                    if (current > 0) {
+                      setFormData({
+                        ...formData,
+                        max_peserta: String(current - 1),
+                      });
+                    }
+                  }}
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input
+                  type="number"
+                  placeholder="Kosongkan untuk unlimited"
+                  className="flex-1 bg-transparent text-center text-sm border-0 focus:ring-0 focus:outline-none text-slate-800 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:margin-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:margin-0 [&::-webkit-inner-spin-button]:appearance-none"
+                  value={formData.max_peserta}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({
+                      ...formData,
+                      max_peserta: val,
+                    });
+                  }}
+                />
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-slate-200 text-slate-600 transition"
+                  onClick={() => {
+                    const current = parseInt(formData.max_peserta) || 0;
+                    setFormData({
+                      ...formData,
+                      max_peserta: String(current + 1),
+                    });
+                  }}
+                >
+                  <span className="text-lg font-medium leading-none">+</span>
+                </button>
+              </div>
               <p className="text-xs text-gray-400">
                 Pendaftaran akan ditutup otomatis setelah batas peserta tercapai.
               </p>
             </div>
 
             {/* Instruksi */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Instruksi Setelah Daftar</Label>
+            <div className="space-y-2">
+              <Label>Instruksi Setelah Daftar</Label>
               <p className="text-xs text-gray-500 leading-relaxed">
                 Catatan yang akan dilihat pendaftar setelah membayar. Bisa berisi link zoom, password, grup WA, dsb.
               </p>
@@ -705,8 +744,8 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Syarat & Ketentuan */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Syarat & Ketentuan</Label>
+            <div className="space-y-2">
+              <Label>Syarat & Ketentuan</Label>
               <Textarea
                 placeholder="Tuliskan syarat dan ketentuan webinar..."
                 rows={3}
@@ -716,9 +755,9 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Redirect URL */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Redirect URL <span className="text-gray-400 font-normal">(Opsional)</span>
+            <div className="space-y-2">
+              <Label>
+                Redirect URL <span className="text-gray-400 font-normal">(opsional)</span>
               </Label>
               <Input
                 type="url"
@@ -732,21 +771,13 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex justify-center pt-4">
               <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setCreateOpen(false)}
-                disabled={isSubmitting}
-              >
-                Batal
-              </Button>
-              <Button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Menyimpan..." : "Buat Webinar"}
+                {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
               </Button>
             </div>
           </div>
