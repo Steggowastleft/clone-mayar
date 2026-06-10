@@ -1,7 +1,10 @@
-import { router, Head } from "@inertiajs/react";
+import { useState } from "react";
+import { router } from "@inertiajs/react";
 import PesertaLayout from "@/layouts/PesertaLayout";
 import TabEngineKelasOnline from "@/Pages/kelas-online/detail/tab-engine";
 import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
+import RatingDialog, { type RatingData } from "../ratingdialog";
 
 interface Sesi {
   id: number;
@@ -31,9 +34,13 @@ interface Props {
   kelas: KelasOnline;
   peserta: any;
   materi?: { file: string | null; name: string | null };
+  myRating?: RatingData | null;
 }
 
-export default function BelajarKelasOnline({ kelas, peserta, materi }: Props) {
+export default function BelajarKelasOnline({ kelas, peserta, materi, myRating }: Props) {
+  const [myRatingState, setMyRatingState] = useState<RatingData | null>(myRating ?? null);
+  const [ratingOpen, setRatingOpen] = useState(false);
+
   return (
     <PesertaLayout peserta={peserta} title={kelas.nama}>
       <div className="p-6 max-w-5xl mx-auto">
@@ -58,7 +65,14 @@ export default function BelajarKelasOnline({ kelas, peserta, materi }: Props) {
             </p>
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRatingOpen(true)}
+              className="px-3 py-2 text-xs font-bold rounded-xl border border-yellow-250 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 transition flex items-center gap-1.5 shrink-0 shadow-sm"
+            >
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              {myRatingState ? `Ulasan (${myRatingState.bintang}★)` : "Beri Ulasan"}
+            </button>
             <Button
               variant="outline"
               className="rounded-xl border-gray-200 text-gray-600 font-bold text-xs"
@@ -74,6 +88,19 @@ export default function BelajarKelasOnline({ kelas, peserta, materi }: Props) {
             <TabEngineKelasOnline kelas={kelas} isOwner={false} materi={materi} />
         </div>
       </div>
+
+      {/* Rating Dialog */}
+      <RatingDialog
+        open={ratingOpen}
+        onOpenChange={setRatingOpen}
+        productId={kelas.id}
+        productType="kelas-online"
+        productName={kelas.nama}
+        existingRating={myRatingState}
+        onSuccess={(r) => {
+          setMyRatingState(r);
+        }}
+      />
     </PesertaLayout>
   );
 }

@@ -22,8 +22,9 @@ export type RatingData = {
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  bootcampId: number;
-  bootcampName: string;
+  productId: number;
+  productType: string;
+  productName: string;
   existingRating?: RatingData | null;
   onSuccess?: (rating: RatingData) => void;
 };
@@ -70,7 +71,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 // Main Dialog
 // ─────────────────────────────────────────────
 export default function RatingDialog({
-  open, onOpenChange, bootcampId, bootcampName, existingRating, onSuccess,
+  open, onOpenChange, productId, productType, productName, existingRating, onSuccess,
 }: Props) {
   const isEdit = !!existingRating;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -113,7 +114,7 @@ export default function RatingDialog({
     const csrfMeta = document.head.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
     if (csrfMeta) fd.append("_token", csrfMeta.content);
 
-    router.post(`/peserta/bootcamp/${bootcampId}/rating`, fd, {
+    router.post(`/peserta/rating/${productType}/${productId}`, fd, {
       forceFormData: true,
       preserveScroll: true,
       onSuccess: (page) => {
@@ -141,7 +142,7 @@ export default function RatingDialog({
           <DialogTitle className="text-base font-bold">
             {isEdit ? "Edit Ulasan" : "Beri Ulasan"}
           </DialogTitle>
-          <p className="text-xs text-gray-400">{bootcampName}</p>
+          <p className="text-xs text-gray-400">{productName}</p>
         </DialogHeader>
 
         <div className="space-y-5 pt-1">

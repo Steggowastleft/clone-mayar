@@ -74,9 +74,43 @@ function DatePickerField({
   withTime?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [time, setTime] = useState(() => {
+    if (value) {
+      const h = String(value.getHours()).padStart(2, '0');
+      const m = String(value.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+    return "00:00";
+  });
+
+  const handleSelect = (d: Date | undefined) => {
+    if (!d) {
+      onChange(undefined);
+      return;
+    }
+    if (withTime) {
+      const [h, m] = time.split(":").map(Number);
+      const combined = new Date(d);
+      combined.setHours(h, m, 0, 0);
+      onChange(combined);
+    } else {
+      onChange(d);
+    }
+  };
+
+  const handleTimeChange = (newTime: string) => {
+    setTime(newTime);
+    if (value) {
+      const [h, m] = newTime.split(":").map(Number);
+      const updated = new Date(value);
+      updated.setHours(h, m, 0, 0);
+      onChange(updated);
+    }
+  };
+
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label>
         {label}{" "}
         {optional && (
           <span className="text-gray-400 font-normal">(Opsional)</span>
@@ -100,12 +134,20 @@ function DatePickerField({
           <Calendar
             mode="single"
             selected={value}
-            onSelect={(d) => {
-              onChange(d);
-              setOpen(false);
-            }}
+            onSelect={handleSelect}
             initialFocus
           />
+          {withTime && (
+            <div className="p-3 border-t flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-400" />
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => handleTimeChange(e.target.value)}
+                className="text-sm border border-gray-200 rounded px-2 py-1 flex-1 font-medium bg-white"
+              />
+            </div>
+          )}
           {value && optional && (
             <div className="p-2 border-t">
               <Button
@@ -218,7 +260,7 @@ export default function Index({ links }: IndexProps) {
     if (formData.redirect_url) payload.append("redirect_url", formData.redirect_url);
     payload.append("bisa_affiliate", formData.bisa_affiliate ? "1" : "0");
     if (waktuMulaiJual) payload.append("waktu_mulai_jual", format(waktuMulaiJual, "yyyy-MM-dd HH:mm:ss"));
-    if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd"));
+    if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd HH:mm:ss"));
     if (coverFile) payload.append("cover", coverFile);
 
     router.post("/payment-link", payload, {
@@ -226,6 +268,7 @@ export default function Index({ links }: IndexProps) {
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
+        router.reload();
       },
       onError: () => setIsSubmitting(false),
     });
@@ -449,24 +492,16 @@ export default function Index({ links }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <Link2 className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Link Pembayaran
-              </DialogTitle>
-            </div>
-            <p className="text-indigo-100 text-sm leading-relaxed">
-              Terima pembayaran dengan mudah dari banyak orang dengan jumlah pembayaran yang sama.
-            </p>
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Link Pembayaran
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Nama */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Nama Link Pembayaran <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -480,7 +515,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Harga */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Harga <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
@@ -500,7 +535,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Harga Coret */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Harga Coret{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -520,21 +555,27 @@ export default function Index({ links }: IndexProps) {
             </div>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Cover (gambar/video untuk promo)
-              </Label>
+            {/* Cover */}
+            <div className="space-y-2">
+              <Label>Cover Gambar</Label>
               <div
-                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {coverPreview ? (
                   <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-500">Drag &amp; drop image</p>
-                    <p className="text-xs text-gray-400">PNG, JPG, WEBP, MP4 (maks. 10MB)</p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Upload className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
               </div>
@@ -550,7 +591,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Deskripsi <span className="text-red-500">*</span>
               </Label>
               <Textarea
@@ -575,6 +616,7 @@ export default function Index({ links }: IndexProps) {
                 value={tanggalKadaluarsa}
                 onChange={setTanggalKadaluarsa}
                 optional
+                withTime
               />
             </div>
             <div className="space-y-1">
@@ -589,7 +631,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Pesan setelah bayar */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Pesan setelah bayar / catatan
               </Label>
               <Textarea
@@ -607,7 +649,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Maksimum Pembayaran */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Maksimum Jumlah Pembayaran (Kuota / Qty){" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -625,7 +667,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Redirect URL */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Redirect URL{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -643,12 +685,13 @@ export default function Index({ links }: IndexProps) {
 
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setCreateOpen(false)} disabled={isSubmitting}>
-                Batal
-              </Button>
-              <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Menyimpan..." : "Buat Link Pembayaran"}
+            <div className="flex justify-center pt-4">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
               </Button>
             </div>
           </div>

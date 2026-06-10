@@ -28,20 +28,35 @@ class PesertaDashboardController extends Controller
             ->get();
 
         $myRatings = Rating::where('peserta_id', $peserta->id)
-            ->pluck('bintang', 'bootcamp_id');
+            ->get()
+            ->keyBy(fn($r) => $r->rateable_type . ':' . $r->rateable_id);
 
-        $bootcamps = $pendaftaranBootcamp->map(fn($p) => [
-            'id'             => $p->registrable->id,
-            'name'           => $p->registrable->name,
-            'cover_url'      => $p->registrable->cover_url,
-            'kategori'       => 'Bootcamp',
-            'type'           => 'bootcamp',
-            'status'         => $p->status,
-            'tanggal_aktif'  => $p->tanggal_aktif?->format('d M Y') ?? $p->created_at->format('d M Y'),
-            'rating'         => $myRatings->get($p->registrable->id),
-            'download_url'   => "/peserta/kelas/" . $p->registrable->id,
-            'batch'          => $p->registrable->batch ?? 'Batch 1',
-        ]);
+        $bootcamps = $pendaftaranBootcamp->map(function($p) use ($myRatings) {
+            $r = $myRatings->get(\App\Models\Bootcamp::class . ':' . $p->registrable->id)
+                ?? $myRatings->values()->where('bootcamp_id', $p->registrable->id)->first();
+
+            return [
+                'id'             => $p->registrable->id,
+                'name'           => $p->registrable->name,
+                'cover_url'      => $p->registrable->cover_url,
+                'kategori'       => 'Bootcamp',
+                'type'           => 'bootcamp',
+                'status'         => $p->status,
+                'tanggal_aktif'  => $p->tanggal_aktif?->format('d M Y') ?? $p->created_at->format('d M Y'),
+                'rating'         => $r?->bintang,
+                'my_rating'      => $r ? [
+                    'id'            => $r->id,
+                    'bintang'       => $r->bintang,
+                    'ulasan'        => $r->ulasan,
+                    'tampil_anonim' => $r->tampil_anonim,
+                    'foto_url'      => $r->foto_url,
+                ] : null,
+                'download_url'   => "/peserta/kelas/" . $p->registrable->id,
+                'batch'          => $p->registrable->batch ?? 'Batch 1',
+                'order_id'       => $p->order_id,
+                'harga_bayar'    => (float) $p->harga_bayar,
+            ];
+        });
 
         // 2. Fetch Kelas Online
         $kelasOnlinePeserta = \App\Models\KelasOnlinePeserta::with(['kelasOnline.owner'])
@@ -50,17 +65,33 @@ class PesertaDashboardController extends Controller
             ->orderBy('mendaftar_pada', 'desc')
             ->get();
 
-        $kelasOnlines = $kelasOnlinePeserta->map(fn($p) => [
-            'id'            => $p->kelasOnline->id,
-            'name'          => $p->kelasOnline->nama,
-            'cover_url'     => $p->kelasOnline->thumbnail ? asset('storage/' . $p->kelasOnline->thumbnail) : null,
-            'kategori'      => 'Kelas Online',
-            'type'          => 'kelas-online',
-            'status'        => $p->status,
-            'tanggal_aktif' => $p->mendaftar_pada?->format('d M Y') ?? $p->created_at->format('d M Y'),
-            'download_url'  => "/peserta/kelas-online/" . $p->kelasOnline->id,
-            'owner_name'    => $p->kelasOnline->owner->name ?? 'Admin',
-        ]);
+        $kelasOnlines = $kelasOnlinePeserta->map(function($p) use ($myRatings) {
+            $r = $myRatings->get(\App\Models\KelasOnline::class . ':' . $p->kelasOnline->id);
+
+            return [
+                'id'            => $p->kelasOnline->id,
+                'name'          => $p->kelasOnline->nama,
+                'cover_url'     => $p->kelasOnline->thumbnail ? asset('storage/' . $p->kelasOnline->thumbnail) : null,
+                'kategori'      => 'Kelas Online',
+                'type'          => 'kelas-online',
+                'status'        => $p->status,
+                'tanggal_aktif' => $p->mendaftar_pada?->format('d M Y') ?? $p->created_at->format('d M Y'),
+                'rating'        => $r?->bintang,
+                'my_rating'     => $r ? [
+                    'id'            => $r->id,
+                    'bintang'       => $r->bintang,
+                    'ulasan'        => $r->ulasan,
+                    'tampil_anonim' => $r->tampil_anonim,
+                    'foto_url'      => $r->foto_url,
+                ] : null,
+                'download_url'  => "/peserta/kelas-online/" . $p->kelasOnline->id,
+                'owner_name'    => $p->kelasOnline->owner->name ?? 'Admin',
+                'order_id'      => $p->order_id,
+                'harga_bayar'   => $p->order_id 
+                    ? (float) (\App\Models\Pembayaran::where('order_id', $p->order_id)->value('jumlah') ?? $p->kelasOnline->harga)
+                    : (($p->kelasOnline->is_gratis || $p->kelasOnline->harga <= 0) ? 0.0 : (float) $p->kelasOnline->harga),
+            ];
+        });
 
         // 3. Fetch Other Polymorphic Products
         $otherPendaftaran = Pendaftaran::with(['registrable'])
@@ -69,7 +100,7 @@ class PesertaDashboardController extends Controller
             ->where('registrable_type', '!=', \App\Models\Bootcamp::class)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($p) {
+            ->map(function ($p) use ($myRatings) {
                 if (!$p->registrable) return null;
 
                 $downloadUrl = null;
@@ -120,6 +151,8 @@ class PesertaDashboardController extends Controller
                     $downloadUrl = "/peserta/produk/" . $productType . "/" . $p->registrable->id;
                 }
 
+                $r = $myRatings->get($p->registrable_type . ':' . $p->registrable->id);
+
                 return [
                     'id'            => $p->registrable->id,
                     'name'          => $p->registrable->nama ?? $p->registrable->name,
@@ -129,6 +162,16 @@ class PesertaDashboardController extends Controller
                     'type'          => $productType,
                     'kategori'      => $kategori,
                     'download_url'  => $downloadUrl,
+                    'rating'        => $r?->bintang,
+                    'my_rating'     => $r ? [
+                        'id'            => $r->id,
+                        'bintang'       => $r->bintang,
+                        'ulasan'        => $r->ulasan,
+                        'tampil_anonim' => $r->tampil_anonim,
+                        'foto_url'      => $r->foto_url,
+                    ] : null,
+                    'order_id'      => $p->order_id,
+                    'harga_bayar'   => (float) $p->harga_bayar,
                 ];
             })
             ->filter()
@@ -194,6 +237,17 @@ class PesertaDashboardController extends Controller
             ->get()
             ->keyBy('assignment_id');
 
+        $myRating = Rating::where('peserta_id', $peserta->id)
+            ->where(function($q) use ($bootcampId) {
+                $q->where('rateable_type', \App\Models\Bootcamp::class)
+                  ->where('rateable_id', $bootcampId);
+            })
+            ->orWhere(function($q) use ($bootcampId, $peserta) {
+                $q->where('bootcamp_id', $bootcampId)
+                  ->where('peserta_id', $peserta->id);
+            })
+            ->first();
+
         return Inertia::render('Peserta/kelas', [
             'peserta'  => [
                 'id'   => $peserta->id,
@@ -204,6 +258,13 @@ class PesertaDashboardController extends Controller
                 'name'  => $bootcamp->name,
                 'batch' => $bootcamp->batch,
             ],
+            'myRating' => $myRating ? [
+                'id'            => $myRating->id,
+                'bintang'       => $myRating->bintang,
+                'ulasan'        => $myRating->ulasan,
+                'tampil_anonim' => $myRating->tampil_anonim,
+                'foto_url'      => $myRating->foto_url,
+            ] : null,
             'babList' => $bootcamp->babs->map(fn($b) => [
                 'id'      => $b->id,
                 'judul'   => $b->judul,
@@ -273,6 +334,11 @@ class PesertaDashboardController extends Controller
             }
         ])->findOrFail($id);
 
+        $myRating = Rating::where('peserta_id', $peserta->id)
+            ->where('rateable_type', \App\Models\KelasOnline::class)
+            ->where('rateable_id', $id)
+            ->first();
+
         return Inertia::render('Peserta/KelasOnline/Belajar', [
             'kelas'   => $kelas,
             'peserta' => [
@@ -285,6 +351,13 @@ class PesertaDashboardController extends Controller
                 'file' => $kelas->materi_file ? asset('storage/' . $kelas->materi_file) : null,
                 'name' => $kelas->materi_nama_asli,
             ],
+            'myRating' => $myRating ? [
+                'id'            => $myRating->id,
+                'bintang'       => $myRating->bintang,
+                'ulasan'        => $myRating->ulasan,
+                'tampil_anonim' => $myRating->tampil_anonim,
+                'foto_url'      => $myRating->foto_url,
+            ] : null,
         ]);
     }
 
@@ -498,6 +571,11 @@ class PesertaDashboardController extends Controller
             $mappedProduct['bundle_items'] = $items;
         }
 
+        $myRating = Rating::where('peserta_id', $peserta->id)
+            ->where('rateable_type', $class)
+            ->where('rateable_id', $id)
+            ->first();
+
         return Inertia::render('Peserta/ProductViewer', [
             'peserta' => [
                 'id'       => $peserta->id,
@@ -514,6 +592,13 @@ class PesertaDashboardController extends Controller
                 'status' => $pendaftaran->status,
                 'order_id' => $pendaftaran->order_id ?? null,
             ],
+            'myRating' => $myRating ? [
+                'id'            => $myRating->id,
+                'bintang'       => $myRating->bintang,
+                'ulasan'        => $myRating->ulasan,
+                'tampil_anonim' => $myRating->tampil_anonim,
+                'foto_url'      => $myRating->foto_url,
+            ] : null,
         ]);
     }
 }

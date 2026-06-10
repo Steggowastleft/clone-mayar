@@ -49,6 +49,7 @@ interface KelasOnline {
   nilai_minimum_quiz: number | null;
   has_assignment: boolean;
   tanggal_selesai: string | null;
+  created_at?: string | null;
 }
 
 interface Props {
@@ -140,8 +141,10 @@ export default function KelasOnlineIndex({ produk }: Props) {
   ];
 
   const totalKelas = produk.total;
-  const publikCount = produk.data.filter((k) => k.status === "published").length;
-  const tidakPublikCount = totalKelas - publikCount;
+  const aktifCount = produk.data.filter((k) => k.status === "published").length;
+  const unlistedCount = produk.data.filter((k) => k.status === "unlisted").length;
+  const tidakAktifCount = totalKelas - aktifCount - unlistedCount;
+  const totalPendapatan = produk.data.reduce((acc, k) => acc + (k.peserta_terdaftar_count || 0) * (k.harga || 0), 0);
 
   return (
     <DashboardLayout title="Kelas Online">
@@ -152,13 +155,24 @@ export default function KelasOnlineIndex({ produk }: Props) {
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kelas Online</h1>
             <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Kelas: <span className="font-bold text-slate-800">{totalKelas}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +12% Dari bulan kemarin
                 </span>
               </div>
             </div>
@@ -171,6 +185,13 @@ export default function KelasOnlineIndex({ produk }: Props) {
               onClick={() => window.open("/kelas-online/katalog", "_blank")}
             >
               Katalog Publik
+            </Button>
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/pengaturan/ekspor?type=kelas-online", "_blank")}
+            >
+              <Download className="h-4 w-4" /> Ekspor Data
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
@@ -271,15 +292,14 @@ export default function KelasOnlineIndex({ produk }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Kelas</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Kelas</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -292,7 +312,7 @@ export default function KelasOnlineIndex({ produk }: Props) {
                 ) : (
                   filteredKelas.map((kelas, index) => {
                     const statusIsPublik = kelas.status === "published";
-                    const formattedDate = kelas.tanggal_mulai ? format(new Date(kelas.tanggal_mulai), "dd MMM yyyy", { locale: idLocale }) : "-";
+                    const formattedDate = kelas.created_at ? format(new Date(kelas.created_at), "dd MMM yyyy", { locale: idLocale }) : "-";
                     return (
                       <tr key={kelas.id} className="hover:bg-slate-50/40 transition">
                         <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{(produk.current_page - 1) * 12 + index + 1}</td>
@@ -315,9 +335,6 @@ export default function KelasOnlineIndex({ produk }: Props) {
                         <td className="px-5 py-5 text-sm text-slate-800 font-semibold whitespace-nowrap">
                           {kelas.is_gratis ? "Gratis" : `Rp ${new Intl.NumberFormat("id-ID").format(kelas.harga)}`}
                         </td>
-                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">
-                          {kelas.peserta_terdaftar_count || 0}
-                        </td>
                         <td className="px-5 py-5">
                           <span
                             className={cn(
@@ -334,24 +351,12 @@ export default function KelasOnlineIndex({ produk }: Props) {
                         <td className="px-5 py-5 text-xs text-slate-455 font-semibold whitespace-nowrap">
                           {formattedDate}
                         </td>
-                        <td className="px-5 py-5 text-right whitespace-nowrap space-x-2">
+                        <td className="px-5 py-5 text-center whitespace-nowrap space-x-2">
                           <button
                             onClick={() => router.visit(`/kelas-online/${kelas.id}/manage`)}
                             className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
                           >
                             Lihat
-                          </button>
-                          <button
-                            onClick={() => handleEdit(kelas)}
-                            className="text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 transition"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(kelas)}
-                            className="text-xs font-semibold text-red-650 hover:text-red-800 border border-red-100 bg-red-50/50 px-2 py-1 rounded hover:bg-red-50 transition"
-                          >
-                            Hapus
                           </button>
                         </td>
                       </tr>

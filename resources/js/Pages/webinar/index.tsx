@@ -250,8 +250,10 @@ export default function Index({ webinars = [] }: IndexProps) {
   const [pricingType, setPricingType] = useState<"free" | "paid" | "donation">("free");
 
   const totalWebinars = webinars.length;
-  const publikCount = webinars.filter((w) => w.status === "published").length;
-  const tidakPublikCount = totalWebinars - publikCount;
+  const aktifCount = webinars.filter((w) => w.status === "published").length;
+  const unlistedCount = webinars.filter((w) => w.status === "unlisted").length;
+  const tidakAktifCount = totalWebinars - aktifCount - unlistedCount;
+  const totalPendapatan = webinars.reduce((acc, w) => acc + (w.peserta || 0) * (w.harga || 0), 0);
 
   return (
     <DashboardLayout title="Webinar">
@@ -262,13 +264,24 @@ export default function Index({ webinars = [] }: IndexProps) {
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Webinar</h1>
             <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Webinar: <span className="font-bold text-slate-800">{totalWebinars}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +8% Dari bulan kemarin
                 </span>
               </div>
             </div>
@@ -277,10 +290,17 @@ export default function Index({ webinars = [] }: IndexProps) {
           <div className="flex gap-2.5">
             <Button
               variant="outline"
-              className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
               onClick={() => window.open("/webinars/catalog", "_blank")}
             >
               Katalog Publik
+            </Button>
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/pengaturan/ekspor?type=webinar", "_blank")}
+            >
+              <Download className="h-4 w-4" /> Ekspor Data
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
@@ -381,15 +401,14 @@ export default function Index({ webinars = [] }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Webinar</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Webinar</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -402,7 +421,7 @@ export default function Index({ webinars = [] }: IndexProps) {
                 ) : (
                   filteredWebinars.map((w, index) => {
                     const statusIsPublik = w.status === "published";
-                    const formattedDate = w.tanggal_mulai ? format(new Date(w.tanggal_mulai), "dd MMM yyyy HH:mm", { locale: idLocale }) : "-";
+                    const formattedCreatedDate = w.created_at ? format(new Date(w.created_at), "dd MMM yyyy", { locale: idLocale }) : "-";
                     return (
                       <tr key={w.id} className="hover:bg-slate-50/40 transition">
                         <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
@@ -422,12 +441,6 @@ export default function Index({ webinars = [] }: IndexProps) {
                         <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[250px] truncate">
                           {w.nama}
                         </td>
-                        <td className="px-5 py-5 text-xs text-slate-655 font-semibold select-all max-w-[180px]">
-                          {formattedDate}
-                        </td>
-                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">
-                          {w.peserta || 0} {w.max_peserta ? ` / ${w.max_peserta}` : ""}
-                        </td>
                         <td className="px-5 py-5 text-sm text-slate-800 font-bold whitespace-nowrap">
                           {w.harga === 0 ? "Gratis" : `Rp ${new Intl.NumberFormat("id-ID").format(w.harga)}`}
                         </td>
@@ -444,7 +457,10 @@ export default function Index({ webinars = [] }: IndexProps) {
                             {statusIsPublik ? "Publik" : "Tidak Publik"}
                           </span>
                         </td>
-                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                        <td className="px-5 py-5 text-xs text-slate-455 font-semibold whitespace-nowrap">
+                          {formattedCreatedDate}
+                        </td>
+                        <td className="px-5 py-5 text-center whitespace-nowrap">
                           <button
                             onClick={() => router.visit(`/webinars/${w.id}`)}
                             className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
@@ -476,7 +492,7 @@ export default function Index({ webinars = [] }: IndexProps) {
 
             {/* Nama */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Nama Webinar <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -488,7 +504,7 @@ export default function Index({ webinars = [] }: IndexProps) {
 
             {/* URL Webinar */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 URL Webinar <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
               <div className="relative">
@@ -520,25 +536,18 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Timezone */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Timezone</Label>
-              <Select
-                value={formData.timezone}
-                onValueChange={(v) => setFormData({ ...formData, timezone: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih timezone..." />
-                </SelectTrigger>
-                <SelectContent className="z-[200]">
-                  {timezoneOptions.map((tz) => (
-                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-1.5">
+              <Label>Timezone</Label>
+              <Input
+                value="WIB (GMT+07:00) - Asia/Jakarta"
+                disabled
+                className="bg-slate-50 border-slate-200 text-xs font-semibold text-slate-500 cursor-not-allowed h-10"
+              />
+              <p className="text-[10px] text-gray-400">Timezone disamaratakan menggunakan WIB untuk seluruh webinar.</p>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Tipe Harga</Label>
+              <Label>Tipe Harga</Label>
               <select
                 className="w-full border rounded-md p-2 text-sm"
                 value={pricingType}
@@ -554,7 +563,7 @@ export default function Index({ webinars = [] }: IndexProps) {
               <>
                 {/* Harga */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
+                  <Label>Harga (Rp)</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                     <Input
@@ -569,7 +578,7 @@ export default function Index({ webinars = [] }: IndexProps) {
 
                 {/* Harga Coret */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label>
                     Harga Coret (Rp) <span className="text-gray-400">(Opsional)</span>
                   </Label>
                   <div className="relative">
@@ -597,7 +606,7 @@ export default function Index({ webinars = [] }: IndexProps) {
             )}
             {pricingType === "donation" && (
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label>
                   Minimum Bayar (Opsional)
                 </Label>
                 <div className="relative">
@@ -619,7 +628,7 @@ export default function Index({ webinars = [] }: IndexProps) {
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Deskripsi</Label>
+              <Label>Deskripsi</Label>
               <Textarea
                 placeholder="Tuliskan deskripsi webinar kamu..."
                 rows={4}

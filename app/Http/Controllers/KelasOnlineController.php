@@ -85,7 +85,7 @@ class KelasOnlineController extends Controller
             ]);
         }
 
-        return redirect()->route('kelas-online.show', $kelas->id)
+        return redirect()->route('kelas-online.index')
             ->with('success', 'Kelas online berhasil dibuat.');
     }
 

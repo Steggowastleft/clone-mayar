@@ -63,9 +63,25 @@ export function SidebarPanel({ kelas }: { kelas: any }) {
     });
   };
 
+  const coverUrl = kelas.thumbnail ? `/storage/${kelas.thumbnail}` : null;
+
   return (
     <>
       <div className="space-y-3">
+        {/* Cover Image */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+          <div className="aspect-video w-full bg-slate-100 flex items-center justify-center relative overflow-hidden border-b">
+            {coverUrl ? (
+              <img src={coverUrl} className="w-full h-full object-cover" alt={kelas.nama} />
+            ) : (
+              <span className="text-4xl">🎓</span>
+            )}
+          </div>
+          <div className="p-3 bg-slate-50/50">
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Cover Kelas Online</h4>
+          </div>
+        </div>
+
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 space-y-2">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
             Edit & Kustom

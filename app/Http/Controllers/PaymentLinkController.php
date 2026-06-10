@@ -100,7 +100,7 @@ class PaymentLinkController extends Controller
             'status'              => 'published',
         ]);
 
-        return redirect()->route('payment-link.show', $link->id)
+        return redirect()->route('payment-link.index')
             ->with('success', 'Link pembayaran berhasil dibuat.');
     }
 

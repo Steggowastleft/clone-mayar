@@ -162,9 +162,25 @@
       { icon: <Star className="h-4 w-4" />,        label: "RATING & TESTIMONIALS", onClick: () => setTestimoniOpen(true) },
     ];
 
+    const coverUrl = bootcamp.cover ? `/storage/${bootcamp.cover}` : (bootcamp.cover_url || null);
+
     return (
       <>
         <div className="space-y-3">
+          {/* Cover Image */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div className="aspect-video w-full bg-slate-100 flex items-center justify-center relative overflow-hidden border-b">
+              {coverUrl ? (
+                <img src={coverUrl} className="w-full h-full object-cover" alt={bootcamp.name} />
+              ) : (
+                <span className="text-4xl">🎓</span>
+              )}
+            </div>
+            <div className="p-3 bg-slate-50/50">
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Cover Bootcamp</h4>
+            </div>
+          </div>
+
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 space-y-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
               Edit & Kustom
@@ -218,14 +234,6 @@
                         )}
                       </button>
                     ))}
-                    <div className="border-t border-gray-100">
-                      <button
-                        onClick={() => { setHapusOpen(true); setStatusOpen(false); }}
-                        className="w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-red-50 text-red-600 transition flex items-center gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" /> Hapus Produk
-                      </button>
-                    </div>
                   </div>
                 </>
               )}
@@ -314,12 +322,42 @@
         <KustomFormDialog open={kustomFormOpen} onOpenChange={setKustomFormOpen} bootcampId={bootcampId} />
 
         {/* Landing Dialogs */}
-        <InstrukturDialog  open={instrukturOpen}  onOpenChange={setInstrukturOpen}  bootcampId={bootcampId} />
-        <SilabusDialog     open={silabusOpen}     onOpenChange={setSilabusOpen}     bootcampId={bootcampId} />
-        <CocokUntukDialog  open={cocokOpen}       onOpenChange={setCocokOpen}       bootcampId={bootcampId} />
-        <OutcomeDialog     open={outcomeOpen}     onOpenChange={setOutcomeOpen}     bootcampId={bootcampId} />
-        <FaqDialog         open={faqOpen}         onOpenChange={setFaqOpen}         bootcampId={bootcampId} />
-        <TestimoniDialog   open={testimoniOpen}   onOpenChange={setTestimoniOpen}   bootcampId={bootcampId} />
+        <InstrukturDialog  
+          open={instrukturOpen}  
+          onOpenChange={setInstrukturOpen}  
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).instruktur || []}
+        />
+        <SilabusDialog     
+          open={silabusOpen}     
+          onOpenChange={setSilabusOpen}     
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).landing_contents?.find((c: any) => c.section === 'silabus')?.konten || []}
+        />
+        <CocokUntukDialog  
+          open={cocokOpen}       
+          onOpenChange={setCocokOpen}       
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).landing_contents?.find((c: any) => c.section === 'cocok_untuk')?.konten || []}
+        />
+        <OutcomeDialog     
+          open={outcomeOpen}     
+          onOpenChange={setOutcomeOpen}     
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).landing_contents?.find((c: any) => c.section === 'outcome')?.konten || []}
+        />
+        <FaqDialog         
+          open={faqOpen}         
+          onOpenChange={setFaqOpen}         
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).landing_contents?.find((c: any) => c.section === 'faq')?.konten || []}
+        />
+        <TestimoniDialog   
+          open={testimoniOpen}   
+          onOpenChange={setTestimoniOpen}   
+          bootcampId={bootcampId} 
+          initialItems={(bootcamp as any).testimoni || []}
+        />
       </>
     );
   }

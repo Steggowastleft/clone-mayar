@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { User, Bell, Shield, CreditCard, Globe, ChevronRight } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Globe, ChevronRight, Download } from "lucide-react";
 import Dashboard from "../dashboard";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 
@@ -31,6 +31,7 @@ export default function PengaturanIndex({ user }: PengaturanProps) {
     { id: "keamanan",     label: "Keamanan",           icon: <Shield className="h-4 w-4" /> },
     { id: "pembayaran",   label: "Metode Pembayaran",  icon: <CreditCard className="h-4 w-4" /> },
     { id: "toko",         label: "Pengaturan Toko",    icon: <Globe className="h-4 w-4" /> },
+    { id: "ekspor",       label: "Ekspor Data",       icon: <Download className="h-4 w-4" /> },
   ];
 
   return (
@@ -135,6 +136,49 @@ export default function PengaturanIndex({ user }: PengaturanProps) {
               </h2>
               <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
                 <p className="text-gray-400 text-sm">Fitur ini akan segera tersedia</p>
+              </div>
+            </div>
+          )}
+
+          {activeSection === "ekspor" && (
+            <div className="max-w-xl">
+              <h2 className="text-lg font-bold text-gray-800 mb-5">Ekspor Data</h2>
+              <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-6">
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Pilih tipe data produk yang ingin Anda ekspor. File akan diunduh dalam format spreadsheet CSV (Comma-Separated Values).
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Tipe Produk</Label>
+                  <select 
+                    id="export-type-select"
+                    className="w-full bg-[#eaedf0] border-0 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    defaultValue="all"
+                  >
+                    <option value="all">Semua Produk</option>
+                    <option value="bootcamp">Kelas Cohort / Bootcamp</option>
+                    <option value="kelas-online">Kelas Online</option>
+                    <option value="webinar">Webinar</option>
+                    <option value="produk-digital">Produk Digital</option>
+                    <option value="coaching-mentoring">Coaching & Mentoring</option>
+                    <option value="bundling">Bundling</option>
+                    <option value="payment-link">Link Pembayaran</option>
+                    <option value="penggalangan-dana">Penggalangan Dana</option>
+                  </select>
+                </div>
+
+                <Button 
+                  onClick={() => {
+                    const select = document.getElementById("export-type-select") as HTMLSelectElement;
+                    const val = select ? select.value : "all";
+                    window.open(`/pengaturan/ekspor?type=${val}`, "_blank");
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold w-full py-2.5"
+                >
+                  Unduh File Ekspor (.csv)
+                </Button>
               </div>
             </div>
           )}

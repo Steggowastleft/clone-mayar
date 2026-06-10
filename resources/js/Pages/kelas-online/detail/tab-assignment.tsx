@@ -61,12 +61,17 @@ const emptyForm = {
   is_wajib:       false,
   is_tugas_akhir: false,
   tipe:           "upload" as "upload" | "quiz",
+  jam_pengumpulan: "23:59",
 };
 
-function formatTanggal(dateStr?: string): string {
+function formatTanggal(dateStr?: string, showTime: boolean = false): string {
   if (!dateStr) return "";
   try {
-    return format(new Date(dateStr), "dd MMM yyyy", { locale: idLocale });
+    const d = new Date(dateStr);
+    if (showTime) {
+      return format(d, "dd MMM yyyy HH:mm", { locale: idLocale });
+    }
+    return format(d, "dd MMM yyyy", { locale: idLocale });
   } catch {
     return dateStr;
   }
@@ -404,7 +409,7 @@ function AssignmentCard({
               )}
               {assignment.tanggal_akhir && (
                 <span className="text-xs text-orange-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir)}
+                  <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir, true)}
                 </span>
               )}
             </div>
@@ -511,7 +516,7 @@ function ViewDialog({ assignment, open, onClose }: { assignment: Assignment | nu
             )}
             {assignment.tanggal_akhir && (
               <span className="text-xs text-orange-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir)}
+                <AlertCircle className="h-3 w-3" /> Deadline: {formatTanggal(assignment.tanggal_akhir, true)}
               </span>
             )}
           </div>
@@ -799,15 +804,24 @@ export default function TabAssignment({
   // ── Buka edit ──
   const handleOpenEdit = (a: Assignment) => {
     setEditingItem(a);
+    let jam = "23:59";
+    if (a.tanggal_akhir) {
+      const d = new Date(a.tanggal_akhir);
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      jam = `${h}:${m}`;
+    }
     setForm({
       judul:         a.judul,
       tugas:         a.tugas,
       rangeTanggal: {
-      from: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
-      to: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,},
+        from: a.tanggal_mulai ? new Date(a.tanggal_mulai) : undefined,
+        to: a.tanggal_akhir ? new Date(a.tanggal_akhir) : undefined,
+      },
       is_wajib:      a.is_wajib,
       is_tugas_akhir: a.is_tugas_akhir ?? false,
       tipe:           a.tipe ?? "upload",
+      jam_pengumpulan: jam,
     });
     setExistingFiles(a.files || []);
     setNewFiles([]);
@@ -859,9 +873,16 @@ export default function TabAssignment({
     fd.append("is_tugas_akhir", form.is_tugas_akhir ? "1" : "0");
     fd.append("tipe", tipeRef.current); // use ref to avoid stale closure
     if (form.rangeTanggal?.from) {
-    fd.append("tanggal_mulai", format(form.rangeTanggal.from, "yyyy-MM-dd"));}
+      fd.append("tanggal_mulai", format(form.rangeTanggal.from, "yyyy-MM-dd 00:00:00"));
+    }
     if (form.rangeTanggal?.to) {
-    fd.append("tanggal_akhir", format(form.rangeTanggal.to, "yyyy-MM-dd"));}
+      const toDate = new Date(form.rangeTanggal.to);
+      const timeParts = (form.jam_pengumpulan || "23:59").split(":");
+      const hours = parseInt(timeParts[0] || "23", 10);
+      const minutes = parseInt(timeParts[1] || "59", 10);
+      toDate.setHours(hours, minutes, 0, 0);
+      fd.append("tanggal_akhir", format(toDate, "yyyy-MM-dd HH:mm:ss"));
+    }
     newFiles.forEach((f, i) => fd.append(`files[${i}]`, f));
     // Kirim id file yang masih dipertahankan (edit mode)
     existingFiles.forEach((f, i) => { if (f.id) fd.append(`existing_files[${i}]`, String(f.id)); });
@@ -1014,34 +1035,48 @@ export default function TabAssignment({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="space-y-1">
-  <Label className="text-sm font-medium text-gray-700">
-    Periode Tugas <span className="text-red-500">*</span>
-  </Label>
+                  <Label className="text-sm font-medium text-gray-700">
+                    Periode Tugas <span className="text-red-500">*</span>
+                  </Label>
 
-  <Popover>
-    <PopoverTrigger asChild>
-      <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm">
-        {form.rangeTanggal?.from && form.rangeTanggal?.to
-          ? `${format(form.rangeTanggal.from, "dd MMM yyyy")} - ${format(form.rangeTanggal.to, "dd MMM yyyy")}`
-          : "Pilih rentang tanggal"}
-      </button>
-    </PopoverTrigger>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm bg-white">
+                        {form.rangeTanggal?.from && form.rangeTanggal?.to
+                          ? `${format(form.rangeTanggal.from, "dd MMM yyyy")} - ${format(form.rangeTanggal.to, "dd MMM yyyy")}`
+                          : "Pilih rentang tanggal"}
+                      </button>
+                    </PopoverTrigger>
 
-    <PopoverContent className="w-auto p-0">
-      <CalendarComponent
-        mode="range"
-        selected={form.rangeTanggal}
-        onSelect={(range) => setForm({ ...form, rangeTanggal: range })}
-        numberOfMonths={2}
-      />
-    </PopoverContent>
-  </Popover>
+                    <PopoverContent className="w-auto p-0">
+                      <CalendarComponent
+                        mode="range"
+                        selected={form.rangeTanggal}
+                        onSelect={(range) => setForm({ ...form, rangeTanggal: range })}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
 
-  {errors.tanggal_mulai && (
-    <p className="text-xs text-red-500">{errors.tanggal_mulai}</p>
-  )}
-</div>
-                <p className="text-xs text-gray-400 mt-1">Peserta tidak dapat mengirimkan tugas setelah tanggal ini</p>
+                  {errors.tanggal_mulai && (
+                    <p className="text-xs text-red-500">{errors.tanggal_mulai}</p>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Pilih tanggal mulai & batas akhir tugas</p>
+              </div>
+
+              <div>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Jam Pengumpulan (Deadline) <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="time"
+                    value={form.jam_pengumpulan || "23:59"}
+                    onChange={(e) => setForm({ ...form, jam_pengumpulan: e.target.value })}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Batas jam pengumpulan (WIB)</p>
               </div>
             </div>
 

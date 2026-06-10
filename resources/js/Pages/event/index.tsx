@@ -73,7 +73,7 @@ function DateTimePickerField({
   const [open, setOpen] = useState(false);
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label>
         {label}{" "}
         {optional && (
           <span className="text-gray-400 font-normal">(Opsional)</span>
@@ -260,6 +260,7 @@ export default function Index({ events }: IndexProps) {
         setCreateOpen(false);
         setIsSubmitting(false);
         toast.success("Event berhasil dibuat!");
+        router.reload();
       },
       onError: (errors) => {
         setIsSubmitting(false);
@@ -502,26 +503,16 @@ export default function Index({ events }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <CalendarDays className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Event / Acara
-              </DialogTitle>
-            </div>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Mengadakan event offline atau online, menerima pembelian
-              tiket, pendaftaran dan pembayaran semakin mudah dengan
-              Mayar
-            </p>
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Event / Acara
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Nama Event */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Nama Event / Acara{" "}
                 <span className="text-red-500">*</span>
               </Label>
@@ -540,7 +531,7 @@ export default function Index({ events }: IndexProps) {
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Deskripsi <span className="text-red-500">*</span>
               </Label>
               <Textarea
@@ -558,7 +549,7 @@ export default function Index({ events }: IndexProps) {
 
             {/* Tipe Event - Dropdown */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Tipe Event <span className="text-red-500">*</span>
               </Label>
               <Select
@@ -580,7 +571,7 @@ export default function Index({ events }: IndexProps) {
             {/* Link Meeting - Only for Online */}
             {formData.tipe === "online" && (
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label>
                   Link Meeting / Join URL <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -631,29 +622,26 @@ export default function Index({ events }: IndexProps) {
             </p>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Cover (gambar/video untuk promo)
-              </Label>
+            <div className="space-y-2">
+              <Label>Cover Gambar</Label>
               <div
-                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {coverPreview ? (
-                  <img
-                    src={coverPreview}
-                    alt="preview"
-                    className="max-h-40 mx-auto rounded-md object-cover"
-                  />
+                  <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-500">
-                      Drag &amp; drop image
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      PNG, JPG, WEBP, MP4 (maks. 10MB)
-                    </p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Upload className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
               </div>
@@ -664,16 +652,12 @@ export default function Index({ events }: IndexProps) {
                 className="hidden"
                 onChange={handleCoverChange}
               />
-              {coverFile && (
-                <p className="text-xs text-green-600">
-                  ✓ {coverFile.name}
-                </p>
-              )}
+              {coverFile && <p className="text-xs text-green-600">✓ {coverFile.name}</p>}
             </div>
 
             {/* Instruksi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Instruksi
               </Label>
               <p className="text-xs text-gray-500">
@@ -698,7 +682,7 @@ export default function Index({ events }: IndexProps) {
 
             {/* Syarat & Ketentuan */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Syarat dan Ketentuan
               </Label>
               <Textarea
@@ -751,7 +735,7 @@ export default function Index({ events }: IndexProps) {
 
             {/* Max Tiket per Transaksi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Jumlah maksimal tiket per transaksi
               </Label>
               <Select
@@ -778,7 +762,7 @@ export default function Index({ events }: IndexProps) {
 
             {/* Redirect URL */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Redirect URL{" "}
                 <span className="text-gray-400 font-normal">
                   (Opsional)
@@ -802,21 +786,13 @@ export default function Index({ events }: IndexProps) {
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex justify-center pt-4">
               <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setCreateOpen(false)}
-                disabled={isSubmitting}
-              >
-                Batal
-              </Button>
-              <Button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Menyimpan..." : "Buat Event"}
+                {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
               </Button>
             </div>
           </div>

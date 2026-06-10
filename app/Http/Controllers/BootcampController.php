@@ -72,7 +72,8 @@ class BootcampController extends Controller
             'date'                       => now()->format('Y-m-d'),
         ]);
 
-        return redirect()->route('bootcamps.show', $bootcamp->id);
+        return redirect()->route('bootcamps.index')
+            ->with('success', 'Kelas Cohort / Bootcamp berhasil dibuat.');
     }
 
     public function show(Bootcamp $bootcamp)
@@ -90,6 +91,9 @@ class BootcampController extends Controller
             'assignments.submissions.peserta',
             'pendaftaran.peserta',
             'ratings.peserta',
+            'instruktur',
+            'landingContents',
+            'testimoni',
         ]);
 
         // ── Submissions (untuk tab Grade) ────────────────────────
@@ -210,6 +214,24 @@ class BootcampController extends Controller
                 'tanggal_tutup_daftar'       => $bootcamp->tanggal_tutup_daftar,
                 'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran,
                 'tanggal_batas_pembelajaran' => $bootcamp->tanggal_batas_pembelajaran,
+                'created_at'                 => $bootcamp->created_at?->toISOString(),
+                'instruktur'                 => $bootcamp->instruktur->map(fn($ins) => [
+                    'id'        => $ins->id,
+                    'nama'      => $ins->nama,
+                    'jabatan'   => $ins->jabatan,
+                    'bio'       => $ins->bio,
+                    'foto_url'  => $ins->foto ? Storage::url($ins->foto) : null,
+                ])->values()->toArray(),
+                'landing_contents'           => $bootcamp->landingContents->map(fn($lc) => [
+                    'section' => $lc->section,
+                    'konten'  => json_decode($lc->konten, true) ?? [],
+                ])->values()->toArray(),
+                'testimoni'                  => $bootcamp->testimoni->map(fn($t) => [
+                    'nama'    => $t->nama,
+                    'profesi' => $t->profesi,
+                    'isi'     => $t->isi,
+                    'rating'  => $t->rating,
+                ])->values()->toArray(),
             ],
 
             // Sesi

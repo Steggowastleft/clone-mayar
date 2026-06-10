@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { router } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Plus, Trash2, Loader2, Star, GripVertical,
-  User, BookOpen, Users, Target, HelpCircle, MessageSquare, Upload, X,
+  User, BookOpen, Users, Target, HelpCircle, MessageSquare, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -51,23 +51,29 @@ function ListEditor({
 
   return (
     <div className="space-y-2">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
-          <Input
-            value={item}
-            onChange={(e) => update(i, e.target.value)}
-            placeholder={placeholder}
-            className="flex-1 text-sm"
-          />
-          <button
-            onClick={() => remove(i)}
-            className="text-gray-300 hover:text-red-500 transition shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+      {items.length === 0 ? (
+        <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs">
+          Belum ada data. Klik tombol di bawah untuk menambah.
         </div>
-      ))}
+      ) : (
+        items.map((item, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
+            <Input
+              value={item}
+              onChange={(e) => update(i, e.target.value)}
+              placeholder={placeholder}
+              className="flex-1 text-sm"
+            />
+            <button
+              onClick={() => remove(i)}
+              className="text-gray-300 hover:text-red-500 transition shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))
+      )}
       <button
         onClick={add}
         className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium mt-1"
@@ -89,12 +95,26 @@ type Instruktur = {
   foto_url?: string;
 };
 
-export function InstrukturDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [instrukturList, setInstrukturList] = useState<Instruktur[]>([
-    { nama: "", jabatan: "", bio: "", foto: null },
-  ]);
+export function InstrukturDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: any[] }) {
+  const [instrukturList, setInstrukturList] = useState<Instruktur[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setInstrukturList(
+        initialItems.length 
+          ? initialItems.map(item => ({
+              nama: item.nama || "",
+              jabatan: item.jabatan || "",
+              bio: item.bio || "",
+              foto: null,
+              foto_url: item.foto_url || null,
+            })) 
+          : [{ nama: "", jabatan: "", bio: "", foto: null }]
+      );
+    }
+  }, [open, initialItems]);
 
   const updateItem = (i: number, field: keyof Instruktur, value: any) => {
     const next = [...instrukturList];
@@ -109,18 +129,21 @@ export function InstrukturDialog({ open, onOpenChange, bootcampId }: BaseProps) 
     setInstrukturList(instrukturList.filter((_, j) => j !== i));
 
   const handleSubmit = () => {
-    const hasEmpty = instrukturList.some((ins) => !ins.nama.trim());
+    // Filter out completely empty items
+    const filtered = instrukturList.filter(ins => ins.nama.trim() || ins.jabatan.trim() || ins.bio.trim());
+    const hasEmpty = filtered.some((ins) => !ins.nama.trim());
     if (hasEmpty) { toast.error("Nama instruktur wajib diisi."); return; }
 
     setIsSubmitting(true);
     const fd = new FormData();
-    instrukturList.forEach((ins, i) => {
+    filtered.forEach((ins, i) => {
       fd.append(`instruktur[${i}][nama]`,    ins.nama);
       fd.append(`instruktur[${i}][jabatan]`, ins.jabatan);
       fd.append(`instruktur[${i}][bio]`,     ins.bio);
       if (ins.foto) fd.append(`instruktur[${i}][foto]`, ins.foto);
     });
 
+    // Send empty payload or values
     router.post(`/bootcamps/${bootcampId}/landing/instruktur`, fd, {
       forceFormData: true,
       preserveScroll: true,
@@ -140,64 +163,68 @@ export function InstrukturDialog({ open, onOpenChange, bootcampId }: BaseProps) 
         </DialogHeader>
 
         <div className="space-y-5 pt-1">
-          {instrukturList.map((ins, i) => (
-            <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
-              {instrukturList.length > 1 && (
+          {instrukturList.length === 0 ? (
+            <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs">
+              Belum ada instruktur. Klik tombol di bawah untuk menambah.
+            </div>
+          ) : (
+            instrukturList.map((ins, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
                 <button
                   onClick={() => removeInstruktur(i)}
                   className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              )}
 
-              {/* Foto */}
-              <div className="flex items-center gap-3">
-                <div
-                  onClick={() => fileRefs.current[i]?.click()}
-                  className="w-16 h-16 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-blue-400 transition overflow-hidden bg-gray-50 shrink-0"
-                >
-                  {ins.foto_url || ins.foto ? (
-                    <img
-                      src={ins.foto ? URL.createObjectURL(ins.foto) : ins.foto_url}
-                      className="w-full h-full object-cover"
+                {/* Foto */}
+                <div className="flex items-center gap-3">
+                  <div
+                    onClick={() => fileRefs.current[i]?.click()}
+                    className="w-16 h-16 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-blue-400 transition overflow-hidden bg-gray-50 shrink-0"
+                  >
+                    {ins.foto_url || ins.foto ? (
+                      <img
+                        src={ins.foto ? URL.createObjectURL(ins.foto) : ins.foto_url}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Upload className="h-5 w-5 text-gray-300" />
+                    )}
+                  </div>
+                  <input
+                    ref={(el) => { fileRefs.current[i] = el; }}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => updateItem(i, "foto", e.target.files?.[0] || null)}
+                  />
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      placeholder="Nama instruktur *"
+                      value={ins.nama}
+                      onChange={(e) => updateItem(i, "nama", e.target.value)}
+                      className="text-sm"
                     />
-                  ) : (
-                    <Upload className="h-5 w-5 text-gray-300" />
-                  )}
+                    <Input
+                      placeholder="Jabatan / Title (contoh: Senior Developer)"
+                      value={ins.jabatan}
+                      onChange={(e) => updateItem(i, "jabatan", e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
-                <input
-                  ref={(el) => { fileRefs.current[i] = el; }}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => updateItem(i, "foto", e.target.files?.[0] || null)}
-                />
-                <div className="flex-1 space-y-2">
-                  <Input
-                    placeholder="Nama instruktur *"
-                    value={ins.nama}
-                    onChange={(e) => updateItem(i, "nama", e.target.value)}
-                    className="text-sm"
-                  />
-                  <Input
-                    placeholder="Jabatan / Title (contoh: Senior Developer)"
-                    value={ins.jabatan}
-                    onChange={(e) => updateItem(i, "jabatan", e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-              </div>
 
-              <Textarea
-                placeholder="Bio singkat instruktur..."
-                rows={2}
-                value={ins.bio}
-                onChange={(e) => updateItem(i, "bio", e.target.value)}
-                className="text-sm"
-              />
-            </div>
-          ))}
+                <Textarea
+                  placeholder="Bio singkat instruktur..."
+                  rows={2}
+                  value={ins.bio}
+                  onChange={(e) => updateItem(i, "bio", e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+            ))
+          )}
 
           <button
             onClick={addInstruktur}
@@ -223,16 +250,21 @@ export function InstrukturDialog({ open, onOpenChange, bootcampId }: BaseProps) 
 // ─────────────────────────────────────────────
 // 2. SILABUS Dialog
 // ─────────────────────────────────────────────
-export function SilabusDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [items, setItems] = useState<string[]>([""]);
+export function SilabusDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: string[] }) {
+  const [items, setItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setItems(initialItems.length ? initialItems : [""]);
+    }
+  }, [open, initialItems]);
 
   const handleSubmit = () => {
     const filtered = items.filter((s) => s.trim());
-    if (!filtered.length) { toast.error("Tambahkan minimal 1 poin silabus."); return; }
 
     setIsSubmitting(true);
-    router.post(`/bootcamps/${bootcampId}/landing/silabus`, { silabus: filtered }, {
+    router.post(`/bootcamps/${bootcampId}/landing/silabus`, { silabus: filtered.length ? filtered : null }, {
       preserveScroll: true,
       onSuccess: () => { setIsSubmitting(false); toast.success("Silabus berhasil disimpan!"); onOpenChange(false); },
       onError:   () => { setIsSubmitting(false); toast.error("Gagal menyimpan silabus."); },
@@ -271,16 +303,21 @@ export function SilabusDialog({ open, onOpenChange, bootcampId }: BaseProps) {
 // ─────────────────────────────────────────────
 // 3. KELAS INI COCOK UNTUK Dialog
 // ─────────────────────────────────────────────
-export function CocokUntukDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [items, setItems] = useState<string[]>([""]);
+export function CocokUntukDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: string[] }) {
+  const [items, setItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setItems(initialItems.length ? initialItems : [""]);
+    }
+  }, [open, initialItems]);
 
   const handleSubmit = () => {
     const filtered = items.filter((s) => s.trim());
-    if (!filtered.length) { toast.error("Tambahkan minimal 1 target peserta."); return; }
 
     setIsSubmitting(true);
-    router.post(`/bootcamps/${bootcampId}/landing/cocok-untuk`, { items: filtered }, {
+    router.post(`/bootcamps/${bootcampId}/landing/cocok-untuk`, { items: filtered.length ? filtered : null }, {
       preserveScroll: true,
       onSuccess: () => { setIsSubmitting(false); toast.success("Berhasil disimpan!"); onOpenChange(false); },
       onError:   () => { setIsSubmitting(false); toast.error("Gagal menyimpan."); },
@@ -319,16 +356,21 @@ export function CocokUntukDialog({ open, onOpenChange, bootcampId }: BaseProps) 
 // ─────────────────────────────────────────────
 // 4. OUTCOME Dialog
 // ─────────────────────────────────────────────
-export function OutcomeDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [items, setItems] = useState<string[]>([""]);
+export function OutcomeDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: string[] }) {
+  const [items, setItems] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setItems(initialItems.length ? initialItems : [""]);
+    }
+  }, [open, initialItems]);
 
   const handleSubmit = () => {
     const filtered = items.filter((s) => s.trim());
-    if (!filtered.length) { toast.error("Tambahkan minimal 1 outcome."); return; }
 
     setIsSubmitting(true);
-    router.post(`/bootcamps/${bootcampId}/landing/outcome`, { items: filtered }, {
+    router.post(`/bootcamps/${bootcampId}/landing/outcome`, { items: filtered.length ? filtered : null }, {
       preserveScroll: true,
       onSuccess: () => { setIsSubmitting(false); toast.success("Outcome berhasil disimpan!"); onOpenChange(false); },
       onError:   () => { setIsSubmitting(false); toast.error("Gagal menyimpan outcome."); },
@@ -369,9 +411,15 @@ export function OutcomeDialog({ open, onOpenChange, bootcampId }: BaseProps) {
 // ─────────────────────────────────────────────
 type FaqItem = { pertanyaan: string; jawaban: string };
 
-export function FaqDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [items, setItems] = useState<FaqItem[]>([{ pertanyaan: "", jawaban: "" }]);
+export function FaqDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: FaqItem[] }) {
+  const [items, setItems] = useState<FaqItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setItems(initialItems.length ? initialItems : [{ pertanyaan: "", jawaban: "" }]);
+    }
+  }, [open, initialItems]);
 
   const update = (i: number, field: keyof FaqItem, v: string) => {
     const next = [...items];
@@ -380,11 +428,18 @@ export function FaqDialog({ open, onOpenChange, bootcampId }: BaseProps) {
   };
 
   const handleSubmit = () => {
-    const hasEmpty = items.some((item) => !item.pertanyaan.trim() || !item.jawaban.trim());
-    if (hasEmpty) { toast.error("Pertanyaan dan jawaban wajib diisi semua."); return; }
+    // Filter out completely empty items
+    const filtered = items.filter(item => item.pertanyaan.trim() || item.jawaban.trim());
+    
+    // Check if any partially filled item exists
+    const hasInvalid = filtered.some((item) => !item.pertanyaan.trim() || !item.jawaban.trim());
+    if (hasInvalid) { 
+      toast.error("Pertanyaan dan jawaban wajib diisi."); 
+      return; 
+    }
 
     setIsSubmitting(true);
-    router.post(`/bootcamps/${bootcampId}/landing/faq`, { faqs: items }, {
+    router.post(`/bootcamps/${bootcampId}/landing/faq`, { faqs: filtered.length ? filtered : null }, {
       preserveScroll: true,
       onSuccess: () => { setIsSubmitting(false); toast.success("FAQ berhasil disimpan!"); onOpenChange(false); },
       onError:   () => { setIsSubmitting(false); toast.error("Gagal menyimpan FAQ."); },
@@ -402,37 +457,41 @@ export function FaqDialog({ open, onOpenChange, bootcampId }: BaseProps) {
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {items.map((item, i) => (
-            <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
-              {items.length > 1 && (
+          {items.length === 0 ? (
+            <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs">
+              Belum ada FAQ. Klik tombol di bawah untuk menambah.
+            </div>
+          ) : (
+            items.map((item, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
                 <button
                   onClick={() => setItems(items.filter((_, j) => j !== i))}
                   className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              )}
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pertanyaan</Label>
-                <Input
-                  placeholder="Contoh: Apakah ada sertifikat setelah lulus?"
-                  value={item.pertanyaan}
-                  onChange={(e) => update(i, "pertanyaan", e.target.value)}
-                  className="text-sm"
-                />
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pertanyaan</Label>
+                  <Input
+                    placeholder="Contoh: Apakah ada sertifikat setelah lulus?"
+                    value={item.pertanyaan}
+                    onChange={(e) => update(i, "pertanyaan", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Jawaban</Label>
+                  <Textarea
+                    placeholder="Tulis jawaban di sini..."
+                    rows={2}
+                    value={item.jawaban}
+                    onChange={(e) => update(i, "jawaban", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Jawaban</Label>
-                <Textarea
-                  placeholder="Tulis jawaban di sini..."
-                  rows={2}
-                  value={item.jawaban}
-                  onChange={(e) => update(i, "jawaban", e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-            </div>
-          ))}
+            ))
+          )}
 
           <button
             onClick={() => setItems([...items, { pertanyaan: "", jawaban: "" }])}
@@ -483,11 +542,24 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   );
 }
 
-export function TestimoniDialog({ open, onOpenChange, bootcampId }: BaseProps) {
-  const [items, setItems] = useState<Testimoni[]>([
-    { nama: "", profesi: "", isi: "", rating: 5 },
-  ]);
+export function TestimoniDialog({ open, onOpenChange, bootcampId, initialItems = [] }: BaseProps & { initialItems?: Testimoni[] }) {
+  const [items, setItems] = useState<Testimoni[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setItems(
+        initialItems.length 
+          ? initialItems.map(item => ({
+              nama: item.nama || "",
+              profesi: item.profesi || "",
+              isi: item.isi || "",
+              rating: item.rating || 5,
+            })) 
+          : [{ nama: "", profesi: "", isi: "", rating: 5 }]
+      );
+    }
+  }, [open, initialItems]);
 
   const update = (i: number, field: keyof Testimoni, v: any) => {
     const next = [...items];
@@ -496,11 +568,12 @@ export function TestimoniDialog({ open, onOpenChange, bootcampId }: BaseProps) {
   };
 
   const handleSubmit = () => {
-    const hasEmpty = items.some((item) => !item.nama.trim() || !item.isi.trim());
+    const filtered = items.filter((item) => item.nama.trim() || item.isi.trim());
+    const hasEmpty = filtered.some((item) => !item.nama.trim() || !item.isi.trim());
     if (hasEmpty) { toast.error("Nama dan isi testimoni wajib diisi."); return; }
 
     setIsSubmitting(true);
-    router.post(`/bootcamps/${bootcampId}/landing/testimoni`, { testimoni: items }, {
+    router.post(`/bootcamps/${bootcampId}/landing/testimoni`, { testimoni: filtered.length ? filtered : null }, {
       preserveScroll: true,
       onSuccess: () => { setIsSubmitting(false); toast.success("Testimoni berhasil disimpan!"); onOpenChange(false); },
       onError:   () => { setIsSubmitting(false); toast.error("Gagal menyimpan testimoni."); },
@@ -518,56 +591,60 @@ export function TestimoniDialog({ open, onOpenChange, bootcampId }: BaseProps) {
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {items.map((item, i) => (
-            <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
-              {items.length > 1 && (
+          {items.length === 0 ? (
+            <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs">
+              Belum ada testimoni. Klik tombol di bawah untuk menambah.
+            </div>
+          ) : (
+            items.map((item, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 relative">
                 <button
                   onClick={() => setItems(items.filter((_, j) => j !== i))}
                   className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              )}
 
-              {/* Rating bintang */}
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rating</Label>
-                <StarRating value={item.rating} onChange={(v) => update(i, "rating", v)} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+                {/* Rating bintang */}
                 <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nama *</Label>
-                  <Input
-                    placeholder="Nama alumni"
-                    value={item.nama}
-                    onChange={(e) => update(i, "nama", e.target.value)}
+                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rating</Label>
+                  <StarRating value={item.rating} onChange={(v) => update(i, "rating", v)} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nama *</Label>
+                    <Input
+                      placeholder="Nama alumni"
+                      value={item.nama}
+                      onChange={(e) => update(i, "nama", e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Profesi</Label>
+                    <Input
+                      placeholder="Contoh: Frontend Developer"
+                      value={item.profesi}
+                      onChange={(e) => update(i, "profesi", e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Testimoni *</Label>
+                  <Textarea
+                    placeholder="Tulis testimoni alumni..."
+                    rows={3}
+                    value={item.isi}
+                    onChange={(e) => update(i, "isi", e.target.value)}
                     className="text-sm"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Profesi</Label>
-                  <Input
-                    placeholder="Contoh: Frontend Developer"
-                    value={item.profesi}
-                    onChange={(e) => update(i, "profesi", e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Testimoni *</Label>
-                <Textarea
-                  placeholder="Tulis testimoni alumni..."
-                  rows={3}
-                  value={item.isi}
-                  onChange={(e) => update(i, "isi", e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-            </div>
-          ))}
+            ))
+          )}
 
           <button
             onClick={() => setItems([...items, { nama: "", profesi: "", isi: "", rating: 5 }])}

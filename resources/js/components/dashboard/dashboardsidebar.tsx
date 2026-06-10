@@ -320,8 +320,9 @@ export function DashboardSidebar({ user, currentPath = "", badgeCounts }: Props)
   }, []);
  
   const isAdmin = user.role === 'admin';
+  const userSlug = user.name ? user.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : user.id;
   const creatorMenuItems: NavItem[] = [
-    { label: "Catalog", icon: <ShoppingCart className="h-4 w-4" />, href: `/catalog?user_id=${user.id}`, external: true },
+    { label: "Catalog", icon: <ShoppingCart className="h-4 w-4" />, href: `/catalog?${userSlug}`, external: true },
     ...MENU_ITEMS
   ];
   const items = isAdmin ? ADMIN_MENU_ITEMS : creatorMenuItems;

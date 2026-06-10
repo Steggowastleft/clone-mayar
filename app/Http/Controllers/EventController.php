@@ -83,7 +83,8 @@ class EventController extends Controller
                 'status'         => 'unpublished',
             ]);
 
-            return redirect()->route('event.show', $event->id);
+            return redirect()->route('event.index')
+                ->with('success', 'Event berhasil dibuat.');
         });
     }
 
