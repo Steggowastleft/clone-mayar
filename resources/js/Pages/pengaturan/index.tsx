@@ -1,6 +1,6 @@
 import AppLayout from "@/layouts/app-layout";
-import { Head } from "@inertiajs/react";
-import { useState } from "react";
+import { Head, usePage } from "@inertiajs/react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +21,28 @@ type PengaturanProps = {
 };
 
 export default function PengaturanIndex({ user }: PengaturanProps) {
-  const [activeSection, setActiveSection] = useState("profil");
+  const { url } = usePage();
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) return tab;
+    }
+    return "profil";
+  });
+
   const u = user ?? { name: "", email: "", no_hp: "", bio: "", website: "" };
   const [form, setForm] = useState({ ...u });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) {
+        setActiveSection(tab);
+      }
+    }
+  }, [url]);
 
   const sections = [
     { id: "profil",       label: "Profil",            icon: <User className="h-4 w-4" /> },
@@ -31,7 +50,6 @@ export default function PengaturanIndex({ user }: PengaturanProps) {
     { id: "keamanan",     label: "Keamanan",           icon: <Shield className="h-4 w-4" /> },
     { id: "pembayaran",   label: "Metode Pembayaran",  icon: <CreditCard className="h-4 w-4" /> },
     { id: "toko",         label: "Pengaturan Toko",    icon: <Globe className="h-4 w-4" /> },
-    { id: "ekspor",       label: "Ekspor Data",       icon: <Download className="h-4 w-4" /> },
   ];
 
   return (
@@ -136,49 +154,6 @@ export default function PengaturanIndex({ user }: PengaturanProps) {
               </h2>
               <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
                 <p className="text-gray-400 text-sm">Fitur ini akan segera tersedia</p>
-              </div>
-            </div>
-          )}
-
-          {activeSection === "ekspor" && (
-            <div className="max-w-xl">
-              <h2 className="text-lg font-bold text-gray-800 mb-5">Ekspor Data</h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-6">
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Pilih tipe data produk yang ingin Anda ekspor. File akan diunduh dalam format spreadsheet CSV (Comma-Separated Values).
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">Tipe Produk</Label>
-                  <select 
-                    id="export-type-select"
-                    className="w-full bg-[#eaedf0] border-0 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
-                    defaultValue="all"
-                  >
-                    <option value="all">Semua Produk</option>
-                    <option value="bootcamp">Kelas Cohort / Bootcamp</option>
-                    <option value="kelas-online">Kelas Online</option>
-                    <option value="webinar">Webinar</option>
-                    <option value="produk-digital">Produk Digital</option>
-                    <option value="coaching-mentoring">Coaching & Mentoring</option>
-                    <option value="bundling">Bundling</option>
-                    <option value="payment-link">Link Pembayaran</option>
-                    <option value="penggalangan-dana">Penggalangan Dana</option>
-                  </select>
-                </div>
-
-                <Button 
-                  onClick={() => {
-                    const select = document.getElementById("export-type-select") as HTMLSelectElement;
-                    const val = select ? select.value : "all";
-                    window.open(`/pengaturan/ekspor?type=${val}`, "_blank");
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold w-full py-2.5"
-                >
-                  Unduh File Ekspor (.csv)
-                </Button>
               </div>
             </div>
           )}

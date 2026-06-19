@@ -35,9 +35,10 @@ interface Props {
   assignments: any[];
   submissions: any[];
   pesertaList: any[];
+  ratings?: any[];
 }
 
-export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignments, submissions, pesertaList }: Props) {
+export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignments, submissions, pesertaList, ratings = [] }: Props) {
   return (
     <DashboardLayout>
       <Head title={kelas?.nama || "Kelas Online Detail"} />
@@ -85,6 +86,7 @@ export default function KelasOnlineShow({ id, kelas, isOwner, materi, assignment
           assignments={assignments}
           submissions={submissions}
           pesertaList={pesertaList}
+          ratings={ratings}
         />
       </div>
     </DashboardLayout>

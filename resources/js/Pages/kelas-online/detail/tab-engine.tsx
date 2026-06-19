@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { Link } from "@inertiajs/react";
 import axios from "axios";
@@ -12,6 +12,7 @@ import {
   Medal,
   User,
   Video,
+  Star,
 } from "lucide-react";
 
 import { SidebarPanel } from "../components/sidebarpanel";
@@ -23,6 +24,8 @@ import TabTransaksi from "./tab-transaksi";
 import TabSection from "./tab-section";
 import TabInstructor from "./tab-instructor";
 import TabMeeting from "./tab-meeting";
+
+const TabRating = lazy(() => import("../../bootcamps/detail/rating"));
 
 // ================================================================
 const SESI_CFG = {
@@ -208,9 +211,18 @@ type Props = {
   assignments?: any[];
   submissions?: any[];
   pesertaList?: any[];
+  ratings?: any[];
 };
 
-export default function TabEngineKelasOnline({ kelas, isOwner, materi, assignments = [], submissions = [], pesertaList = [] }: Props) {
+export default function TabEngineKelasOnline({
+  kelas,
+  isOwner,
+  materi,
+  assignments = [],
+  submissions = [],
+  pesertaList = [],
+  ratings = [],
+}: Props) {
   const [activeTab, setActiveTab] = useState(isOwner ? "detail" : "section");
 
   const tabsOwner = useMemo(
@@ -221,8 +233,9 @@ export default function TabEngineKelasOnline({ kelas, isOwner, materi, assignmen
       { id: "instruktur", label: "INSTRUKTUR", icon: <User className="h-3 w-3" /> },
       { id: "presensi", label: "PRESENSI", icon: <CalendarCheck className="h-3 w-3" /> },
       { id: "sertifikat", label: "SERTIFIKAT", icon: <Medal className="h-3 w-3" /> },
-      ...(kelas.has_assignment ? [{ id: "assignment", label: "ASSIGNMENT", icon: <CheckSquare className="h-3 w-3" /> }] : []),
+      ...(kelas.has_assignment ? [{ id: "assignment", label: "TUGAS/UJIAN", icon: <CheckSquare className="h-3 w-3" /> }] : []),
       { id: "grade", label: "NILAI", icon: <Award className="h-3 w-3" /> },
+      { id: "rating", label: "RATING", icon: <Star className="h-3 w-3" /> },
       { id: "email", label: "EMAIL", icon: <Mail className="h-3 w-3" /> },
       { id: "transaksi", label: "TRANSAKSI", icon: <BarChart3 className="h-3 w-3" /> },
     ],
@@ -253,6 +266,11 @@ export default function TabEngineKelasOnline({ kelas, isOwner, materi, assignmen
       case "sertifikat": return <SertifikatTab kelas={kelas} isOwner={isOwner} />;
       case "assignment": return <TabAssignment kelasId={kelas.id} initialAssignmentList={kelas.assignments} isOwner={isOwner} />;
       case "grade":      return <TabGrade kelasId={kelas.id} assignments={assignments} submissions={submissions} />;
+      case "rating":     return (
+        <Suspense fallback={<div className="p-6 text-gray-400">Loading rating...</div>}>
+          <TabRating ratings={ratings} />
+        </Suspense>
+      );
       case "email":      return <TabEmail pesertaList={pesertaList} />;
       case "transaksi":  return <TabTransaksi kelasId={kelas.id} isGratis={kelas.is_gratis} pesertaList={pesertaList} />;
       default:           return null;

@@ -21,6 +21,13 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
 
 type CreateKelasOnlineDialogProps = {
@@ -172,36 +179,39 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
             />
           </div>
 
-          {/* Harga */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_gratis"
-                checked={form.is_gratis}
-                onChange={(e) => setForm({ ...form, is_gratis: e.target.checked })}
-                className="rounded"
-              />
-              <Label htmlFor="is_gratis" className="cursor-pointer">
-                Kelas Gratis
-              </Label>
-            </div>
-            {!form.is_gratis && (
-              <div className="space-y-1">
-                <Label>Harga (Rp)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-                  <Input
-                    className="pl-9"
-                    placeholder="0"
-                    type="number"
-                    value={form.harga}
-                    onChange={(e) => setForm({ ...form, harga: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Tipe Pembayaran */}
+          <div className="space-y-1">
+            <Label>Tipe Pembayaran <span className="text-red-500">*</span></Label>
+            <Select
+              value={form.is_gratis ? "gratis" : "berbayar"}
+              onValueChange={(value) => setForm({ ...form, is_gratis: value === "gratis" })}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Pilih tipe pembayaran..." />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="berbayar">Berbayar</SelectItem>
+                <SelectItem value="gratis">Gratis</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* Harga */}
+          {!form.is_gratis && (
+            <div className="space-y-1">
+              <Label>Harga (Rp) <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                <Input
+                  className="pl-9"
+                  placeholder="0"
+                  type="number"
+                  value={form.harga}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Tanggal Mulai & Selesai */}
           <div className="space-y-1">

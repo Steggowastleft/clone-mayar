@@ -100,6 +100,7 @@ const MENU_ITEMS: NavItem[] = [
     children: [
       { label: "Akun", icon: <User className="h-3.5 w-3.5" />, href: "/pengaturan/akun" },
       { label: "Withdrawal", icon: <CreditCard className="h-3.5 w-3.5" />, href: "/pengaturan/withdrawal" },
+      { label: "Ekspor Data", icon: <FileText className="h-3.5 w-3.5" />, href: "/ekspor-data" },
     ],
   },
 ];

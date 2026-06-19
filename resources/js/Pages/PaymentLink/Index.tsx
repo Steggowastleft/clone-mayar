@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,10 +53,13 @@ export type PaymentLinkItem = {
   tanggal_kadaluarsa?: string;
   maksimum_pembayaran?: number;
   bisa_affiliate: boolean;
+  revenue?: number;
 };
 
 type IndexProps = {
   links: PaymentLinkItem[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ───
@@ -82,6 +85,14 @@ function DatePickerField({
     }
     return "00:00";
   });
+
+  useEffect(() => {
+    if (value) {
+      const h = String(value.getHours()).padStart(2, '0');
+      const m = String(value.getMinutes()).padStart(2, '0');
+      setTime(`${h}:${m}`);
+    }
+  }, [value]);
 
   const handleSelect = (d: Date | undefined) => {
     if (!d) {
@@ -188,7 +199,7 @@ function formatRupiah(val: string | number): string {
 }
 
 // ─── Main ───
-export default function Index({ links }: IndexProps) {
+export default function Index({ links, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateOpen, setDateOpen] = useState(false);
@@ -275,8 +286,12 @@ export default function Index({ links }: IndexProps) {
   };
 
   const totalLinks = links.length;
-  const publikCount = links.filter((l) => l.status === "published").length;
-  const tidakPublikCount = totalLinks - publikCount;
+  const aktifCount = links.filter((l) => l.status === "published").length;
+  const unlistedCount = links.filter((l) => l.status === "unlisted").length;
+  const tidakAktifCount = totalLinks - aktifCount - unlistedCount;
+  const localPendapatan = links.reduce((acc, l) => acc + (l.revenue || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
     <DashboardLayout title="Link Pembayaran">
@@ -286,14 +301,25 @@ export default function Index({ links }: IndexProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Link Pembayaran</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Link: <span className="font-bold text-slate-800">{totalLinks}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -406,14 +432,14 @@ export default function Index({ links }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Link</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Link</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">

@@ -163,26 +163,42 @@ function DetailDialog({ peserta, onClose }: { peserta: PesertaItem; onClose: () 
 // Export CSV
 // ─────────────────────────────────────────────
 function exportCSV(pesertaList: PesertaItem[]) {
-  const headers = ["Nama", "Email", "No HP", "Status", "Tanggal Daftar", "Progress (%)", "Nilai Rata-rata"];
+  // Extract all unique custom form keys
+  const customKeys = Array.from(
+    new Set(pesertaList.flatMap((p) => Object.keys(p.form_data || {})))
+  );
+
+  const headers = [
+    "Nama", 
+    "Email", 
+    "No HP", 
+    "Status", 
+    "Tanggal Daftar", 
+    "Progress (%)", 
+    "Nilai Rata-rata",
+    ...customKeys.map(key => `Form: ${key}`)
+  ];
+
   const rows = pesertaList.map((p) => [
     p.nama,
     p.email,
     p.no_hp || "",
     p.status,
-    format(new Date(p.tanggal_daftar), "dd/MM/yyyy"),
+    p.tanggal_daftar ? format(new Date(p.tanggal_daftar), "dd/MM/yyyy HH:mm") : "",
     p.progress,
     p.nilai_rata ?? "",
+    ...customKeys.map(key => p.form_data?.[key] ?? "")
   ]);
 
   const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(","))
     .join("\n");
 
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `peserta-event-${Date.now()}.csv`;
+  a.download = `peserta-payment-link-${Date.now()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

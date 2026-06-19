@@ -19,7 +19,8 @@ class EventController extends Controller
     // ─────────────────────────────────────
     public function index(): Response
     {
-        $events = Event::where('user_id', Auth::id())
+        $userId = Auth::id();
+        $events = Event::where('user_id', $userId)
             ->latest()
             ->get()
             ->map(fn($e) => [
@@ -31,13 +32,43 @@ class EventController extends Controller
                     : '-',
                 'location' => $e->lokasi,
                 'participants' => $e->pendaftaran()->count(),
+                'revenue' => (float) $e->pendaftaran()->where('status', 'active')->sum('harga_bayar'),
                 'tipe'     => $e->tipe,
                 'cover_url' => $e->cover_url,
                 'created_at' => $e->created_at->format('Y-m-d H:i:s'),
             ]);
 
+        $productIds = Event::where('user_id', $userId)->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['event', \App\Models\Event::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['event', \App\Models\Event::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['event', \App\Models\Event::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('event/index', [
-            'events' => $events
+            'events' => $events,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 
@@ -197,7 +228,15 @@ class EventController extends Controller
                 ]),
             'tiketList' => $event->tiket,
             'pembicaraList' => $event->pembicaras,
-            'ratings'     => [],
+            'ratings'     => $event->ratings()->with('peserta')->latest()->get()->map(fn($r) => [
+                'id'           => $r->id,
+                'bintang'      => $r->bintang,
+                'ulasan'       => $r->ulasan,
+                'tampil_anonim'=> (bool) $r->tampil_anonim,
+                'foto_url'     => $r->foto_url,
+                'nama_peserta' => $r->tampil_anonim ? 'Anonim' : ($r->peserta?->nama ?? '-'),
+                'created_at'   => $r->created_at->toISOString(),
+            ])->values()->toArray(),
             'analisis'    => $analisis,
             'transaksi'   => $transaksi,
         ]);

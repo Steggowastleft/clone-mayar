@@ -149,6 +149,28 @@ export function SidebarPanel({ kelas }: { kelas: any }) {
             <Trash2 className="h-4 w-4" /> HAPUS
           </button>
         </div>
+
+        {/* Landing / Promotion Page */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3 space-y-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+            Landing / Promotion Page
+          </h3>
+          <button
+            className={btnClass}
+            onClick={() => window.open(`/p/${kelas.id}/kelas-online`, "_blank")}
+          >
+            Lihat Halaman Publik
+          </button>
+          <button
+            className={btnClass}
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/p/${kelas.id}/kelas-online`);
+              toast.success("Link Landing Page berhasil disalin!");
+            }}
+          >
+            Salin Link Landing Page
+          </button>
+        </div>
       </div>
 
       <EditKelasOnlineDialog open={editOpen} onOpenChange={setEditOpen} kelas={kelas} />

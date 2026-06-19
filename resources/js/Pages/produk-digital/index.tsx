@@ -66,6 +66,8 @@ type OldFile = {
 type IndexProps = {
   produkList: ProdukDigital[];
   oldFiles: OldFile[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ─────────────────────────────────────────────────
@@ -283,7 +285,7 @@ const getCategoryTheme = (cat: string) => {
 
 // ─── Main ─────────────────────────────────────────────────────────────
 
-export default function Index({ produkList, oldFiles }: IndexProps) {
+export default function Index({ produkList, oldFiles, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -556,9 +558,12 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
   // Stats
   const totalProduk = produkList.length;
-  const publikCount = produkList.filter((p) => p.status === "published").length;
-  const tidakPublikCount = totalProduk - publikCount;
-  const totalPendapatan = produkList.reduce((acc, p) => acc + p.total_penjualan * p.harga, 0);
+  const aktifCount = produkList.filter((p) => p.status === "published").length;
+  const unlistedCount = produkList.filter((p) => p.status === "unlisted").length;
+  const tidakAktifCount = totalProduk - aktifCount - unlistedCount;
+  const localPendapatan = produkList.reduce((acc, p) => acc + p.total_penjualan * p.harga, 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -583,20 +588,25 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Produk Digital</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Produk: <span className="font-bold text-slate-800">{totalProduk}</span></span>
-                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{aktifCount} Aktif
                 </span>
-                <span className="bg-green-50 text-green-650 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(totalPendapatan)}</span></span>
-                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +6% Dari bulan kemarin
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -606,8 +616,9 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
             <Button
               variant="outline"
               className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/produk-digital/katalog", "_blank")}
             >
-              <Download className="h-4 w-4" /> Ekspor Data
+              Katalog Publik
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
@@ -723,17 +734,17 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Produk Digital</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terjual</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Produk Digital</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Pendapatan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">

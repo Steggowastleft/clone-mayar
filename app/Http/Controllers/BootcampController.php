@@ -11,12 +11,42 @@ class BootcampController extends Controller
 {
     public function index()
     {
-        $bootcamps = Bootcamp::where('user_id', auth()->id())
+        $userId = auth()->id();
+        $bootcamps = Bootcamp::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $productIds = Bootcamp::where('user_id', $userId)->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('bootcamps/index', [
             'bootcamps' => $bootcamps,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 

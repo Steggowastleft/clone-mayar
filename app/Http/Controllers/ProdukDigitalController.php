@@ -49,9 +49,38 @@ class ProdukDigitalController extends Controller
             ->unique('id')
             ->values();
 
+        $productIds = ProdukDigital::where('user_id', Auth::id())->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['produkdigital', \App\Models\ProdukDigital::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['produkdigital', \App\Models\ProdukDigital::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['produkdigital', \App\Models\ProdukDigital::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('produk-digital/index', [
             'produkList' => $produkList,
             'oldFiles' => $oldFiles,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
     public function edit($id)
@@ -240,11 +269,22 @@ class ProdukDigitalController extends Controller
             'resi'              => 'Lihat',
         ]);
 
+        $ratings = $produk->ratings()->with('peserta')->latest()->get()->map(fn($r) => [
+            'id'           => $r->id,
+            'bintang'      => $r->bintang,
+            'ulasan'       => $r->ulasan,
+            'tampil_anonim'=> (bool) $r->tampil_anonim,
+            'foto_url'     => $r->foto_url,
+            'nama_peserta' => $r->tampil_anonim ? 'Anonim' : ($r->peserta?->nama ?? '-'),
+            'created_at'   => $r->created_at->toISOString(),
+        ])->values()->toArray();
+
         return Inertia::render('produk-digital/Show', [
             'produk'    => $this->formatProdukDetail($produk),
             'oldFiles'  => $oldFiles,
             'analisis'  => $analisis,
             'transaksi' => $transaksi,
+            'ratings'   => $ratings,
         ]);
     }
 

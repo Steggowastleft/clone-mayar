@@ -56,6 +56,8 @@ type Bootcamp = {
 
 type IndexProps = {
   bootcamps: Bootcamp[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ───
@@ -126,7 +128,7 @@ const defaultForm = {
 };
 
 // ─── Main ───
-export default function Index({ bootcamps }: IndexProps) {
+export default function Index({ bootcamps, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [kategoriFilter, setKategoriFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -224,25 +226,40 @@ export default function Index({ bootcamps }: IndexProps) {
   ];
 
   const totalBootcamps = bootcamps.length;
-  const publikCount = bootcamps.filter((b) => b.status === "published").length;
-  const tidakPublikCount = totalBootcamps - publikCount;
+  const aktifCount = bootcamps.filter((b) => b.status === "published").length;
+  const unlistedCount = bootcamps.filter((b) => b.status === "unlisted").length;
+  const tidakAktifCount = totalBootcamps - aktifCount - unlistedCount;
+  const localPendapatan = bootcamps.reduce((acc, b) => acc + (b.participants || 0) * (b.harga || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
-    <DashboardLayout title="Kelas Cohort / Bootcamp">
-      <Head title="Kelas Cohort / Bootcamp" />
+    <DashboardLayout title="Pelatihan (Sesi/Batch)">
+      <Head title="Pelatihan (Sesi/Batch)" />
       <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kelas Cohort / Bootcamp (Batch)</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
-                <span>Total Bootcamp: <span className="font-bold text-slate-800">{totalBootcamps}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Pelatihan (Sesi/Batch)</h1>
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pelatihan: <span className="font-bold text-slate-800">{totalBootcamps}</span></span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -260,7 +277,7 @@ export default function Index({ bootcamps }: IndexProps) {
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
               onClick={openCreate}
             >
-              + Buat Bootcamp
+              + Buat Pelatihan
             </Button>
           </div>
         </div>
@@ -368,17 +385,17 @@ export default function Index({ bootcamps }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Batch</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Bootcamp</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai Jual</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Batch</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Pelatihan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Peserta</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mulai Jual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">

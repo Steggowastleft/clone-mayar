@@ -107,4 +107,9 @@ class KelasOnline extends Model
     {
         return $this->status === 'published';
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(\App\Models\Rating::class, 'rateable');
+    }
 }

@@ -59,9 +59,11 @@ interface Props {
     last_page: number;
     total: number;
   };
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 }
 
-export default function KelasOnlineIndex({ produk }: Props) {
+export default function KelasOnlineIndex({ produk, totalRevenue, revenueGrowthText }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -144,7 +146,9 @@ export default function KelasOnlineIndex({ produk }: Props) {
   const aktifCount = produk.data.filter((k) => k.status === "published").length;
   const unlistedCount = produk.data.filter((k) => k.status === "unlisted").length;
   const tidakAktifCount = totalKelas - aktifCount - unlistedCount;
-  const totalPendapatan = produk.data.reduce((acc, k) => acc + (k.peserta_terdaftar_count || 0) * (k.harga || 0), 0);
+  const localPendapatan = produk.data.reduce((acc, k) => acc + (k.peserta_terdaftar_count || 0) * (k.harga || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
     <DashboardLayout title="Kelas Online">
@@ -170,9 +174,9 @@ export default function KelasOnlineIndex({ produk }: Props) {
               </div>
               {/* Baris 2: Pendapatan */}
               <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
-                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
                 <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +12% Dari bulan kemarin
+                  {growthText}
                 </span>
               </div>
             </div>

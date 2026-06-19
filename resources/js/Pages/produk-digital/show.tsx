@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -8,12 +8,15 @@ import {
   BookOpen,
   Package,
   TrendingUp,
+  Star,
 } from "lucide-react";
 
 import TabTransaksi from "./detail/transaksi";
 import TabDetail from "./detail/detail";
 import TabAnalisis from "./detail/analisis";
 import { SidebarPanel } from "./detail/components/sidebarpanel";
+
+const TabRating = lazy(() => import("../bootcamps/detail/rating"));
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -73,8 +76,9 @@ export type AnalisisData = {
 type Props = {
   produk: ProdukDigitalData;
   oldFiles: any[];
-  analisis: AnalisisData;
+  analisis: any;
   transaksi: any[];
+  ratings?: any[];
 };
 
 // ─── Placeholder tab ─────────────────────────────────────────────────
@@ -82,7 +86,7 @@ type Props = {
 function TabPlaceholder({ label }: { label: string }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-12 text-center">
-      <p className="text-gray-450 text-sm">
+      <p className="text-gray-455 text-sm">
         Fitur <strong>{label}</strong> akan segera tersedia
       </p>
     </div>
@@ -91,21 +95,29 @@ function TabPlaceholder({ label }: { label: string }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────
 
-export default function ProdukDigitalShow({ produk, oldFiles, analisis, transaksi }: Props) {
+export default function ProdukDigitalShow({ produk, oldFiles, analisis, transaksi, ratings = [] }: Props) {
   const [activeTab, setActiveTab] = useState<string>("detail");
 
   const tabs = [
     {
       id: "detail",
       label: "DETAIL",
+      icon: <BookOpen className="h-3 w-3" />,
     },
     {
       id: "transaksi",
       label: "TRANSAKSI",
+      icon: <BarChart3 className="h-3 w-3" />,
     },
     {
       id: "analisis",
       label: "ANALISIS",
+      icon: <TrendingUp className="h-3 w-3" />,
+    },
+    {
+      id: "rating",
+      label: "RATING",
+      icon: <Star className="h-3 w-3" />,
     },
   ];
 
@@ -117,6 +129,12 @@ export default function ProdukDigitalShow({ produk, oldFiles, analisis, transaks
         return <TabTransaksi transaksi={transaksi} />;
       case "analisis":
         return <TabAnalisis produk={produk} analisis={analisis} />;
+      case "rating":
+        return (
+          <Suspense fallback={<div className="p-6 text-gray-400">Loading rating...</div>}>
+            <TabRating ratings={ratings} />
+          </Suspense>
+        );
       default:
         return (
           <TabPlaceholder

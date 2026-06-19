@@ -419,6 +419,7 @@ Route::middleware('auth')->group(function () {
 
     // ── Pengaturan ────────────────────────────────────────────
     Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
+    Route::get('/ekspor-data', [PengaturanController::class, 'eksporDataPage'])->name('ekspor-data.index');
     Route::get('/pengaturan/ekspor', [PengaturanController::class, 'export'])->name('pengaturan.export');
 
     Route::get('/pengaturan/akun', function () {

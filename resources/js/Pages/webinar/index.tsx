@@ -59,6 +59,8 @@ type Webinar = {
 
 type IndexProps = {
   webinars: Webinar[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DateTimePickerField ───
@@ -164,7 +166,7 @@ const timezoneOptions = [
 ];
 
 // ─── Main ───
-export default function Index({ webinars = [] }: IndexProps) {
+export default function Index({ webinars = [], totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -253,7 +255,9 @@ export default function Index({ webinars = [] }: IndexProps) {
   const aktifCount = webinars.filter((w) => w.status === "published").length;
   const unlistedCount = webinars.filter((w) => w.status === "unlisted").length;
   const tidakAktifCount = totalWebinars - aktifCount - unlistedCount;
-  const totalPendapatan = webinars.reduce((acc, w) => acc + (w.peserta || 0) * (w.harga || 0), 0);
+  const localPendapatan = webinars.reduce((acc, w) => acc + (w.peserta || 0) * (w.harga || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
     <DashboardLayout title="Webinar">
@@ -263,7 +267,7 @@ export default function Index({ webinars = [] }: IndexProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Webinar</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
+            <div className="flex flex-col gap-2 mt-3">
               {/* Baris 1: Status Produk */}
               <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Webinar: <span className="font-bold text-slate-800">{totalWebinars}</span></span>
@@ -279,9 +283,9 @@ export default function Index({ webinars = [] }: IndexProps) {
               </div>
               {/* Baris 2: Pendapatan */}
               <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
-                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
                 <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +8% Dari bulan kemarin
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -521,29 +525,23 @@ export default function Index({ webinars = [] }: IndexProps) {
             </div>
 
             {/* Schedule */}
-            <div className="grid grid-cols-2 gap-4">
-              <DateTimePickerField
-                label="Tanggal & Waktu Mulai"
-                value={tanggalMulai}
-                onChange={setTanggalMulai}
-              />
-              <DateTimePickerField
-                label="Tanggal & Waktu Selesai"
-                value={tanggalSelesai}
-                onChange={setTanggalSelesai}
-                optional
-              />
-            </div>
-
-            {/* Timezone */}
-            <div className="space-y-1.5">
-              <Label>Timezone</Label>
-              <Input
-                value="WIB (GMT+07:00) - Asia/Jakarta"
-                disabled
-                className="bg-slate-50 border-slate-200 text-xs font-semibold text-slate-500 cursor-not-allowed h-10"
-              />
-              <p className="text-[10px] text-gray-400">Timezone disamaratakan menggunakan WIB untuk seluruh webinar.</p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-4">
+                <DateTimePickerField
+                  label="Tanggal & Waktu Mulai"
+                  value={tanggalMulai}
+                  onChange={setTanggalMulai}
+                />
+                <DateTimePickerField
+                  label="Tanggal & Waktu Selesai"
+                  value={tanggalSelesai}
+                  onChange={setTanggalSelesai}
+                  optional
+                />
+              </div>
+              <p className="text-[11px] text-blue-700 bg-blue-50/60 border border-blue-100/80 rounded-lg p-2.5 font-medium">
+                Info: Seluruh jadwal webinar diatur menggunakan Waktu Indonesia Barat (WIB / Asia/Jakarta).
+              </p>
             </div>
 
             <div className="space-y-1">

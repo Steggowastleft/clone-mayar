@@ -34,8 +34,37 @@ class WebinarController extends Controller
                 'created_at'      => $w->created_at ? $w->created_at->format('Y-m-d H:i:s') : null,
             ]);
 
+        $productIds = Webinar::where('user_id', $userId)->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['webinar', \App\Models\Webinar::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['webinar', \App\Models\Webinar::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['webinar', \App\Models\Webinar::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('webinar/index', [
             'webinars' => $webinars,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 
@@ -105,8 +134,19 @@ class WebinarController extends Controller
 
         $webinar->load('pembicaras');
 
+        $ratings = $webinar->ratings()->with('peserta')->latest()->get()->map(fn($r) => [
+            'id'           => $r->id,
+            'bintang'      => $r->bintang,
+            'ulasan'       => $r->ulasan,
+            'tampil_anonim'=> (bool) $r->tampil_anonim,
+            'foto_url'     => $r->foto_url,
+            'nama_peserta' => $r->tampil_anonim ? 'Anonim' : ($r->peserta?->nama ?? '-'),
+            'created_at'   => $r->created_at->toISOString(),
+        ])->values()->toArray();
+
         return Inertia::render('webinar/detail', [
             'webinar' => $webinar,
+            'ratings' => $ratings,
         ]);
     }
 

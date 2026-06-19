@@ -84,5 +84,10 @@ class Webinar extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(\App\Models\Rating::class, 'rateable');
+    }
 }
 

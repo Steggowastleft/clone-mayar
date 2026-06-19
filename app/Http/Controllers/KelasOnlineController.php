@@ -36,8 +36,37 @@ class KelasOnlineController extends Controller
             ->latest()
             ->paginate(12);
 
+        $productIds = KelasOnline::where('user_id', $user->id)->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['kelas_online', \App\Models\KelasOnline::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['kelas_online', \App\Models\KelasOnline::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['kelas_online', \App\Models\KelasOnline::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('kelas-online/index', [
             'produk' => $kelasOnline,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 
@@ -133,6 +162,16 @@ class KelasOnlineController extends Controller
             ];
         });
 
+        $ratings = $kelas->ratings()->with('peserta')->latest()->get()->map(fn($r) => [
+            'id'           => $r->id,
+            'bintang'      => $r->bintang,
+            'ulasan'       => $r->ulasan,
+            'tampil_anonim'=> (bool) $r->tampil_anonim,
+            'foto_url'     => $r->foto_url,
+            'nama_peserta' => $r->tampil_anonim ? 'Anonim' : ($r->peserta?->nama ?? '-'),
+            'created_at'   => $r->created_at->toISOString(),
+        ])->values()->toArray();
+
         return Inertia::render('kelas-online/show', [
             'id'      => $id,
             'kelas'   => $kelas,
@@ -144,6 +183,7 @@ class KelasOnlineController extends Controller
             'assignments' => $assignments,
             'submissions' => $submissions,
             'pesertaList' => $pesertaList,
+            'ratings'     => $ratings,
         ]);
     }
 
@@ -584,13 +624,16 @@ class KelasOnlineController extends Controller
 
         return response()->streamDownload(function () use ($attendances) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Peserta', 'Tipe Presensi', 'Status', 'Tanggal Upload', 'Keterangan']);
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            fputcsv($file, ['Nama Peserta', 'Tipe Presensi', 'Status Kelayakan', 'Waktu Kirim', 'Keterangan Tambahan']);
             foreach ($attendances as $att) {
                 fputcsv($file, [
                     $att->peserta->nama,
-                    ucfirst($att->attendance_type),
+                    ucfirst($att->attendance_type === 'file' ? 'Unggah File/Tugas' : ($att->attendance_type === 'zoom' ? 'Presensi Sesi Zoom' : $att->attendance_type)),
                     ucfirst($att->status),
-                    $att->uploaded_at?->format('Y-m-d H:i:s'),
+                    $att->uploaded_at ? $att->uploaded_at->format('d M Y H:i') . ' WIB' : '-',
                     $att->keterangan ?? '-',
                 ]);
             }
@@ -612,14 +655,18 @@ class KelasOnlineController extends Controller
 
         return response()->streamDownload(function () use ($sertifikats) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Nomor Sertifikat', 'Nama Peserta', 'Tanggal Disetujui', 'Tipe Approval', 'Disetujui Oleh']);
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            fputcsv($file, ['Nomor Sertifikat', 'Nama Penerima', 'Email Penerima', 'Tanggal Terbit', 'Metode Approval', 'Disetujui Oleh']);
             foreach ($sertifikats as $cert) {
                 fputcsv($file, [
                     $cert->nomor_sertifikat,
                     $cert->peserta->nama,
-                    $cert->approved_at?->format('Y-m-d'),
-                    $cert->is_manual_approved ? 'Manual' : 'Otomatis',
-                    $cert->approvedBy?->name ?? 'Sistem',
+                    $cert->peserta->email,
+                    $cert->approved_at ? $cert->approved_at->format('d M Y H:i') . ' WIB' : '-',
+                    $cert->is_manual_approved ? 'Persetujuan Manual' : 'Lulus Otomatis Sistem',
+                    $cert->approvedBy?->name ?? 'Sistem Utama',
                 ]);
             }
             fclose($file);

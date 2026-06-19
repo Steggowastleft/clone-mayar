@@ -99,4 +99,9 @@ class ProdukDigital extends Model
             }
         });
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(\App\Models\Rating::class, 'rateable');
+    }
 }

@@ -76,6 +76,7 @@ export default function WebinarDetail({
     { id: "transaksi", label: "TRANSAKSI", icon: <BarChart3 className="h-3 w-3" /> },
     { id: "detail", label: "DETAIL", icon: <BookOpen className="h-3 w-3" /> },
     { id: "peserta", label: "PESERTA", icon: <Users2 className="h-3 w-3" /> },
+    { id: "rating", label: "RATING", icon: <Star className="h-3 w-3" /> },
     { id: "email", label: "EMAIL", icon: <Mail className="h-3 w-3" /> },
     { id: "pengaturan", label: "SETTING", icon: <Settings className="h-3 w-3" /> },
   ];
@@ -95,6 +96,9 @@ export default function WebinarDetail({
             pesertaList={pesertaList}
           />
         );
+
+      case "rating":
+        return <TabRating ratings={ratings} />;
 
       default:
         return <TabPlaceholder label={activeTab} />;

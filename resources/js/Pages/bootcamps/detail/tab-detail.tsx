@@ -66,7 +66,7 @@ console.log("TAB ENGINE PROPS:", {
       { id: "detail", label: "DETAIL", icon: <BookOpen className="h-3 w-3" /> },
       { id: "sesi", label: "SESI MEETING", icon: <Clock className="h-3 w-3" /> },
       { id: "modul", label: "MODUL", icon: <BookOpen className="h-3 w-3" /> },
-      { id: "assignment", label: "ASSIGNMENT", icon: <CheckSquare className="h-3 w-3" /> },
+      { id: "assignment", label: "TUGAS/UJIAN", icon: <CheckSquare className="h-3 w-3" /> },
       { id: "grade", label: "GRADE & SUBMISSION", icon: <Award className="h-3 w-3" /> },
       { id: "peserta", label: "PESERTA", icon: <Users2 className="h-3 w-3" /> },
       { id: "rating", label: "RATING", icon: <Star className="h-3 w-3" /> },
