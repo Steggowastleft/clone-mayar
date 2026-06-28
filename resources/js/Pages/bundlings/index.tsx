@@ -38,9 +38,11 @@ import {
   X,
   ExternalLink,
   Package,
+  Power,
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type Bundling = {
   id: number;
@@ -65,6 +67,12 @@ type Product = {
 type IndexProps = {
   bundlings: Bundling[];
   products: Product[];
+};
+
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
 };
 
 export default function Index({ bundlings, products }: IndexProps) {
@@ -164,13 +172,27 @@ export default function Index({ bundlings, products }: IndexProps) {
 
   const handleDelete = (id: number) => {
     if (confirm("Apakah Anda yakin ingin menghapus bundling ini?")) {
-      router.delete(`/bundling/${id}/`, {
+      router.delete(`/bundling/${id}`, {
         onSuccess: () => {
-          // Refresh page
-          router.visit("/bundling/");
+          toast.success("Bundling berhasil dihapus");
+          router.visit("/bundling");
         },
       });
     }
+  };
+
+  const handleStatusToggle = (id: number, currentStatus: string) => {
+    const nextStatus = currentStatus === "published" ? "unpublished" : "published";
+    router.patch(
+      `/bundling/${id}/status`,
+      { status: nextStatus },
+      {
+        onSuccess: () => {
+          toast.success("Status bundling berhasil diperbarui.");
+          router.visit("/bundling");
+        },
+      }
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -187,12 +209,13 @@ export default function Index({ bundlings, products }: IndexProps) {
       produkIds: data.produkIds.map(p => p.id)
     };
 
-    router.post("/bundling/", payload, {
+    router.post("/bundling", payload, {
       forceFormData: true,
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
-        router.visit("/bundling/");
+        toast.success("Bundling berhasil dibuat!");
+        router.visit("/bundling");
       },
       onError: () => setIsSubmitting(false),
     });
@@ -203,183 +226,204 @@ export default function Index({ bundlings, products }: IndexProps) {
     { label: "PUBLISHED", value: "published" },
     { label: "UNPUBLISHED", value: "unpublished" },
   ];
+  // Calculate stats
+  const totalBundling = bundlings.length;
+  const aktifCount = bundlings.filter((b) => b.status === "published").length;
+  const tidakAktifCount = totalBundling - aktifCount;
+  const totalTerjual = bundlings.reduce((acc, b) => acc + (b.jumlah_terjual || 0), 0);
+  const totalPendapatan = bundlings.reduce((acc, b) => acc + (b.jumlah_terjual || 0) * (b.harga || 0), 0);
 
   return (
     <DashboardLayout title="Bundling Produk">
       <Head title="Bundling Produk" />
 
-      <div className="flex gap-0 min-h-screen">
-        {/* MAIN CONTENT */}
-        <div className="flex-1 p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            PRODUK
-          </p>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Bundling Produk
-            </h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.open("/bundling/", "_blank")}
-              >
-                PRODUK
-              </Button>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={openCreate}
-              >
-                + BUAT
-              </Button>
+      <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Bundling Produk</h1>
+            <div className="space-y-1.5 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Bundling: <span className="font-bold text-slate-800">{totalBundling}</span></span>
+                <span className="bg-green-50 text-green-755 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{aktifCount} Aktif / Published
+                </span>
+                <span className="bg-red-50 text-red-755 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif / Draft
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan & Terjual */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Terjual: <span className="font-bold text-slate-800">{totalTerjual} paket</span></span>
+                <span>· Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(totalPendapatan)}</span></span>
+              </div>
             </div>
           </div>
 
-          {/* Table Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-700">
-                Semua Bundling Produk
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Input
-                    placeholder="Filter Halaman"
-                    className="pl-8 w-48 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Printer className="h-5 w-5" />
-                </button>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <Download className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <div className="p-6">
-              {filteredBundlings.length === 0 ? (
-                <p className="text-center text-gray-400 py-12 text-sm">
-                  There are no records to display
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredBundlings.map((bundling) => (
-                    <div
-                      key={bundling.id}
-                      className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        {bundling.cover_url ? (
-                          <img
-                            src={bundling.cover_url}
-                            alt={bundling.nama}
-                            className="h-12 w-12 rounded-md object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center text-gray-400">
-                            <Package className="h-6 w-6" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {bundling.nama}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Rp {bundling.harga.toLocaleString("id-ID")} ·{" "}
-                            {bundling.jumlah_produk} produk · Terjual{" "}
-                            {bundling.jumlah_terjual}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {statusBadge(bundling.status)}
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            router.visit(`/bundling/${bundling.id}/`)
-                          }
-                        >
-                          Detail
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            router.visit(`/bundling/${bundling.id}/edit/`)
-                          }
-                        >
-                          <Edit className="h-4 w-4 text-gray-500" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-600"
-                          onClick={() => handleDelete(bundling.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2.5">
+            <Button
+              variant="outline"
+              className="border-gray-200 text-slate-655 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/bundling/catalog", "_blank")}
+            >
+              Katalog Publik
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              onClick={openCreate}
+            >
+              + Buat Bundling Baru
+            </Button>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR */}
-        <div className="w-72 border-l border-gray-200 bg-gray-50 p-4 space-y-3 shrink-0">
-          <div className="relative">
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/85 rounded-xl shadow-sm flex-wrap">
+          {/* Left Search */}
+          <div className="relative w-72 max-w-full">
+            <svg
+              className="absolute left-3 top-3 h-4 w-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
             <Input
-              placeholder="Cari Bundling"
-              className="bg-white text-sm pl-8"
+              placeholder="Cari Bundling..."
+              className="pl-9 bg-slate-50/50 border-slate-250 rounded-lg text-sm w-full focus:bg-white transition"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
           </div>
 
-          <div className="space-y-2">
-            {filterButtons.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setStatusFilter(btn.value)}
-                className={cn(
-                  "w-full px-4 py-2.5 rounded-md text-sm font-semibold tracking-wide transition",
-                  statusFilter === btn.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
+          {/* Right Filters */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-45 bg-white border-slate-250 rounded-lg text-xs font-semibold text-slate-600">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="published">Publik (Published)</SelectItem>
+                <SelectItem value="unpublished">Tidak Publik (Unpublished)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Table List */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Bundling</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Jumlah Produk</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashed divide-slate-200">
+                {filteredBundlings.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center text-slate-400 py-16 text-sm">
+                      There are no records to display
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBundlings.map((bundling, index) => {
+                    const statusIsPublik = bundling.status === "published";
+                    return (
+                      <tr key={bundling.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-5 text-sm text-slate-550 font-semibold">{index + 1}</td>
+                        <td className="px-5 py-5">
+                          {bundling.cover_url ? (
+                            <img
+                              src={bundling.cover_url}
+                              alt={bundling.nama}
+                              className="h-10 w-14 object-cover rounded-lg border border-slate-100 shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-10 w-14 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                              <Package className="h-5 w-5 text-slate-455" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-bold text-slate-800 select-all max-w-[250px] truncate">
+                          {bundling.nama}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-800 font-semibold whitespace-nowrap">
+                          Rp {new Intl.NumberFormat("id-ID").format(bundling.harga)}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-600 font-semibold">
+                          {bundling.jumlah_produk} produk
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-655 font-semibold">
+                          {bundling.jumlah_terjual} terjual
+                        </td>
+                        <td className="px-5 py-5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                              statusIsPublik
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-755 border-red-200"
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5", statusIsPublik ? "bg-green-500" : "bg-red-500")} />
+                            {statusIsPublik ? "Publik" : "Draft"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-5 text-center whitespace-nowrap space-x-2">
+                          <button
+                            onClick={() => router.visit(`/bundling/${bundling.id}`)}
+                            className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"
+                          >
+                            Lihat
+                          </button>
+                          <button
+                            onClick={() => router.visit(`/bundling/${bundling.id}/edit`)}
+                            className="text-sm font-bold text-slate-600 hover:text-slate-800 underline transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusToggle(bundling.id, bundling.status);
+                            }}
+                            className={cn(
+                              "text-sm font-bold underline transition",
+                              statusIsPublik ? "text-yellow-600 hover:text-yellow-800" : "text-green-600 hover:text-green-800"
+                            )}
+                          >
+                            {statusIsPublik ? "Draftkan" : "Publish"}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(bundling.id)}
+                            className="text-sm font-bold text-red-600 hover:text-red-800 underline transition"
+                          >
+                            Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
-              >
-                {btn.label}
-              </button>
-            ))}
+              </tbody>
+            </table>
           </div>
-
-          <button
-            onClick={() => window.open("/bundling/catalog", "_blank")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-md transition mt-2"
-          >
-            KATALOG BUNDLING
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            Katalog Bundling adalah halaman katalog online dimana semua paket bundling anda ditampilkan.
-          </p>
-
-          <button className="w-full px-4 py-2.5 border border-gray-200 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 transition bg-white">
-            INFO & TUTORIAL
-          </button>
-
-          <button
-            onClick={openCreate}
-            className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition"
-          >
-            + Buat Bundling Baru
-          </button>
         </div>
       </div>
 
@@ -504,10 +548,10 @@ export default function Index({ bundlings, products }: IndexProps) {
                   <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                   <Input
                     className="pl-9"
-                    type="number"
-                    min={0}
-                    value={data.harga}
-                    onChange={(e) => setData("harga", e.target.value)}
+                    type="text"
+                    placeholder="0"
+                    value={data.harga ? formatRupiahInput(data.harga) : ""}
+                    onChange={(e) => setData("harga", e.target.value.replace(/\D/g, ""))}
                   />
                 </div>
                 {errors.harga && (
@@ -523,10 +567,10 @@ export default function Index({ bundlings, products }: IndexProps) {
                   <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                   <Input
                     className="pl-9"
-                    type="number"
-                    min={0}
-                    value={data.hargaCoret}
-                    onChange={(e) => setData("hargaCoret", e.target.value)}
+                    type="text"
+                    placeholder="0"
+                    value={data.hargaCoret ? formatRupiahInput(data.hargaCoret) : ""}
+                    onChange={(e) => setData("hargaCoret", e.target.value.replace(/\D/g, ""))}
                   />
                 </div>
               </div>

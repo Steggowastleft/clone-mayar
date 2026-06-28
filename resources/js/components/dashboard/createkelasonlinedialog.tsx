@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 type CreateKelasOnlineDialogProps = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -51,6 +57,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
     require_quiz_sertifikat: false,
     nilai_minimum_quiz: "70",
     has_assignment: false,
+    syarat_ketentuan: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,6 +87,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
     payload.append("require_quiz_sertifikat", form.require_quiz_sertifikat ? "1" : "0");
     payload.append("nilai_minimum_quiz", form.nilai_minimum_quiz);
     payload.append("has_assignment", form.has_assignment ? "1" : "0");
+    payload.append("syarat_ketentuan", form.syarat_ketentuan);
     if (rangeTanggal?.from) payload.append("tanggal_mulai", format(rangeTanggal.from, "yyyy-MM-dd HH:mm:ss"));
     if (rangeTanggal?.to) payload.append("tanggal_selesai", format(rangeTanggal.to, "yyyy-MM-dd HH:mm:ss"));
     if (thumbnailFile) payload.append("thumbnail", thumbnailFile);
@@ -100,6 +108,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
           require_quiz_sertifikat: false,
           nilai_minimum_quiz: "70",
           has_assignment: false,
+          syarat_ketentuan: "",
         });
         setThumbnailFile(null);
         setThumbnailPreview(null);
@@ -179,6 +188,17 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
             />
           </div>
 
+          {/* Syarat & Ketentuan */}
+          <div className="space-y-1">
+            <Label>Syarat & Ketentuan</Label>
+            <Textarea
+              placeholder="Tuliskan syarat dan ketentuan kelas online..."
+              rows={4}
+              value={form.syarat_ketentuan}
+              onChange={(e) => setForm({ ...form, syarat_ketentuan: e.target.value })}
+            />
+          </div>
+
           {/* Tipe Pembayaran */}
           <div className="space-y-1">
             <Label>Tipe Pembayaran <span className="text-red-500">*</span></Label>
@@ -205,9 +225,9 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
                 <Input
                   className="pl-9"
                   placeholder="0"
-                  type="number"
-                  value={form.harga}
-                  onChange={(e) => setForm({ ...form, harga: e.target.value })}
+                  type="text"
+                  value={form.harga ? formatRupiahInput(form.harga) : ""}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })}
                 />
               </div>
             </div>

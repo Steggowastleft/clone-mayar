@@ -152,6 +152,12 @@ const defaultForm = {
   bahasa: "",
 };
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 // ─── Main ───
 export default function Index({ produk = [], createOpen: initialCreateOpen = false }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
@@ -221,12 +227,12 @@ export default function Index({ produk = [], createOpen: initialCreateOpen = fal
     if (formData.tipe_tulisan === "one_shot") {
         payload.append("tipe_pembayaran", formData.tipe_pembayaran);
         if (formData.tipe_pembayaran !== "gratis") {
-            payload.append("harga", formData.harga || "0");
+            const cleanHarga = formData.harga ? formData.harga.replace(/\D/g, "") : "0";
+            payload.append("harga", cleanHarga);
         }
         payload.append("max_pembayaran", formData.max_pembayaran);
     } else {
         payload.append("mekanisme_bayar", formData.mekanisme_bayar);
-        // harga might be needed depending on mechanism but omitted for simplicity if not requested
     }
 
     payload.append("deskripsi", formData.deskripsi);
@@ -488,10 +494,11 @@ export default function Index({ produk = [], createOpen: initialCreateOpen = fal
                       <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                       <Input
                         className="pl-9"
-                        type="number"
-                        min={0}
-                        value={formData.harga}
-                        onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                        type="text"
+                        placeholder="0"
+                        value={formatRupiahInput(formData.harga)}
+                        onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
+                        inputMode="numeric"
                       />
                     </div>
                     <p className="text-xs text-gray-400">Penagihan ini menggunakan mata uang IDR (Rupiah)</p>

@@ -112,6 +112,12 @@ function DatePickerField({
   );
 }
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 // ─── Default form values ───
 const defaultForm = {
   judul: "",
@@ -524,10 +530,10 @@ export default function Index({ bootcamps, totalRevenue, revenueGrowthText }: In
                     <Input
                       className="pl-9"
                       placeholder="0"
-                      type="number"
-                      value={formData.harga}
+                      type="text"
+                      value={formData.harga ? formatRupiahInput(formData.harga) : ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, harga: e.target.value })
+                        setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })
                       }
                     />
                   </div>
@@ -544,10 +550,10 @@ export default function Index({ bootcamps, totalRevenue, revenueGrowthText }: In
                     <Input
                       className="pl-9"
                       placeholder="Harus lebih besar dari harga awal"
-                      type="number"
-                      value={formData.hargaCoret}
+                      type="text"
+                      value={formData.hargaCoret ? formatRupiahInput(formData.hargaCoret) : ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, hargaCoret: e.target.value })
+                        setFormData({ ...formData, hargaCoret: e.target.value.replace(/\D/g, "") })
                       }
                     />
                   </div>

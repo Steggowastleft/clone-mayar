@@ -143,6 +143,12 @@ function DateTimePickerField({
   );
 }
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 // ─── Default form values ───
 const defaultForm = {
   nama: "",
@@ -566,10 +572,10 @@ export default function Index({ webinars = [], totalRevenue, revenueGrowthText }
                     <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                     <Input
                       className="pl-9"
-                      type="number"
-                      min={0}
-                      value={formData.harga}
-                      onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                      type="text"
+                      placeholder="0"
+                      value={formData.harga ? formatRupiahInput(formData.harga) : ""}
+                      onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                     />
                   </div>
                 </div>
@@ -583,10 +589,10 @@ export default function Index({ webinars = [], totalRevenue, revenueGrowthText }
                     <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                     <Input
                       className="pl-9"
-                      type="number"
-                      min={0}
-                      value={formData.harga_coret}
-                      onChange={(e) => setFormData({ ...formData, harga_coret: e.target.value })}
+                      type="text"
+                      placeholder="0"
+                      value={formData.harga_coret ? formatRupiahInput(formData.harga_coret) : ""}
+                      onChange={(e) => setFormData({ ...formData, harga_coret: e.target.value.replace(/\D/g, "") })}
                     />
                   </div>
 
@@ -600,7 +606,7 @@ export default function Index({ webinars = [], totalRevenue, revenueGrowthText }
               </>
             )}
             {pricingType === "free" && (
-              <p className="text-sm text-gray-500">Event ini gratis.</p>
+              <p className="text-sm text-gray-550">Event ini gratis.</p>
             )}
             {pricingType === "donation" && (
               <div className="space-y-1">
@@ -611,14 +617,13 @@ export default function Index({ webinars = [], totalRevenue, revenueGrowthText }
                   <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                   <Input
                     className="pl-9"
-                    type="number"
-                    min={0}
+                    type="text"
                     placeholder="Kosongkan kalau bebas"
-                    value={formData.harga}
-                    onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                    value={formData.harga ? formatRupiahInput(formData.harga) : ""}
+                    onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                   />
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-550">
                   User nanti bebas isi nominal saat checkout
                 </p>
               </div>

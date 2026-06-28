@@ -15,6 +15,7 @@ class WebinarCatalogController extends Controller
     public function index()
     {
         $query = Webinar::query()
+            ->with('pembicaras')
             ->where('status', 'published')
             ->latest();
 
@@ -40,6 +41,8 @@ class WebinarCatalogController extends Controller
                 'tanggal' => $w->created_at->format('d M Y H:i'),
                 'terjual' => $w->peserta ?? 0,
                 'kategori' => 'Webinar',
+                'pembicara' => $w->pembicaras->pluck('nama')->implode(', '),
+                'syarat_ketentuan' => $w->syarat_ketentuan,
             ]);
 
         return Inertia::render('webinar/catalog', [
@@ -55,6 +58,8 @@ class WebinarCatalogController extends Controller
         if ($webinar->status !== 'published') {
             abort(404);
         }
+
+        $webinar->load('pembicaras');
 
         $webinarData = [
             'id'            => $webinar->id,
@@ -75,6 +80,15 @@ class WebinarCatalogController extends Controller
             'is_full'       => $webinar->isFull(),
             'is_registration_open' => $webinar->isRegistrationOpen(),
             'user_id'       => $webinar->user_id,
+            'pembicaras'    => $webinar->pembicaras->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'nama' => $p->nama,
+                    'pekerjaan' => $p->pekerjaan,
+                    'profil' => $p->profil,
+                    'foto_url' => $p->foto_url,
+                ];
+            })->toArray(),
         ];
 
         return Inertia::render('webinar/checkout', [

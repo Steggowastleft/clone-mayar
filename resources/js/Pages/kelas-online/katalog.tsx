@@ -11,6 +11,8 @@ type KelasOnline = {
   cover_url?: string;
   peserta_count?: number;
   status?: string;
+  instruktur?: string;
+  syarat_ketentuan?: string;
 };
 
 type Props = {
@@ -65,6 +67,12 @@ export default function Katalog({ kelasOnlineList }: Props) {
                   {b.name}
                 </h2>
 
+                {b.instruktur && (
+                  <p className="text-xs text-slate-500 font-medium">
+                    Instruktur: <span className="font-bold text-slate-700">{b.instruktur}</span>
+                  </p>
+                )}
+
                 {b.deskripsi && (
                   <p className="text-xs text-gray-500 line-clamp-2">
                     {b.deskripsi}
@@ -85,6 +93,14 @@ export default function Katalog({ kelasOnlineList }: Props) {
                   </span>
 
                 </div>
+
+                {/* Syarat & Ketentuan */}
+                {b.syarat_ketentuan && (
+                  <div className="text-xs text-gray-500 border-t pt-2 mt-2 bg-slate-50/50 p-2 rounded-lg border-slate-100">
+                    <p className="font-bold text-gray-700 mb-0.5">Syarat & Ketentuan:</p>
+                    <p className="line-clamp-2 text-gray-500 leading-relaxed">{b.syarat_ketentuan}</p>
+                  </div>
+                )}
 
                 {/* PRICE + CTA */}
                 <div className="flex items-center justify-between pt-3">

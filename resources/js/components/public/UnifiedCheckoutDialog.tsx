@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, CheckCircle2, ArrowRight,
-  Mail, KeyRound, User, ChevronLeft, UserPlus, Phone, ShieldCheck, Sparkles
+  Mail, KeyRound, User, ChevronLeft, UserPlus, Phone, ShieldCheck, Sparkles, Ticket
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,6 +60,98 @@ export default function UnifiedCheckoutDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [snapLoaded, setSnapLoaded] = useState(false);
+
+  const [couponCodeInput, setCouponCodeInput] = useState(couponCode || "");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    kode: string;
+    discountAmount: number;
+    finalPrice: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCodeInput.trim()) {
+      setCouponError("Masukkan kode kupon.");
+      return;
+    }
+    setValidatingCoupon(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/diskon/validate-coupon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": getCsrf(),
+        },
+        body: JSON.stringify({
+          kode_kupon: couponCodeInput.trim(),
+          product_id: `${productType}:${productId}`,
+          harga: harga,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAppliedCoupon({
+          kode: couponCodeInput.trim().toUpperCase(),
+          discountAmount: data.discount_amount,
+          finalPrice: data.final_price,
+        });
+        toast.success(data.message || "Kupon berhasil diterapkan!");
+      } else {
+        setCouponError(data.message || "Kupon tidak valid.");
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      setCouponError("Gagal memvalidasi kupon. Coba lagi.");
+      setAppliedCoupon(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
+    setCouponError("");
+  };
+
+  useEffect(() => {
+    if (open && couponCode) {
+      setCouponCodeInput(couponCode);
+      const autoValidate = async () => {
+        try {
+          const res = await fetch("/diskon/validate-coupon", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-TOKEN": getCsrf(),
+            },
+            body: JSON.stringify({
+              kode_kupon: couponCode.trim(),
+              product_id: `${productType}:${productId}`,
+              harga: harga,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setAppliedCoupon({
+              kode: couponCode.trim().toUpperCase(),
+              discountAmount: data.discount_amount,
+              finalPrice: data.final_price,
+            });
+          }
+        } catch (e) {
+          // ignore auto validate error
+        }
+      };
+      autoValidate();
+    } else if (!open) {
+      setAppliedCoupon(null);
+      setCouponCodeInput("");
+      setCouponError("");
+    }
+  }, [open, couponCode, productType, productId, harga]);
 
   // Load Midtrans Snap Script dynamically
   useEffect(() => {
@@ -240,7 +332,7 @@ export default function UnifiedCheckoutDialog({
           email: submitEmail,
           phone: submitPhone,
           amount: harga,
-          coupon_code: couponCode || undefined,
+          coupon_code: appliedCoupon ? appliedCoupon.kode : (couponCodeInput || undefined),
         }),
       });
 
@@ -591,6 +683,12 @@ export default function UnifiedCheckoutDialog({
                           <span>Harga Produk</span>
                           <span>{formatHarga(harga)}</span>
                         </div>
+                        {appliedCoupon && (
+                          <div className="flex justify-between text-emerald-600 font-semibold">
+                            <span>Diskon (Kupon: {appliedCoupon.kode})</span>
+                            <span>-{formatHarga(appliedCoupon.discountAmount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-slate-555">
                           <span>Biaya Penanganan Admin</span>
                           <span>{formatHarga(5000)}</span>
@@ -600,12 +698,65 @@ export default function UnifiedCheckoutDialog({
                     <div className="flex justify-between items-center pt-2 border-t border-slate-200/50 mt-2">
                       <span className="text-xs text-slate-500 font-semibold">Total Bayar</span>
                       <span className="text-lg font-black text-indigo-600">
-                        {harga > 0 ? formatHarga(harga + 5000) : "Gratis"}
+                        {harga > 0 
+                          ? formatHarga((appliedCoupon ? appliedCoupon.finalPrice : harga) + 5000) 
+                          : "Gratis"}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-3">
+                    {/* Kupon Diskon */}
+                    {harga > 0 && (
+                      <div className="space-y-1.5 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <Label htmlFor="checkout-coupon" className="text-xs font-bold text-slate-650 uppercase tracking-wide flex items-center gap-1">
+                          <Ticket size={12} className="text-indigo-500" />
+                          Punya Kode Kupon?
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="checkout-coupon"
+                            placeholder="Contoh: DISKON50"
+                            value={couponCodeInput}
+                            onChange={(e) => {
+                              setCouponCodeInput(e.target.value.toUpperCase());
+                              setCouponError("");
+                            }}
+                            disabled={!!appliedCoupon || validatingCoupon}
+                            className="h-9 text-xs rounded-xl border-slate-200 uppercase font-mono font-semibold"
+                          />
+                          {appliedCoupon ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleRemoveCoupon}
+                              className="h-9 px-3 rounded-xl border-red-200 text-red-500 hover:bg-red-50 text-xs font-bold"
+                            >
+                              Hapus
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={handleApplyCoupon}
+                              disabled={validatingCoupon || !couponCodeInput}
+                              className="h-9 px-4 rounded-xl bg-indigo-650 hover:bg-indigo-750 text-white text-xs font-bold"
+                            >
+                              {validatingCoupon ? "Checking..." : "Gunakan"}
+                            </Button>
+                          )}
+                        </div>
+                        {couponError && (
+                          <p className="text-[10px] text-red-500 font-bold mt-1 pl-1">{couponError}</p>
+                        )}
+                        {appliedCoupon && (
+                          <p className="text-[10px] text-emerald-600 font-bold mt-1 pl-1 flex items-center gap-1">
+                            <CheckCircle2 size={10} />
+                            Kupon "{appliedCoupon.kode}" berhasil diterapkan! Hemat {formatHarga(appliedCoupon.discountAmount)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-1.5">
                       <Label htmlFor="checkout-name" className="text-xs font-bold text-slate-600 uppercase tracking-wide">
                         Nama Penerima / Pendaftar

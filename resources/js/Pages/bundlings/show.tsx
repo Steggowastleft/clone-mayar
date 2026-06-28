@@ -47,6 +47,8 @@ export type Bundling = {
   jumlah_terjual: number;
   items: BundlingItem[];
   registrasi_count: number;
+  peserta_list?: any[];
+  transaksi_list?: any[];
 };
 
 type ShowProps = {
@@ -76,10 +78,10 @@ export default function Show({ bundling }: ShowProps) {
 
   const handleDelete = () => {
     if (confirm("Apakah Anda yakin ingin menghapus bundling ini?")) {
-      router.delete(`/bundling/${bundling.id}/`, {
+      router.delete(`/bundling/${bundling.id}`, {
         onSuccess: () => {
           toast.success("Bundling berhasil dihapus");
-          router.visit("/bundling/");
+          router.visit("/bundling");
         },
       });
     }
@@ -87,7 +89,7 @@ export default function Show({ bundling }: ShowProps) {
 
   const handleStatusChange = (status: string) => {
     router.patch(
-      `/bundling/${bundling.id}/status/`,
+      `/bundling/${bundling.id}/status`,
       { status },
       {
         onSuccess: () => {
@@ -103,9 +105,9 @@ export default function Show({ bundling }: ShowProps) {
       case "detail":
         return <TabDetail bundling={bundling} />;
       case "peserta":
-        return <TabPeserta bundlingId={bundling.id} />;
+        return <TabPeserta bundlingId={bundling.id} pesertaList={bundling.peserta_list ?? []} />;
       case "transaksi":
-        return <TabTransaksi bundlingId={bundling.id} />;
+        return <TabTransaksi bundlingId={bundling.id} transaksiList={bundling.transaksi_list ?? []} />;
       case "rating":
         return <TabRating bundlingId={bundling.id} />;
       case "tiket":
@@ -215,7 +217,7 @@ export default function Show({ bundling }: ShowProps) {
 
               {/* ACTION BUTTONS */}
               <button
-                onClick={() => router.visit(`/bundling/${bundling.id}/edit/`)}
+                onClick={() => router.visit(`/bundling/${bundling.id}/edit`)}
                 className="w-full border border-gray-200 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50 rounded-md flex gap-2 justify-center items-center transition-all"
               >
                 <Edit className="h-3.5 w-3.5" /> EDIT

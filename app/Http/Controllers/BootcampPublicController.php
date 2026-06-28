@@ -34,6 +34,7 @@ class BootcampPublicController extends Controller
                 'kategori'                   => $bootcamp->kategori,
                 'cover_url'                  => $bootcamp->cover_url,
                 'max_peserta'                => $bootcamp->max_peserta,
+                'syarat_ketentuan'           => $bootcamp->syarat_ketentuan,
                 'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran?->format('d M Y'),
                 'tanggal_batas_pembelajaran' => $bootcamp->tanggal_batas_pembelajaran?->format('d M Y'),
             ],

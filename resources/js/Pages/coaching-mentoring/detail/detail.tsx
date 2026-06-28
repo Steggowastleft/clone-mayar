@@ -43,6 +43,12 @@ type CoachingMentoring = {
   updated_at: string;
 };
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 type Props = {
   coaching: CoachingMentoring;
   onUpdate?: (coaching: CoachingMentoring) => void;
@@ -71,7 +77,12 @@ export default function DetailTab({ coaching, onUpdate }: Props) {
 
   const handleSave = () => {
     setIsLoading(true);
-    router.put(`/coaching-mentoring/${coaching.id}`, formData, {
+    const cleanedData = {
+      ...formData,
+      harga: formData.harga ? formData.harga.replace(/\D/g, "") : "0",
+      harga_coret: formData.harga_coret ? formData.harga_coret.replace(/\D/g, "") : null,
+    };
+    router.put(`/coaching-mentoring/${coaching.id}`, cleanedData, {
       onSuccess: (page: any) => {
         setIsEditing(false);
         if (page.props?.coaching && onUpdate) {
@@ -247,15 +258,20 @@ export default function DetailTab({ coaching, onUpdate }: Props) {
               {formData.tipe_pembayaran === "berbayar" && (
                 <div>
                   <Label htmlFor="harga">Harga</Label>
-                  <Input
-                    id="harga"
-                    type="number"
-                    value={formData.harga}
-                    onChange={(e) =>
-                      setFormData({ ...formData, harga: e.target.value })
-                    }
-                    placeholder="0"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-sm text-gray-500 font-medium">Rp</span>
+                    <Input
+                      id="harga"
+                      className="pl-9"
+                      type="text"
+                      value={formatRupiahInput(formData.harga)}
+                      onChange={(e) =>
+                        setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })
+                      }
+                      placeholder="0"
+                      inputMode="numeric"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -263,15 +279,20 @@ export default function DetailTab({ coaching, onUpdate }: Props) {
             {formData.tipe_pembayaran === "berbayar" && (
               <div>
                 <Label htmlFor="harga_coret">Harga Coret (Opsional)</Label>
-                <Input
-                  id="harga_coret"
-                  type="number"
-                  value={formData.harga_coret}
-                  onChange={(e) =>
-                    setFormData({ ...formData, harga_coret: e.target.value })
-                  }
-                  placeholder="0"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-sm text-gray-500 font-medium">Rp</span>
+                  <Input
+                    id="harga_coret"
+                    className="pl-9"
+                    type="text"
+                    value={formatRupiahInput(formData.harga_coret)}
+                    onChange={(e) =>
+                      setFormData({ ...formData, harga_coret: e.target.value.replace(/\D/g, "") })
+                    }
+                    placeholder="0"
+                    inputMode="numeric"
+                  />
+                </div>
               </div>
             )}
 

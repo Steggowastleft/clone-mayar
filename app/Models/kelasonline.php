@@ -20,7 +20,7 @@ class KelasOnline extends Model
         'require_quiz_sertifikat', 'nilai_minimum_quiz',
         'has_assignment',
         'materi_file', 'materi_nama_asli',
-        'tanggal_mulai', 'tanggal_selesai',
+        'tanggal_mulai', 'tanggal_selesai', 'syarat_ketentuan',
     ];
 
     protected $casts = [

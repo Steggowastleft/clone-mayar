@@ -88,6 +88,7 @@ class KelasOnlineController extends Controller
             'nilai_minimum_quiz'      => 'nullable|numeric|min:0|max:100',
             'has_assignment'          => 'boolean',
             'thumbnail'               => 'nullable|image|max:2048',
+            'syarat_ketentuan'        => 'nullable|string',
         ]);
 
         if ($request->hasFile('thumbnail')) {
@@ -204,6 +205,7 @@ class KelasOnlineController extends Controller
             'nilai_minimum_quiz'      => 'nullable|numeric|min:0|max:100',
             'has_assignment'          => 'boolean',
             'thumbnail'               => 'nullable|image|max:2048',
+            'syarat_ketentuan'        => 'nullable|string',
         ]);
 
         if ($request->hasFile('thumbnail')) {

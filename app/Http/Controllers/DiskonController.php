@@ -12,6 +12,7 @@ use App\Models\CoachingMentoring;
 use App\Models\Tulisan;
 use App\Models\KelasOnline;
 use App\Models\PaymentLink;
+use App\Models\Bundling;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -103,6 +104,72 @@ class DiskonController extends Controller
             $produkTerpilih = $this->getProdukDetails($diskon->produk_ids);
         }
 
+        // Get usage statistics
+        $usage = [];
+
+        // Query Pendaftaran using this coupon
+        $pendaftarans = \App\Models\Pendaftaran::whereRaw('UPPER(coupon_code) = ?', [strtoupper($diskon->kode_kupon)])
+            ->whereIn('status', ['active', 'aktif', 'completed'])
+            ->get();
+
+        foreach ($pendaftarans as $p) {
+            $product = $p->registrable;
+            if ($product) {
+                $name = $product->nama ?? $product->name ?? $product->title ?? 'Produk';
+                $type = class_basename($p->registrable_type);
+                $typeMap = [
+                    'Produkdigital' => 'Produk Digital',
+                    'CoachingMentoring' => 'Coaching / Mentoring',
+                    'KelasOnline' => 'Kelas Online',
+                    'PaymentLink' => 'Link Pembayaran',
+                    'Ebook' => 'Ebook',
+                    'Bundling' => 'Bundling',
+                    'Event' => 'Event',
+                    'Webinar' => 'Webinar',
+                    'Bootcamp' => 'Bootcamp',
+                    'Tulisan' => 'Tulisan'
+                ];
+                if (isset($typeMap[$type])) {
+                    $type = $typeMap[$type];
+                }
+                
+                $key = $type . ':' . $product->id;
+                if (!isset($usage[$key])) {
+                    $usage[$key] = [
+                        'nama' => $name,
+                        'tipe' => $type,
+                        'kali_dipakai' => 0,
+                    ];
+                }
+                $usage[$key]['kali_dipakai']++;
+            }
+        }
+
+        // Query KelasOnlinePeserta using this coupon
+        $kelasEnrolls = \App\Models\KelasOnlinePeserta::whereRaw('UPPER(coupon_code) = ?', [strtoupper($diskon->kode_kupon)])
+            ->where('status', 'aktif')
+            ->get();
+
+        foreach ($kelasEnrolls as $k) {
+            $product = $k->kelasOnline;
+            if ($product) {
+                $name = $product->nama ?? 'Kelas Online';
+                $type = 'Kelas Online';
+                
+                $key = $type . ':' . $product->id;
+                if (!isset($usage[$key])) {
+                    $usage[$key] = [
+                        'nama' => $name,
+                        'tipe' => $type,
+                        'kali_dipakai' => 0,
+                    ];
+                }
+                $usage[$key]['kali_dipakai']++;
+            }
+        }
+
+        $riwayatPenggunaan = array_values($usage);
+
         return Inertia::render('diskon-kupon/show', [
             'diskon' => [
                 'id' => $diskon->id,
@@ -123,6 +190,7 @@ class DiskonController extends Controller
                 'jumlah_dipakai' => $diskon->jumlah_dipakai,
                 'is_aktif' => $diskon->isAktif(),
                 'created_at' => $diskon->created_at->format('d M Y'),
+                'riwayat_penggunaan' => $riwayatPenggunaan,
             ],
             'produk' => $this->getAllProduk(),
         ]);
@@ -309,6 +377,18 @@ class DiskonController extends Controller
             ]);
         $produk = array_merge($produk, $paymentLinks->toArray());
 
+        // Bundlings
+        $bundlings = Bundling::where('user_id', $userId)
+            ->where('status', 'published')
+            ->get()
+            ->map(fn($b) => [
+                'id' => 'bundling:' . $b->id,
+                'nama' => $b->nama,
+                'tipe' => 'Bundling',
+                'harga' => $b->harga ?? 0,
+            ]);
+        $produk = array_merge($produk, $bundlings->toArray());
+
         return $produk;
     }
 
@@ -335,6 +415,7 @@ class DiskonController extends Controller
                 'tulisan' => Tulisan::find($realId),
                 'kelas-online' => KelasOnline::find($realId),
                 'payment-link' => PaymentLink::find($realId),
+                'bundling' => Bundling::find($realId),
                 default => null,
             };
 

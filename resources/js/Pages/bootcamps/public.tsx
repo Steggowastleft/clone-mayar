@@ -43,6 +43,7 @@ type Bootcamp = {
   max_peserta?: number;
   tanggal_mulai_pembelajaran?: string;
   tanggal_batas_pembelajaran?: string;
+  syarat_ketentuan?: string;
   user_id?: number | null;
 };
 
@@ -134,6 +135,7 @@ export default function BootcampPublic(props: Props) {
     babList.length    > 0 && { href: "#modul",      label: "Modul" },
     sesiList.length   > 0 && { href: "#sesi",       label: "Jadwal Sesi" },
     instruktur.length > 0 && { href: "#instruktur", label: "Instruktur" },
+    bootcamp.syarat_ketentuan && { href: "#syarat", label: "Syarat & Ketentuan" },
   ].filter(Boolean) as { href: string; label: string }[];
 
   const handleCheckoutClick = (finalPrice?: number, coupon?: string) => {
@@ -419,6 +421,17 @@ export default function BootcampPublic(props: Props) {
                   </div>
                 ))}
               </div>
+            </ContentCard>
+          </div>
+        )}
+
+        {/* Syarat & Ketentuan */}
+        {bootcamp.syarat_ketentuan && (
+          <div id="syarat">
+            <ContentCard title="Syarat & Ketentuan">
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                {bootcamp.syarat_ketentuan}
+              </p>
             </ContentCard>
           </div>
         )}

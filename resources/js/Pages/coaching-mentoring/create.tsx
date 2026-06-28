@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 export default function CoachingMentoringCreate() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -121,10 +127,10 @@ export default function CoachingMentoringCreate() {
                 <Label htmlFor="harga">Harga</Label>
                 <Input
                   id="harga"
-                  type="number"
-                  value={formData.harga}
+                  type="text"
+                  value={formData.harga ? formatRupiahInput(formData.harga) : ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, harga: e.target.value })
+                    setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })
                   }
                   placeholder="0"
                 />
@@ -137,10 +143,10 @@ export default function CoachingMentoringCreate() {
               <Label htmlFor="harga_coret">Harga Coret (Opsional)</Label>
               <Input
                 id="harga_coret"
-                type="number"
-                value={formData.harga_coret}
+                type="text"
+                value={formData.harga_coret ? formatRupiahInput(formData.harga_coret) : ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, harga_coret: e.target.value })
+                  setFormData({ ...formData, harga_coret: e.target.value.replace(/\D/g, "") })
                 }
                 placeholder="0"
               />

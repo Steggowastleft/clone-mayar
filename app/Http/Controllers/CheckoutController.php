@@ -95,6 +95,7 @@ class CheckoutController extends Controller
             $price = (float) $product->harga;
         }
 
+        $appliedCouponCode = null;
         if ($request->filled('coupon_code') && $productType !== 'penggalangan-dana') {
             $kode = strtoupper($request->input('coupon_code'));
             $diskon = \App\Models\Diskon::whereRaw('UPPER(kode_kupon) = ?', [$kode])->first();
@@ -123,6 +124,7 @@ class CheckoutController extends Controller
                     }
                     $price -= $discountAmount;
                     $diskon->increment('jumlah_dipakai');
+                    $appliedCouponCode = $kode;
                 }
             }
         }
@@ -159,6 +161,7 @@ class CheckoutController extends Controller
                     [
                         'status'          => 'aktif',
                         'mendaftar_pada'  => now(),
+                        'coupon_code'     => $appliedCouponCode,
                     ]
                 );
             } else {
@@ -173,6 +176,7 @@ class CheckoutController extends Controller
                         'harga_bayar'      => 0,
                         'tanggal_daftar'   => now(),
                         'tanggal_aktif'    => now(),
+                        'coupon_code'      => $appliedCouponCode,
                     ]
                 );
             }
@@ -253,6 +257,7 @@ class CheckoutController extends Controller
                         'mendaftar_pada'  => now(),
                         'order_id'        => $orderId,
                         'snap_token'      => $snapToken,
+                        'coupon_code'     => $appliedCouponCode,
                     ]
                 );
             } else {
@@ -268,6 +273,7 @@ class CheckoutController extends Controller
                         'tanggal_daftar'   => now(),
                         'order_id'         => $orderId,
                         'snap_token'       => $snapToken,
+                        'coupon_code'      => $appliedCouponCode,
                     ]
                 );
             }
@@ -283,6 +289,7 @@ class CheckoutController extends Controller
                     'no_hp_pembeli'  => $validated['phone'],
                     'jumlah'         => $finalPrice,
                     'status'         => 'pending',
+                    'coupon_code'    => $appliedCouponCode,
                 ]
             );
 
@@ -358,6 +365,14 @@ class CheckoutController extends Controller
                                 }
                                 $campaign->increment('terkumpul', $donationAmount);
                                 $campaign->increment('pembeli');
+                            }
+                        }
+
+                        // Sync Webinar totals if it is a webinar
+                        if ($pendaftaran->registrable_type === \App\Models\Webinar::class) {
+                            $webinar = $pendaftaran->registrable;
+                            if ($webinar) {
+                                $webinar->increment('peserta');
                             }
                         }
                     }
@@ -437,6 +452,14 @@ class CheckoutController extends Controller
                             }
                             $campaign->increment('terkumpul', $donationAmount);
                             $campaign->increment('pembeli');
+                        }
+                    }
+
+                    // Sync Webinar totals if it is a webinar
+                    if ($pendaftaran->registrable_type === \App\Models\Webinar::class) {
+                        $webinar = $pendaftaran->registrable;
+                        if ($webinar) {
+                            $webinar->increment('peserta');
                         }
                     }
                 }

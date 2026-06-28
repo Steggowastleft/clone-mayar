@@ -24,6 +24,14 @@ type KelasOnline = {
   require_quiz_sertifikat?: boolean;
   nilai_minimum_quiz?: number;
   peserta_terdaftar_count: number;
+  syarat_ketentuan?: string;
+  instruktur?: Array<{
+    id: number;
+    nama: string;
+    jabatan?: string;
+    bio?: string;
+    foto_url?: string;
+  }>;
   owner: { name: string };
   user_id?: number | null;
 };
@@ -73,6 +81,8 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
   // Nav items sticky
   const navItems = [
     kelas.deskripsi && { href: "#tentang", label: "Tentang Kelas" },
+    kelas.instruktur && kelas.instruktur.length > 0 && { href: "#instruktur", label: "Instruktur" },
+    kelas.syarat_ketentuan && { href: "#syarat", label: "Syarat & Ketentuan" },
     kelas.require_quiz_sertifikat && { href: "#sertifikat", label: "Sertifikat" },
     { href: "#penyelenggara", label: "Penyelenggara" },
   ].filter(Boolean) as { href: string; label: string }[];
@@ -120,9 +130,21 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                 {kelas.nama}
               </h1>
+              <div className="flex items-center gap-3 pt-2">
+                <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                  <Users className="text-slate-500 h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Instruktur Kelas</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {kelas.instruktur && kelas.instruktur.length > 0 
+                      ? kelas.instruktur.map(i => i.nama).join(', ') 
+                      : (kelas.owner?.name ?? 'Anonim')}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-sm">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Peserta</p>
@@ -166,6 +188,43 @@ export default function KelasOnlinePublicDetail({ kelas, peserta = null }: Props
             <ContentCard title="Tentang Kelas">
               <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
                 {kelas.deskripsi}
+              </p>
+            </ContentCard>
+          </div>
+        )}
+
+        {/* Instruktur */}
+        {kelas.instruktur && kelas.instruktur.length > 0 && (
+          <div id="instruktur">
+            <ContentCard title="Instruktur Kelas">
+              <div className="grid gap-6 sm:grid-cols-2">
+                {kelas.instruktur.map((ins) => (
+                  <div key={ins.id} className="flex gap-4 items-start p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                      {ins.foto_url ? (
+                        <img src={ins.foto_url} alt={ins.nama} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-indigo-600 font-bold text-lg">{ins.nama.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-slate-800">{ins.nama}</h4>
+                      {ins.jabatan && <p className="text-xs font-semibold text-indigo-600">{ins.jabatan}</p>}
+                      {ins.bio && <p className="text-xs text-slate-500 leading-relaxed mt-1">{ins.bio}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ContentCard>
+          </div>
+        )}
+
+        {/* Syarat & Ketentuan */}
+        {kelas.syarat_ketentuan && (
+          <div id="syarat">
+            <ContentCard title="Syarat & Ketentuan">
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                {kelas.syarat_ketentuan}
               </p>
             </ContentCard>
           </div>

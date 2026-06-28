@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Search, Plus, Edit2, Trash2, Power, Copy, Sparkles } from "lucide-react";
+import { Ticket, Search, Plus, Edit2, Trash2, Power, Copy, Sparkles, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import {
@@ -53,6 +53,12 @@ type Produk = {
 type Props = {
   diskons: Diskon[];
   produk: Produk[];
+};
+
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
 };
 
 export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
@@ -280,7 +286,12 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                             {/* Info */}
                             <div className="col-span-2">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold text-gray-800">{d.nama}</h3>
+                      <button
+                        onClick={() => router.visit(`/diskon-kupon/${d.id}`)}
+                        className="font-semibold text-gray-800 hover:text-blue-650 text-left transition-colors"
+                      >
+                        {d.nama}
+                      </button>
                       {statusBadge(d)}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -330,6 +341,13 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                       title={d.is_aktif ? "Nonaktifkan" : "Aktifkan"}
                     >
                       <Power className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => router.visit(`/diskon-kupon/${d.id}`)}
+                      className="p-2 text-slate-500 hover:bg-slate-100 rounded-md transition"
+                      title="Lihat Detail"
+                    >
+                      <Eye className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => router.visit(`/diskon-kupon/${d.id}`)}
@@ -445,6 +463,7 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                       <SelectItem value="Tulisan">Tulisan</SelectItem>
                       <SelectItem value="Kelas Online">Kelas Online</SelectItem>
                       <SelectItem value="Link Pembayaran">Payment Link</SelectItem>
+                      <SelectItem value="Bundling">Bundling</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -527,10 +546,13 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                   </span>
                   <Input
                     id="besaran"
-                    type="number"
+                    type={form.tipe_diskon === "persentase" ? "number" : "text"}
                     placeholder="0"
-                    value={form.besaran}
-                    onChange={(e) => setForm({ ...form, besaran: e.target.value })}
+                    value={form.tipe_diskon === "persentase" ? form.besaran : formatRupiahInput(form.besaran)}
+                    onChange={(e) => {
+                      const raw = form.tipe_diskon === "persentase" ? e.target.value : e.target.value.replace(/\D/g, "");
+                      setForm({ ...form, besaran: raw });
+                    }}
                     className={cn(
                       "rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500",
                       form.tipe_diskon === "persentase" ? "pl-8" : "pl-10"
@@ -550,10 +572,10 @@ export default function DiskonKuponIndex({ diskons = [], produk = [] }: Props) {
                 </span>
                 <Input
                   id="minimum_pembelian"
-                  type="number"
+                  type="text"
                   placeholder="0"
-                  value={form.minimum_pembelian}
-                  onChange={(e) => setForm({ ...form, minimum_pembelian: e.target.value })}
+                  value={formatRupiahInput(form.minimum_pembelian)}
+                  onChange={(e) => setForm({ ...form, minimum_pembelian: e.target.value.replace(/\D/g, "") })}
                   className="pl-10 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +37,12 @@ function formatRupiah(num: number) {
   return "Rp " + num.toLocaleString("id-ID");
 }
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 // ─────────────────────────────────────────────
 // Dialog Form
 // ─────────────────────────────────────────────
@@ -52,10 +58,18 @@ function FormDialog({
   initial?: Partial<TiketItem>;
 }) {
   const [form, setForm] = useState({
-    nama: initial?.nama || "",
-    harga: initial?.harga || 0,
-    kuota: initial?.kuota || 0,
+    nama: "",
+    harga: "",
+    kuota: 0,
   });
+
+  useEffect(() => {
+    setForm({
+      nama: initial?.nama || "",
+      harga: initial?.harga ? String(initial.harga) : "",
+      kuota: initial?.kuota || 0,
+    });
+  }, [initial, open]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -72,18 +86,23 @@ function FormDialog({
             value={form.nama}
             onChange={(e) => setForm({ ...form, nama: e.target.value })}
           />
-          <Input
-            type="number"
-            placeholder="Harga"
-            value={form.harga}
-            onChange={(e) =>
-              setForm({ ...form, harga: Number(e.target.value) })
-            }
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-2.5 text-sm text-gray-500 font-medium">Rp</span>
+            <Input
+              className="pl-9"
+              type="text"
+              placeholder="Harga"
+              value={formatRupiahInput(form.harga)}
+              onChange={(e) =>
+                setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })
+              }
+              inputMode="numeric"
+            />
+          </div>
           <Input
             type="number"
             placeholder="Kuota"
-            value={form.kuota}
+            value={form.kuota || ""}
             onChange={(e) =>
               setForm({ ...form, kuota: Number(e.target.value) })
             }
@@ -92,7 +111,10 @@ function FormDialog({
           <Button
             className="w-full"
             onClick={() => {
-              onSave(form);
+              onSave({
+                ...form,
+                harga: Number(form.harga),
+              });
               onClose();
             }}
           >

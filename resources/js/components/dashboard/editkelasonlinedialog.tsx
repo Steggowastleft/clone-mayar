@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { router } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,13 @@ type KelasOnline = {
   nilai_minimum_quiz: number | null;
   has_assignment: boolean;
   thumbnail: string | null;
+  syarat_ketentuan?: string | null;
+};
+
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
 };
 
 type EditKelasOnlineDialogProps = {
@@ -65,7 +72,28 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
     require_quiz_sertifikat: kelas?.require_quiz_sertifikat ?? false,
     nilai_minimum_quiz: String(kelas?.nilai_minimum_quiz ?? "70"),
     has_assignment: kelas?.has_assignment ?? false,
+    syarat_ketentuan: kelas?.syarat_ketentuan ?? "",
   });
+
+  useEffect(() => {
+    if (kelas) {
+      setForm({
+        nama: kelas.nama ?? "",
+        deskripsi: kelas.deskripsi ?? "",
+        harga: String(kelas.harga ?? "0"),
+        is_gratis: kelas.is_gratis ?? false,
+        require_quiz_sertifikat: kelas.require_quiz_sertifikat ?? false,
+        nilai_minimum_quiz: String(kelas.nilai_minimum_quiz ?? "70"),
+        has_assignment: kelas.has_assignment ?? false,
+        syarat_ketentuan: kelas.syarat_ketentuan ?? "",
+      });
+      setThumbnailPreview(kelas.thumbnail ?? null);
+      setRangeTanggal({
+        from: parseDate(kelas.tanggal_mulai),
+        to: parseDate(kelas.tanggal_selesai),
+      });
+    }
+  }, [kelas]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -107,6 +135,7 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
     payload.append("require_quiz_sertifikat", form.require_quiz_sertifikat ? "1" : "0");
     payload.append("nilai_minimum_quiz", form.nilai_minimum_quiz);
     payload.append("has_assignment", form.has_assignment ? "1" : "0");
+    payload.append("syarat_ketentuan", form.syarat_ketentuan);
     if (rangeTanggal?.from) payload.append("tanggal_mulai", format(rangeTanggal.from, "yyyy-MM-dd HH:mm:ss"));
     if (rangeTanggal?.to) payload.append("tanggal_selesai", format(rangeTanggal.to, "yyyy-MM-dd HH:mm:ss"));
     if (thumbnailFile) payload.append("thumbnail", thumbnailFile);
@@ -191,6 +220,17 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
             />
           </div>
 
+          {/* Syarat & Ketentuan */}
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Syarat & Ketentuan</Label>
+            <Textarea
+              placeholder="Tuliskan syarat dan ketentuan kelas online..."
+              rows={4}
+              value={form.syarat_ketentuan}
+              onChange={(e) => setForm({ ...form, syarat_ketentuan: e.target.value })}
+            />
+          </div>
+
           {/* Tipe Pembayaran */}
           <div className="space-y-1">
             <Label className="text-sm font-medium text-gray-700">Tipe Pembayaran <span className="text-red-500">*</span></Label>
@@ -217,9 +257,9 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
                 <Input
                   className="pl-9"
                   placeholder="0"
-                  type="number"
-                  value={form.harga}
-                  onChange={(e) => setForm({ ...form, harga: e.target.value })}
+                  type="text"
+                  value={form.harga ? formatRupiahInput(form.harga) : ""}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })}
                 />
               </div>
             </div>

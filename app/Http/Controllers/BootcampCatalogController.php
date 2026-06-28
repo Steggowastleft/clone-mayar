@@ -36,6 +36,7 @@ class BootcampCatalogController extends Controller
                 'cover_url' => $b->cover_url,
                 'peserta_count' => $b->pendaftaran()->count(),
                 'status' => $b->status,
+                'syarat_ketentuan' => $b->syarat_ketentuan,
             ]);
 
         return Inertia::render('bootcamps/katalog', [

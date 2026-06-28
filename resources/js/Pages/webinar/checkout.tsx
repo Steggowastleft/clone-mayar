@@ -1,17 +1,11 @@
 import { Head } from "@inertiajs/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Calendar, Users, AlertCircle, Check, Award, Play, 
-  CheckCircle2, Clock, User, Phone, Mail, Loader2
+  CheckCircle2, Clock
 } from "lucide-react";
 import PublicProductLayout from "@/components/public/PublicProductLayout";
-import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import UnifiedCheckoutDialog from "@/components/public/UnifiedCheckoutDialog";
 
 type Webinar = {
   id: number;
@@ -28,6 +22,13 @@ type Webinar = {
   instruksi?: string;
   syarat_ketentuan?: string;
   user_id?: number | null;
+  pembicaras?: Array<{
+    id: number;
+    nama: string;
+    pekerjaan?: string;
+    profil?: string;
+    foto_url?: string;
+  }>;
 };
 
 type Props = {
@@ -53,92 +54,15 @@ function ContentCard({ title, children }: { title: string; children: React.React
 
 export default function CheckoutWebinar({ webinar }: Props) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [snapLoaded, setSnapLoaded] = useState(false);
+  const [checkoutPrice, setCheckoutPrice] = useState(webinar.harga ?? 0);
+  const [couponCode, setCouponCode] = useState("");
 
-  useEffect(() => {
-    // Load Midtrans Snap
-    const script = document.createElement("script");
-    script.src = "https://app.midtrans.com/snap/snap.js";
-    script.async = true;
-    script.onload = () => setSnapLoaded(true);
-    document.body.appendChild(script);
-  }, []);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch(
-        `/webinar/${webinar.id}/payment/process`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": document
-              .querySelector('meta[name="csrf-token"]')
-              ?.getAttribute("content") || "",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || "Gagal memproses pembayaran");
-        setLoading(false);
-        return;
-      }
-
-      // Jika gratis
-      if (data.order_id?.startsWith("FREE-")) {
-        setSuccess(true);
-        setTimeout(() => {
-          window.location.href = `/webinar/confirmation?order_id=${data.order_id}`;
-        }, 1500);
-        return;
-      }
-
-      // Tampilkan Midtrans payment
-      if (data.snap_token && window.snap) {
-        window.snap.pay(data.snap_token, {
-          onSuccess: (result: any) => {
-            window.location.href = `/webinar/confirmation?order_id=${data.order_id}&status=success`;
-          },
-          onPending: (result: any) => {
-            window.location.href = `/webinar/confirmation?order_id=${data.order_id}&status=pending`;
-          },
-          onError: (result: any) => {
-            setError("Pembayaran gagal");
-            setLoading(false);
-          },
-          onClose: () => {
-            setError("Pembayaran dibatalkan");
-            setLoading(false);
-          },
-        });
-      }
-    } catch (err) {
-      setError("Error: " + (err instanceof Error ? err.message : "Unknown error"));
-      setLoading(false);
+  const handleCheckout = (finalPrice?: number, coupon?: string) => {
+    if (typeof finalPrice === "number") {
+      setCheckoutPrice(finalPrice);
     }
+    setCouponCode(coupon || "");
+    setCheckoutOpen(true);
   };
 
   const formatTanggal = (str?: string) => {
@@ -165,8 +89,8 @@ export default function CheckoutWebinar({ webinar }: Props) {
       navTitle="Mayar Webinar"
       navIcon={<Award className="text-white h-5 w-5" />}
       creatorId={webinar.user_id}
-      onCheckout={() => setCheckoutOpen(true)}
-      hideCoupon={true}
+      onCheckout={handleCheckout}
+      hideCoupon={false}
     >
       <div className="space-y-8">
         
@@ -196,6 +120,19 @@ export default function CheckoutWebinar({ webinar }: Props) {
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
                 {webinar.nama}
               </h1>
+              <div className="flex items-center gap-3 pt-2">
+                <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                  <Users className="text-slate-500 h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Instruktur / Pembicara</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {webinar.pembicaras && webinar.pembicaras.length > 0 
+                      ? webinar.pembicaras.map(p => p.nama).join(', ') 
+                      : 'Anonim'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Quick Stats Grid */}
@@ -238,6 +175,32 @@ export default function CheckoutWebinar({ webinar }: Props) {
           </div>
         )}
 
+        {/* Pembicara / Instruktur */}
+        {webinar.pembicaras && webinar.pembicaras.length > 0 && (
+          <div>
+            <ContentCard title="Instruktur / Pembicara">
+              <div className="grid gap-6 sm:grid-cols-2">
+                {webinar.pembicaras.map((ins) => (
+                  <div key={ins.id} className="flex gap-4 items-start p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                      {ins.foto_url ? (
+                        <img src={ins.foto_url} alt={ins.nama} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-purple-600 font-bold text-lg">{ins.nama.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-slate-800">{ins.nama}</h4>
+                      {ins.pekerjaan && <p className="text-xs font-semibold text-purple-600">{ins.pekerjaan}</p>}
+                      {ins.profil && <p className="text-xs text-slate-500 leading-relaxed mt-1">{ins.profil}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ContentCard>
+          </div>
+        )}
+
         {/* Syarat & Ketentuan */}
         {webinar.syarat_ketentuan && (
           <div>
@@ -269,102 +232,15 @@ export default function CheckoutWebinar({ webinar }: Props) {
       </div>
 
       {/* Checkout Dialog */}
-      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Pendaftaran Webinar</DialogTitle>
-            <DialogDescription className="text-sm text-slate-500">
-              Silakan isi formulir di bawah ini untuk mengamankan tiket webinar Anda.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Nama Lengkap *</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="pl-9 rounded-xl border-slate-200"
-                  placeholder="Masukkan nama lengkap Anda"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Alamat Email *</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="pl-9 rounded-xl border-slate-200"
-                  placeholder="email@example.com"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">No. Telepon / WhatsApp *</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="pl-9 rounded-xl border-slate-200"
-                  placeholder="08xx xxxx xxxx"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-2.5 text-xs">
-                <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {success && (
-              <div className="p-3 bg-green-50 text-green-700 rounded-xl border border-green-200 flex items-start gap-2.5 text-xs animate-pulse">
-                <Check size={16} className="flex-shrink-0 mt-0.5" />
-                <span>✓ Berhasil! Mengalihkan ke halaman konfirmasi...</span>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={loading || success}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memproses Pendaftaran...
-                </>
-              ) : (
-                "Lanjut ke Pembayaran"
-              )}
-            </Button>
-
-            <p className="text-[10px] text-slate-400 text-center">
-              🔒 Transaksi aman & terenkripsi oleh Midtrans.
-            </p>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <UnifiedCheckoutDialog
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        productType="webinar"
+        productId={webinar.id}
+        productName={webinar.nama}
+        harga={checkoutPrice}
+        couponCode={couponCode}
+      />
     </PublicProductLayout>
   );
 }

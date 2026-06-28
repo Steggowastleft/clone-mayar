@@ -603,6 +603,10 @@ class ProdukDigitalController extends Controller
                 ->exists();
         }
 
+        $isCreator = auth()->check() && $produkDigital->user_id === auth()->id();
+        $isFree = $produkDigital->tipe_pembayaran === 'gratis';
+        $allowFile = $hasAccess || $isCreator || $isFree;
+
         return Inertia::render('produk-digital/public', [
             'produk' => [
                 'id' => $produkDigital->id,
@@ -612,7 +616,7 @@ class ProdukDigitalController extends Controller
                 'harga' => $produkDigital->harga ?? 0,
                 'harga_coret' => $produkDigital->harga_coret,
                 'cover_url' => $produkDigital->cover_url,
-                'file_url' => $produkDigital->file_url,
+                'file_url' => $allowFile ? $produkDigital->file_url : null,
                 'redirect_url' => $produkDigital->redirect_url,
                 'tipe_pembayaran' => $produkDigital->tipe_pembayaran,
                 'sumber_file' => $produkDigital->sumber_file,
