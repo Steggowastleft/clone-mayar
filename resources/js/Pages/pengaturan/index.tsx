@@ -1,12 +1,12 @@
 import AppLayout from "@/layouts/app-layout";
-import { Head } from "@inertiajs/react";
-import { useState } from "react";
+import { Head, usePage } from "@inertiajs/react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { User, Bell, Shield, CreditCard, Globe, ChevronRight } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Globe, ChevronRight, Download } from "lucide-react";
 import Dashboard from "../dashboard";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 
@@ -21,9 +21,28 @@ type PengaturanProps = {
 };
 
 export default function PengaturanIndex({ user }: PengaturanProps) {
-  const [activeSection, setActiveSection] = useState("profil");
+  const { url } = usePage();
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) return tab;
+    }
+    return "profil";
+  });
+
   const u = user ?? { name: "", email: "", no_hp: "", bio: "", website: "" };
   const [form, setForm] = useState({ ...u });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) {
+        setActiveSection(tab);
+      }
+    }
+  }, [url]);
 
   const sections = [
     { id: "profil",       label: "Profil",            icon: <User className="h-4 w-4" /> },

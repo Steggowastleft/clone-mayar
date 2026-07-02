@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { router } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,13 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
 
 type KelasOnline = {
@@ -36,6 +43,13 @@ type KelasOnline = {
   nilai_minimum_quiz: number | null;
   has_assignment: boolean;
   thumbnail: string | null;
+  syarat_ketentuan?: string | null;
+};
+
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
 };
 
 type EditKelasOnlineDialogProps = {
@@ -58,7 +72,28 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
     require_quiz_sertifikat: kelas?.require_quiz_sertifikat ?? false,
     nilai_minimum_quiz: String(kelas?.nilai_minimum_quiz ?? "70"),
     has_assignment: kelas?.has_assignment ?? false,
+    syarat_ketentuan: kelas?.syarat_ketentuan ?? "",
   });
+
+  useEffect(() => {
+    if (kelas) {
+      setForm({
+        nama: kelas.nama ?? "",
+        deskripsi: kelas.deskripsi ?? "",
+        harga: String(kelas.harga ?? "0"),
+        is_gratis: kelas.is_gratis ?? false,
+        require_quiz_sertifikat: kelas.require_quiz_sertifikat ?? false,
+        nilai_minimum_quiz: String(kelas.nilai_minimum_quiz ?? "70"),
+        has_assignment: kelas.has_assignment ?? false,
+        syarat_ketentuan: kelas.syarat_ketentuan ?? "",
+      });
+      setThumbnailPreview(kelas.thumbnail ?? null);
+      setRangeTanggal({
+        from: parseDate(kelas.tanggal_mulai),
+        to: parseDate(kelas.tanggal_selesai),
+      });
+    }
+  }, [kelas]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -100,6 +135,7 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
     payload.append("require_quiz_sertifikat", form.require_quiz_sertifikat ? "1" : "0");
     payload.append("nilai_minimum_quiz", form.nilai_minimum_quiz);
     payload.append("has_assignment", form.has_assignment ? "1" : "0");
+    payload.append("syarat_ketentuan", form.syarat_ketentuan);
     if (rangeTanggal?.from) payload.append("tanggal_mulai", format(rangeTanggal.from, "yyyy-MM-dd HH:mm:ss"));
     if (rangeTanggal?.to) payload.append("tanggal_selesai", format(rangeTanggal.to, "yyyy-MM-dd HH:mm:ss"));
     if (thumbnailFile) payload.append("thumbnail", thumbnailFile);
@@ -184,36 +220,50 @@ export function EditKelasOnlineDialog({ open, onOpenChange, kelas }: EditKelasOn
             />
           </div>
 
-          {/* Harga */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_gratis"
-                checked={form.is_gratis}
-                onChange={(e) => setForm({ ...form, is_gratis: e.target.checked })}
-                className="rounded"
-              />
-              <Label htmlFor="is_gratis" className="text-sm font-medium text-gray-700 cursor-pointer">
-                Kelas Gratis
-              </Label>
-            </div>
-            {!form.is_gratis && (
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-                  <Input
-                    className="pl-9"
-                    placeholder="0"
-                    type="number"
-                    value={form.harga}
-                    onChange={(e) => setForm({ ...form, harga: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Syarat & Ketentuan */}
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Syarat & Ketentuan</Label>
+            <Textarea
+              placeholder="Tuliskan syarat dan ketentuan kelas online..."
+              rows={4}
+              value={form.syarat_ketentuan}
+              onChange={(e) => setForm({ ...form, syarat_ketentuan: e.target.value })}
+            />
           </div>
+
+          {/* Tipe Pembayaran */}
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Tipe Pembayaran <span className="text-red-500">*</span></Label>
+            <Select
+              value={form.is_gratis ? "gratis" : "berbayar"}
+              onValueChange={(value) => setForm({ ...form, is_gratis: value === "gratis" })}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Pilih tipe pembayaran..." />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="berbayar">Berbayar</SelectItem>
+                <SelectItem value="gratis">Gratis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Harga */}
+          {!form.is_gratis && (
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Harga (Rp) <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                <Input
+                  className="pl-9"
+                  placeholder="0"
+                  type="text"
+                  value={form.harga ? formatRupiahInput(form.harga) : ""}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Tanggal Mulai & Selesai */}
           <div className="space-y-1">

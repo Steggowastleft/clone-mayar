@@ -72,4 +72,9 @@ class Diskon extends Model
     {
         return $this->produk_ids ?? [];
     }
+
+    public function getIsAktifAttribute(): bool
+    {
+        return $this->isAktif();
+    }
 }

@@ -56,6 +56,8 @@ type Bootcamp = {
 
 type IndexProps = {
   bootcamps: Bootcamp[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ───
@@ -73,7 +75,7 @@ function DatePickerField({
   const [open, setOpen] = useState(false);
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label>
         {label}{" "}
         {optional && <span className="text-gray-400 font-normal">(Opsional)</span>}
       </Label>
@@ -110,6 +112,12 @@ function DatePickerField({
   );
 }
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 // ─── Default form values ───
 const defaultForm = {
   judul: "",
@@ -126,7 +134,7 @@ const defaultForm = {
 };
 
 // ─── Main ───
-export default function Index({ bootcamps }: IndexProps) {
+export default function Index({ bootcamps, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [kategoriFilter, setKategoriFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -224,25 +232,40 @@ export default function Index({ bootcamps }: IndexProps) {
   ];
 
   const totalBootcamps = bootcamps.length;
-  const publikCount = bootcamps.filter((b) => b.status === "published").length;
-  const tidakPublikCount = totalBootcamps - publikCount;
+  const aktifCount = bootcamps.filter((b) => b.status === "published").length;
+  const unlistedCount = bootcamps.filter((b) => b.status === "unlisted").length;
+  const tidakAktifCount = totalBootcamps - aktifCount - unlistedCount;
+  const localPendapatan = bootcamps.reduce((acc, b) => acc + (b.participants || 0) * (b.harga || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
-    <DashboardLayout title="Kelas Cohort / Bootcamp">
-      <Head title="Kelas Cohort / Bootcamp" />
+    <DashboardLayout title="Pelatihan (Sesi/Batch)">
+      <Head title="Pelatihan (Sesi/Batch)" />
       <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kelas Cohort / Bootcamp (Batch)</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
-                <span>Total Bootcamp: <span className="font-bold text-slate-800">{totalBootcamps}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Pelatihan (Sesi/Batch)</h1>
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pelatihan: <span className="font-bold text-slate-800">{totalBootcamps}</span></span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -260,7 +283,7 @@ export default function Index({ bootcamps }: IndexProps) {
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
               onClick={openCreate}
             >
-              + Buat Bootcamp
+              + Buat Pelatihan
             </Button>
           </div>
         </div>
@@ -368,17 +391,17 @@ export default function Index({ bootcamps }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Batch</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Bootcamp</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peserta</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mulai Jual</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Batch</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Pelatihan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Peserta</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mulai Jual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -458,31 +481,24 @@ export default function Index({ bootcamps }: IndexProps) {
       {/* CREATE DIALOG */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Kelas Cohort / Bootcamp
-              </DialogTitle>
-            </div>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Mengadakan kelas berkelompok (batch / cohort-based) dengan banyak sesi semakin mudah dengan Mayar
-            </p>
+          {/* Header */}
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Kelas Cohort / Bootcamp
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Judul */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Judul / Nama Bootcamp <span className="text-red-500">*</span></Label>
+              <Label>Judul / Nama Bootcamp <span className="text-red-500">*</span></Label>
               <Input placeholder="Contoh: Web Development Bootcamp Batch 5"
                 value={formData.judul} onChange={(e) => setFormData({ ...formData, judul: e.target.value })} />
             </div>
 
             {/* Kategori */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Kategori <span className="text-red-500">*</span></Label>
+              <Label>Kategori <span className="text-red-500">*</span></Label>
               <Select value={formData.kategori} onValueChange={(v) => setFormData({ ...formData, kategori: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih kategori bootcamp..." /></SelectTrigger>
                 <SelectContent className="z-[200]">
@@ -493,7 +509,7 @@ export default function Index({ bootcamps }: IndexProps) {
 
             {/* Tipe Pembayaran */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Tipe Pembayaran <span className="text-red-500">*</span></Label>
+              <Label>Tipe Pembayaran <span className="text-red-500">*</span></Label>
               <Select value={formData.tipePembayaran} onValueChange={(v) => setFormData({ ...formData, tipePembayaran: v })}>
                 <SelectTrigger><SelectValue placeholder="Pilih tipe pembayaran..." /></SelectTrigger>
                 <SelectContent className="z-[200]">
@@ -505,83 +521,98 @@ export default function Index({ bootcamps }: IndexProps) {
             </div>
 
             {formData.tipePembayaran !== "gratis" && (
-  <>
-    {/* Harga */}
-    <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
-      <div className="relative">
-        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-        <Input
-          className="pl-9"
-          placeholder="0"
-          type="number"
-          value={formData.harga}
-          onChange={(e) =>
-            setFormData({ ...formData, harga: e.target.value })
-          }
-        />
-      </div>
-    </div>
+              <>
+                {/* Harga */}
+                <div className="space-y-1">
+                  <Label>Harga (Rp)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                    <Input
+                      className="pl-9"
+                      placeholder="0"
+                      type="text"
+                      value={formData.harga ? formatRupiahInput(formData.harga) : ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })
+                      }
+                    />
+                  </div>
+                </div>
 
-    {/* Harga Coret */}
-    <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
-        Harga Coret (Rp){" "}
-        <span className="text-gray-400 font-normal">(Opsional)</span>
-      </Label>
-      <div className="relative">
-        <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-        <Input
-          className="pl-9"
-          placeholder="Harus lebih besar dari harga awal"
-          type="number"
-          value={formData.hargaCoret}
-          onChange={(e) =>
-            setFormData({ ...formData, hargaCoret: e.target.value })
-          }
-        />
-      </div>
+                {/* Harga Coret */}
+                <div className="space-y-1">
+                  <Label>
+                    Harga Coret (Rp){" "}
+                    <span className="text-gray-400 font-normal">(Opsional)</span>
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                    <Input
+                      className="pl-9"
+                      placeholder="Harus lebih besar dari harga awal"
+                      type="text"
+                      value={formData.hargaCoret ? formatRupiahInput(formData.hargaCoret) : ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, hargaCoret: e.target.value.replace(/\D/g, "") })
+                      }
+                    />
+                  </div>
 
-      {formData.harga &&
-        formData.hargaCoret &&
-        Number(formData.hargaCoret) <= Number(formData.harga) && (
-          <p className="text-xs text-red-500">
-            Harga coret harus lebih besar dari harga awal
-          </p>
-        )}
-    </div>
-  </>
-)}
+                  {formData.harga &&
+                    formData.hargaCoret &&
+                    Number(formData.hargaCoret) <= Number(formData.harga) && (
+                      <p className="text-xs text-red-500">
+                        Harga coret harus lebih besar dari harga awal
+                      </p>
+                    )}
+                </div>
+              </>
+            )}
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Deskripsi</Label>
+              <Label>Deskripsi</Label>
               <Textarea placeholder="Tuliskan deskripsi bootcamp kamu..." rows={4}
                 value={formData.deskripsi} onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })} />
             </div>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Cover Gambar</Label>
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
-                onClick={() => fileInputRef.current?.click()}>
+            <div className="space-y-2">
+              <Label>Cover Gambar</Label>
+              <div
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 {coverPreview ? (
                   <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-500">Klik untuk unggah gambar cover</p>
-                    <p className="text-xs text-gray-400">PNG, JPG, WEBP (maks. 5MB)</p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Upload className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
               {coverFile && <p className="text-xs text-green-600">✓ {coverFile.name}</p>}
             </div>
 
             {/* Instruksi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Instruksi</Label>
+              <Label>Instruksi</Label>
               <p className="text-xs text-gray-500 leading-relaxed">
                 Instruksi adalah catatan yang akan dilihat oleh pendaftar setelah melakukan pendaftaran/membayar.
                 Anda bisa memasukkan instruksi masuk ke zoom, passwordnya, link gabung grup WA, formulir google, kontak cs dll disini.
@@ -592,71 +623,71 @@ export default function Index({ bootcamps }: IndexProps) {
 
             {/* Syarat & Ketentuan */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Syarat & Ketentuan</Label>
+              <Label>Syarat & Ketentuan</Label>
               <Textarea placeholder="Tuliskan syarat dan ketentuan bootcamp..." rows={3}
                 value={formData.syaratKetentuan} onChange={(e) => setFormData({ ...formData, syaratKetentuan: e.target.value })} />
             </div>
 
            {/* Dates */}
-<div className="space-y-4">
+            <div className="space-y-4">
 
-  {/* Penjualan */}
-  <div className="space-y-1">
-    <Label className="text-sm font-medium text-gray-700">
-      Periode Penjualan
-    </Label>
+              {/* Penjualan */}
+              <div className="space-y-1">
+                <Label>
+                  Periode Penjualan
+                </Label>
 
-    <Popover>
-      <PopoverTrigger asChild>
-        <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
-          {rangePenjualan?.from && rangePenjualan?.to
-            ? `${format(rangePenjualan.from, "dd MMM yyyy")} - ${format(rangePenjualan.to, "dd MMM yyyy")}`
-            : "Pilih periode penjualan..."}
-        </button>
-      </PopoverTrigger>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
+                      {rangePenjualan?.from && rangePenjualan?.to
+                        ? `${format(rangePenjualan.from, "dd MMM yyyy")} - ${format(rangePenjualan.to, "dd MMM yyyy")}`
+                        : "Pilih periode penjualan..."}
+                    </button>
+                  </PopoverTrigger>
 
-      <PopoverContent className="w-auto p-0 z-[200]" align="start">
-        <Calendar
-          mode="range"
-          selected={rangePenjualan}
-          onSelect={setRangePenjualan}
-          numberOfMonths={2}
-        />
-      </PopoverContent>
-    </Popover>
-  </div>
+                  <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                    <Calendar
+                      mode="range"
+                      selected={rangePenjualan}
+                      onSelect={setRangePenjualan}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-  {/* Pembelajaran */}
-  <div className="space-y-1">
-    <Label className="text-sm font-medium text-gray-700">
-      Periode Pembelajaran
-    </Label>
+              {/* Pembelajaran */}
+              <div className="space-y-1">
+                <Label>
+                  Periode Pembelajaran
+                </Label>
 
-    <Popover>
-      <PopoverTrigger asChild>
-        <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
-          {rangePembelajaran?.from && rangePembelajaran?.to
-            ? `${format(rangePembelajaran.from, "dd MMM yyyy")} - ${format(rangePembelajaran.to, "dd MMM yyyy")}`
-            : "Pilih periode pembelajaran..."}
-        </button>
-      </PopoverTrigger>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full px-3 py-2 border border-gray-200 rounded-md text-left text-sm hover:border-gray-300 transition">
+                      {rangePembelajaran?.from && rangePembelajaran?.to
+                        ? `${format(rangePembelajaran.from, "dd MMM yyyy")} - ${format(rangePembelajaran.to, "dd MMM yyyy")}`
+                        : "Pilih periode pembelajaran..."}
+                    </button>
+                  </PopoverTrigger>
 
-      <PopoverContent className="w-auto p-0 z-[200]" align="start">
-        <Calendar
-          mode="range"
-          selected={rangePembelajaran}
-          onSelect={setRangePembelajaran}
-          numberOfMonths={2}
-        />
-      </PopoverContent>
-    </Popover>
-  </div>
+                  <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                    <Calendar
+                      mode="range"
+                      selected={rangePembelajaran}
+                      onSelect={setRangePembelajaran}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-</div>
+            </div>
 
             {/* Max Peserta */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Jumlah Maksimum Peserta</Label>
+              <Label>Jumlah Maksimum Peserta</Label>
               <Input type="number" placeholder="Kosongkan untuk unlimited"
                 value={formData.maxPeserta} onChange={(e) => setFormData({ ...formData, maxPeserta: e.target.value })} />
               <p className="text-xs text-gray-400">Kami akan menutup pendaftaran setelah melewati batas jumlah maksimal. Kosongkan untuk tanpa limit jumlah (unlimited).</p>
@@ -664,7 +695,7 @@ export default function Index({ bootcamps }: IndexProps) {
 
             {/* Batas Nilai Quiz */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Batas Nilai Quiz untuk Sertifikat</Label>
+              <Label>Batas Nilai Quiz untuk Sertifikat</Label>
               <Input type="number" placeholder="Kosongkan jika tidak dibatasi nilai" min={0} max={100}
                 value={formData.batasNilaiQuiz} onChange={(e) => setFormData({ ...formData, batasNilaiQuiz: e.target.value })} />
               <p className="text-xs text-gray-400">Kami akan menutup akses sertifikat sebelum customer mencapai batas minimal nilai rata-rata quiz. Kosongkan jika akses sertifikat tidak dibatasi nilai rata-rata quiz.</p>
@@ -672,19 +703,20 @@ export default function Index({ bootcamps }: IndexProps) {
 
             {/* Redirect URL */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">Redirect URL <span className="text-gray-400 font-normal">(Opsional)</span></Label>
+              <Label>Redirect URL <span className="text-gray-400 font-normal">(Opsional)</span></Label>
               <Input type="url" placeholder="https://example.com/thank-you"
                 value={formData.redirectUrl} onChange={(e) => setFormData({ ...formData, redirectUrl: e.target.value })} />
               <p className="text-xs text-gray-400">Pelanggan akan dibawa ke halaman ini setelah membayar (opsional / bisa dikosongkan).</p>
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setCreateOpen(false)} disabled={isSubmitting}>
-                Batal
-              </Button>
-              <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Menyimpan..." : "Buat Kelas Bootcamp"}
+            <div className="flex justify-center pt-4">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
               </Button>
             </div>
           </div>

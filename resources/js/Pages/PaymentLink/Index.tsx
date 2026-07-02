@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
 import { Head, router } from "@inertiajs/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,10 +53,13 @@ export type PaymentLinkItem = {
   tanggal_kadaluarsa?: string;
   maksimum_pembayaran?: number;
   bisa_affiliate: boolean;
+  revenue?: number;
 };
 
 type IndexProps = {
   links: PaymentLinkItem[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ───
@@ -74,9 +77,51 @@ function DatePickerField({
   withTime?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [time, setTime] = useState(() => {
+    if (value) {
+      const h = String(value.getHours()).padStart(2, '0');
+      const m = String(value.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+    return "00:00";
+  });
+
+  useEffect(() => {
+    if (value) {
+      const h = String(value.getHours()).padStart(2, '0');
+      const m = String(value.getMinutes()).padStart(2, '0');
+      setTime(`${h}:${m}`);
+    }
+  }, [value]);
+
+  const handleSelect = (d: Date | undefined) => {
+    if (!d) {
+      onChange(undefined);
+      return;
+    }
+    if (withTime) {
+      const [h, m] = time.split(":").map(Number);
+      const combined = new Date(d);
+      combined.setHours(h, m, 0, 0);
+      onChange(combined);
+    } else {
+      onChange(d);
+    }
+  };
+
+  const handleTimeChange = (newTime: string) => {
+    setTime(newTime);
+    if (value) {
+      const [h, m] = newTime.split(":").map(Number);
+      const updated = new Date(value);
+      updated.setHours(h, m, 0, 0);
+      onChange(updated);
+    }
+  };
+
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label>
         {label}{" "}
         {optional && (
           <span className="text-gray-400 font-normal">(Opsional)</span>
@@ -100,12 +145,20 @@ function DatePickerField({
           <Calendar
             mode="single"
             selected={value}
-            onSelect={(d) => {
-              onChange(d);
-              setOpen(false);
-            }}
+            onSelect={handleSelect}
             initialFocus
           />
+          {withTime && (
+            <div className="p-3 border-t flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-400" />
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => handleTimeChange(e.target.value)}
+                className="text-sm border border-gray-200 rounded px-2 py-1 flex-1 font-medium bg-white"
+              />
+            </div>
+          )}
           {value && optional && (
             <div className="p-2 border-t">
               <Button
@@ -146,7 +199,7 @@ function formatRupiah(val: string | number): string {
 }
 
 // ─── Main ───
-export default function Index({ links }: IndexProps) {
+export default function Index({ links, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateOpen, setDateOpen] = useState(false);
@@ -218,7 +271,7 @@ export default function Index({ links }: IndexProps) {
     if (formData.redirect_url) payload.append("redirect_url", formData.redirect_url);
     payload.append("bisa_affiliate", formData.bisa_affiliate ? "1" : "0");
     if (waktuMulaiJual) payload.append("waktu_mulai_jual", format(waktuMulaiJual, "yyyy-MM-dd HH:mm:ss"));
-    if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd"));
+    if (tanggalKadaluarsa) payload.append("tanggal_kadaluarsa", format(tanggalKadaluarsa, "yyyy-MM-dd HH:mm:ss"));
     if (coverFile) payload.append("cover", coverFile);
 
     router.post("/payment-link", payload, {
@@ -226,14 +279,19 @@ export default function Index({ links }: IndexProps) {
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
+        router.reload();
       },
       onError: () => setIsSubmitting(false),
     });
   };
 
   const totalLinks = links.length;
-  const publikCount = links.filter((l) => l.status === "published").length;
-  const tidakPublikCount = totalLinks - publikCount;
+  const aktifCount = links.filter((l) => l.status === "published").length;
+  const unlistedCount = links.filter((l) => l.status === "unlisted").length;
+  const tidakAktifCount = totalLinks - aktifCount - unlistedCount;
+  const localPendapatan = links.reduce((acc, l) => acc + (l.revenue || 0), 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   return (
     <DashboardLayout title="Link Pembayaran">
@@ -243,14 +301,25 @@ export default function Index({ links }: IndexProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Link Pembayaran</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Link: <span className="font-bold text-slate-800">{totalLinks}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
+                </span>
+              </div>
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {new Intl.NumberFormat("id-ID").format(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -363,14 +432,14 @@ export default function Index({ links }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Link</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Link</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -449,24 +518,16 @@ export default function Index({ links }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <Link2 className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Link Pembayaran
-              </DialogTitle>
-            </div>
-            <p className="text-indigo-100 text-sm leading-relaxed">
-              Terima pembayaran dengan mudah dari banyak orang dengan jumlah pembayaran yang sama.
-            </p>
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Link Pembayaran
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Nama */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Nama Link Pembayaran <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -480,7 +541,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Harga */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Harga <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
@@ -500,7 +561,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Harga Coret */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Harga Coret{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -520,21 +581,27 @@ export default function Index({ links }: IndexProps) {
             </div>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Cover (gambar/video untuk promo)
-              </Label>
+            {/* Cover */}
+            <div className="space-y-2">
+              <Label>Cover Gambar</Label>
               <div
-                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {coverPreview ? (
                   <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-500">Drag &amp; drop image</p>
-                    <p className="text-xs text-gray-400">PNG, JPG, WEBP, MP4 (maks. 10MB)</p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Upload className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
               </div>
@@ -550,7 +617,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Deskripsi <span className="text-red-500">*</span>
               </Label>
               <Textarea
@@ -575,6 +642,7 @@ export default function Index({ links }: IndexProps) {
                 value={tanggalKadaluarsa}
                 onChange={setTanggalKadaluarsa}
                 optional
+                withTime
               />
             </div>
             <div className="space-y-1">
@@ -589,7 +657,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Pesan setelah bayar */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Pesan setelah bayar / catatan
               </Label>
               <Textarea
@@ -607,7 +675,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Maksimum Pembayaran */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Maksimum Jumlah Pembayaran (Kuota / Qty){" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -625,7 +693,7 @@ export default function Index({ links }: IndexProps) {
 
             {/* Redirect URL */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label>
                 Redirect URL{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -643,12 +711,13 @@ export default function Index({ links }: IndexProps) {
 
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setCreateOpen(false)} disabled={isSubmitting}>
-                Batal
-              </Button>
-              <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Menyimpan..." : "Buat Link Pembayaran"}
+            <div className="flex justify-center pt-4">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
               </Button>
             </div>
           </div>

@@ -71,6 +71,7 @@ class BundlingController extends Controller
             'maksimalPembayaran' => 'nullable|integer|min:1',
             'redirectUrl' => 'nullable|url',
             'bisaAffiliate' => 'nullable|boolean',
+            'status' => 'nullable|string|in:published,unpublished',
             'produkIds' => 'required|array|min:1',
             'produkIds.*' => 'required',
         ]);
@@ -93,7 +94,7 @@ class BundlingController extends Controller
             'maksimal_pembayaran' => $request->maksimalPembayaran,
             'redirect_url' => $request->redirectUrl,
             'bisa_affiliate' => $request->bisaAffiliate ?? false,
-            'status' => 'unpublished',
+            'status' => $request->status ?? 'unpublished',
         ]);
 
         // Store bundling items
@@ -110,7 +111,7 @@ class BundlingController extends Controller
             abort(403);
         }
 
-        $bundling->load(['items', 'registrations']);
+        $bundling->load(['items', 'registrations.peserta']);
 
         $items = $bundling->items->map(function ($item) {
             $product = $item->itemable;
@@ -120,6 +121,27 @@ class BundlingController extends Controller
                 'tipe' => class_basename($item->itemable_type),
                 'harga' => $product->harga ?? 0,
                 'cover' => $product->cover_url ?? $product->cover ?? null,
+            ];
+        });
+
+        $pesertaList = $bundling->registrations->map(function ($reg) {
+            return [
+                'id' => $reg->id,
+                'nama' => $reg->nama ?? ($reg->peserta->name ?? '-'),
+                'email' => $reg->email ?? ($reg->peserta->email ?? '-'),
+                'no_wa' => $reg->no_wa,
+                'tanggal_daftar' => $reg->created_at->toISOString(),
+                'status' => $reg->status_pembayaran ?? 'active',
+            ];
+        });
+
+        $transaksiList = $bundling->registrations->map(function ($reg) {
+            return [
+                'id' => $reg->id,
+                'peserta_nama' => $reg->nama ?? ($reg->peserta->name ?? '-'),
+                'jumlah' => (float)$reg->harga,
+                'status' => $reg->status_pembayaran ?? 'success',
+                'tanggal' => $reg->created_at->toISOString(),
             ];
         });
 
@@ -141,6 +163,8 @@ class BundlingController extends Controller
                 'jumlah_terjual' => $bundling->jumlah_terjual,
                 'items' => $items,
                 'registrasi_count' => $bundling->registrations->count(),
+                'peserta_list' => $pesertaList,
+                'transaksi_list' => $transaksiList,
             ],
         ]);
     }
@@ -185,6 +209,7 @@ class BundlingController extends Controller
                 'maksimalPembayaran' => $bundling->maksimal_pembayaran,
                 'redirectUrl' => $bundling->redirect_url,
                 'bisaAffiliate' => $bundling->bisa_affiliate,
+                'status' => $bundling->status,
                 'produkIds' => $selectedProducts,
             ],
             'products' => $products,
@@ -197,21 +222,29 @@ class BundlingController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $rules = [
             'nama' => 'required|string|max:255',
             'harga' => 'required|numeric|min:0',
             'hargaCoret' => 'nullable|numeric|min:0',
             'deskripsi' => 'nullable|string',
-            'cover' => 'nullable|image|max:5120',
             'tipePembayaran' => 'nullable|string|in:gratis,berbayar,bayar_semaunya',
             'tanggalKadaluarsa' => 'nullable|date',
             'pesanSetelahBayar' => 'nullable|string',
             'maksimalPembayaran' => 'nullable|integer|min:1',
             'redirectUrl' => 'nullable|url',
             'bisaAffiliate' => 'nullable|boolean',
+            'status' => 'nullable|string|in:published,unpublished',
             'produkIds' => 'required|array|min:1',
             'produkIds.*' => 'required',
-        ]);
+        ];
+
+        if ($request->hasFile('cover')) {
+            $rules['cover'] = 'nullable|image|max:5120';
+        } else {
+            $rules['cover'] = 'nullable|string';
+        }
+
+        $request->validate($rules);
 
         $coverPath = $bundling->cover;
         if ($request->hasFile('cover')) {
@@ -233,6 +266,7 @@ class BundlingController extends Controller
             'maksimal_pembayaran' => $request->maksimalPembayaran,
             'redirect_url' => $request->redirectUrl,
             'bisa_affiliate' => $request->bisaAffiliate ?? false,
+            'status' => $request->status ?? $bundling->status,
         ]);
 
         // Update bundling items
@@ -269,10 +303,7 @@ class BundlingController extends Controller
             'status' => $request->status ?? ($bundling->status === 'published' ? 'unpublished' : 'published'),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'status' => $bundling->status,
-        ]);
+        return back()->with('success', 'Status bundling berhasil diperbarui.');
     }
 
     public function catalog()

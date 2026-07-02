@@ -100,6 +100,7 @@ const MENU_ITEMS: NavItem[] = [
     children: [
       { label: "Akun", icon: <User className="h-3.5 w-3.5" />, href: "/pengaturan/akun" },
       { label: "Withdrawal", icon: <CreditCard className="h-3.5 w-3.5" />, href: "/pengaturan/withdrawal" },
+      { label: "Ekspor Data", icon: <FileText className="h-3.5 w-3.5" />, href: "/ekspor-data" },
     ],
   },
 ];
@@ -320,8 +321,9 @@ export function DashboardSidebar({ user, currentPath = "", badgeCounts }: Props)
   }, []);
  
   const isAdmin = user.role === 'admin';
+  const userSlug = user.name ? user.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : user.id;
   const creatorMenuItems: NavItem[] = [
-    { label: "Catalog", icon: <ShoppingCart className="h-4 w-4" />, href: `/catalog?user_id=${user.id}`, external: true },
+    { label: "Catalog", icon: <ShoppingCart className="h-4 w-4" />, href: `/catalog?${userSlug}`, external: true },
     ...MENU_ITEMS
   ];
   const items = isAdmin ? ADMIN_MENU_ITEMS : creatorMenuItems;

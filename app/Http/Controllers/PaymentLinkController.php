@@ -39,13 +39,46 @@ class PaymentLinkController extends Controller
             'slug'        => $l->slug,
             'cover_url'   => $l->cover_url,
             'created_at'  => $l->created_at->format('Y-m-d H:i:s'),
-            'tanggal_kadaluarsa' => $l->tanggal_kadaluarsa?->format('d M Y'),
+            'tanggal_kadaluarsa' => $l->tanggal_kadaluarsa?->format('d M Y H:i'),
             'maksimum_pembayaran' => $l->maksimum_pembayaran,
             'bisa_affiliate' => $l->bisa_affiliate,
+            'revenue'     => (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['payment_link', \App\Models\PaymentLink::class])
+                ->where('registrable_id', $l->id)
+                ->whereIn('status', ['active', 'aktif'])
+                ->sum('harga_bayar'),
         ]);
+
+        $productIds = PaymentLink::where('user_id', Auth::id())->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['payment_link', \App\Models\PaymentLink::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['payment_link', \App\Models\PaymentLink::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['payment_link', \App\Models\PaymentLink::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
 
         return Inertia::render('PaymentLink/Index', [
             'links' => $links,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 
@@ -100,7 +133,7 @@ class PaymentLinkController extends Controller
             'status'              => 'published',
         ]);
 
-        return redirect()->route('payment-link.show', $link->id)
+        return redirect()->route('payment-link.index')
             ->with('success', 'Link pembayaran berhasil dibuat.');
     }
 
@@ -294,7 +327,7 @@ public function destroy(PaymentLink $paymentLink)
             'cover'               => $l->cover,
             'cover_url'           => $l->cover_url,
             'waktu_mulai_jual'    => $l->waktu_mulai_jual?->format('d M Y HH:mm'),
-            'tanggal_kadaluarsa'  => $l->tanggal_kadaluarsa?->format('d M Y'),
+            'tanggal_kadaluarsa'  => $l->tanggal_kadaluarsa?->format('d M Y H:i'),
             'pesan_setelah_bayar' => $l->pesan_setelah_bayar,
             'maksimum_pembayaran' => $l->maksimum_pembayaran,
             'redirect_url'        => $l->redirect_url,

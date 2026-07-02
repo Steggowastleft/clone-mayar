@@ -16,8 +16,8 @@ class Assignment extends Model
     protected $casts = [
         'is_wajib'      => 'boolean',
         'is_tugas_akhir' => 'boolean',
-        'tanggal_mulai' => 'date',
-        'tanggal_akhir' => 'date',
+        'tanggal_mulai' => 'datetime',
+        'tanggal_akhir' => 'datetime',
     ];
  
     public function bootcamp()

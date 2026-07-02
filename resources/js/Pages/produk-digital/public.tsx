@@ -76,7 +76,7 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
   });
 
   const isFree = produk.tipe_pembayaran === "gratis";
-  const hasAccess = (isLoggedIn && isFree) || (isLoggedIn && hasPurchased) || backendHasAccess;
+  const hasAccess = !!produk.file_url;
 
   // Initialize lock state from localStorage to persist lock state on refresh
   const [isLocked, setIsLocked] = useState(() => {
@@ -388,20 +388,26 @@ export default function ProdukDigitalPublic({ produk, hasAccess: backendHasAcces
         )}
 
         {/* File Preview (For non-comic categories only, since comics show embedded previews) */}
-        {produk.file_url && produk.kategori !== "komik" && (
+        {produk.sumber_file && produk.kategori !== "komik" && (
           <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <ExternalLink className="h-5 w-5 text-violet-600" /> File Produk
             </h3>
-            <a 
-              href={produk.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 font-semibold"
-            >
-              <Download className="h-4 w-4" />
-              Lihat / Download File
-            </a>
+            {hasAccess && produk.file_url ? (
+              <a 
+                href={produk.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 font-semibold"
+              >
+                <Download className="h-4 w-4" />
+                Lihat / Download File
+              </a>
+            ) : (
+              <div className="flex items-center gap-2 text-slate-400 font-semibold text-sm">
+                <span>🔒 File produk terkunci. Silakan lakukan pembelian untuk mengakses.</span>
+              </div>
+            )}
           </div>
         )}
 

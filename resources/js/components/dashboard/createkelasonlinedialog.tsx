@@ -21,7 +21,20 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
+
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
 
 type CreateKelasOnlineDialogProps = {
   open: boolean;
@@ -44,6 +57,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
     require_quiz_sertifikat: false,
     nilai_minimum_quiz: "70",
     has_assignment: false,
+    syarat_ketentuan: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -73,6 +87,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
     payload.append("require_quiz_sertifikat", form.require_quiz_sertifikat ? "1" : "0");
     payload.append("nilai_minimum_quiz", form.nilai_minimum_quiz);
     payload.append("has_assignment", form.has_assignment ? "1" : "0");
+    payload.append("syarat_ketentuan", form.syarat_ketentuan);
     if (rangeTanggal?.from) payload.append("tanggal_mulai", format(rangeTanggal.from, "yyyy-MM-dd HH:mm:ss"));
     if (rangeTanggal?.to) payload.append("tanggal_selesai", format(rangeTanggal.to, "yyyy-MM-dd HH:mm:ss"));
     if (thumbnailFile) payload.append("thumbnail", thumbnailFile);
@@ -93,6 +108,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
           require_quiz_sertifikat: false,
           nilai_minimum_quiz: "70",
           has_assignment: false,
+          syarat_ketentuan: "",
         });
         setThumbnailFile(null);
         setThumbnailPreview(null);
@@ -113,32 +129,34 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         {/* Header */}
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-t-lg sticky top-0 z-10">
-          <DialogHeader>
-            <DialogTitle className="text-white text-xl font-bold">
-              Buat Kelas Online Baru
-            </DialogTitle>
-            <DialogDescription className="text-indigo-100 text-sm leading-relaxed mt-1">
-              Buat kelas online dengan fitur sesi, assignment, dan sertifikat otomatis
-            </DialogDescription>
-          </DialogHeader>
+        <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+          <DialogTitle className="text-slate-900 text-xl font-bold">
+            Buat Kelas Online Baru
+          </DialogTitle>
         </div>
 
         <div className="p-6 space-y-5">
           {/* Thumbnail */}
-          <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">Thumbnail Kelas</Label>
+          <div className="space-y-2">
+            <Label>Cover Gambar</Label>
             <div
-              className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+              className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
               onClick={() => fileInputRef.current?.click()}
             >
               {thumbnailPreview ? (
                 <img src={thumbnailPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
               ) : (
-                <div className="space-y-2">
-                  <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                  <p className="text-sm text-gray-500">Klik untuk unggah thumbnail</p>
-                  <p className="text-xs text-gray-400">PNG, JPG, WEBP (maks. 5MB)</p>
+                <div className="flex items-center gap-3 justify-center">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                  >
+                    Select image...
+                  </button>
+                  <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                    <Upload className="h-4 w-4 text-slate-400" />
+                    Drop image here
+                  </span>
                 </div>
               )}
             </div>
@@ -148,7 +166,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
 
           {/* Nama Kelas */}
           <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">
+            <Label>
               Nama Kelas <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -161,7 +179,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
 
           {/* Deskripsi */}
           <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">Deskripsi</Label>
+            <Label>Deskripsi</Label>
             <Textarea
               placeholder="Jelaskan isi dan tujuan kelas..."
               rows={4}
@@ -170,40 +188,54 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
             />
           </div>
 
-          {/* Harga */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="is_gratis"
-                checked={form.is_gratis}
-                onChange={(e) => setForm({ ...form, is_gratis: e.target.checked })}
-                className="rounded"
-              />
-              <Label htmlFor="is_gratis" className="text-sm font-medium text-gray-700 cursor-pointer">
-                Kelas Gratis
-              </Label>
-            </div>
-            {!form.is_gratis && (
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">Harga (Rp)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
-                  <Input
-                    className="pl-9"
-                    placeholder="0"
-                    type="number"
-                    value={form.harga}
-                    onChange={(e) => setForm({ ...form, harga: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Syarat & Ketentuan */}
+          <div className="space-y-1">
+            <Label>Syarat & Ketentuan</Label>
+            <Textarea
+              placeholder="Tuliskan syarat dan ketentuan kelas online..."
+              rows={4}
+              value={form.syarat_ketentuan}
+              onChange={(e) => setForm({ ...form, syarat_ketentuan: e.target.value })}
+            />
           </div>
+
+          {/* Tipe Pembayaran */}
+          <div className="space-y-1">
+            <Label>Tipe Pembayaran <span className="text-red-500">*</span></Label>
+            <Select
+              value={form.is_gratis ? "gratis" : "berbayar"}
+              onValueChange={(value) => setForm({ ...form, is_gratis: value === "gratis" })}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Pilih tipe pembayaran..." />
+              </SelectTrigger>
+              <SelectContent className="z-[200]">
+                <SelectItem value="berbayar">Berbayar</SelectItem>
+                <SelectItem value="gratis">Gratis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Harga */}
+          {!form.is_gratis && (
+            <div className="space-y-1">
+              <Label>Harga (Rp) <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
+                <Input
+                  className="pl-9"
+                  placeholder="0"
+                  type="text"
+                  value={form.harga ? formatRupiahInput(form.harga) : ""}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Tanggal Mulai & Selesai */}
           <div className="space-y-1">
-            <Label className="text-sm font-medium text-gray-700">
+            <Label>
               Periode Kelas
             </Label>
             <Popover>
@@ -228,7 +260,7 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
 
           {/* Quiz & Sertifikat */}
           <div className="space-y-3 border-t border-gray-200 pt-5">
-            <Label className="text-sm font-medium text-gray-700 block">Pengaturan Sertifikat</Label>
+            <Label className="block">Pengaturan Sertifikat</Label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -237,13 +269,13 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
                 className="rounded"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700">Butuh Quiz untuk Sertifikat</span>
+                <span >Butuh Quiz untuk Sertifikat</span>
                 <p className="text-xs text-gray-500">Peserta harus lulus quiz untuk mendapat sertifikat</p>
               </div>
             </label>
             {form.require_quiz_sertifikat && (
               <div className="space-y-1 pl-6">
-                <Label className="text-sm font-medium text-gray-700">Nilai Minimum Quiz (%)</Label>
+                <Label>Nilai Minimum Quiz (%)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -264,27 +296,19 @@ export function CreateKelasOnlineDialog({ open, onOpenChange }: CreateKelasOnlin
               className="rounded"
             />
             <div>
-              <span className="text-sm font-medium text-gray-700">Kelas memiliki Assignment</span>
+              <span >Kelas memiliki Assignment</span>
               <p className="text-xs text-gray-500">Peserta akan bisa submit assignment di kelas ini</p>
             </div>
           </label>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-5 border-t border-gray-200">
+          {/* Buttons */}
+          <div className="flex justify-center pt-4 border-t border-gray-200">
             <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Batal
-            </Button>
-            <Button
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Membuat..." : "Buat Kelas"}
+              {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
             </Button>
           </div>
         </div>

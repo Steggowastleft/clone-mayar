@@ -120,4 +120,9 @@ public function getParticipantsAttribute(): int
 
         return true;
     }
+
+    public function ratings()
+    {
+        return $this->morphMany(\App\Models\Rating::class, 'rateable');
+    }
 }

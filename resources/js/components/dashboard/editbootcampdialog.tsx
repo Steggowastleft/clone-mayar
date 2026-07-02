@@ -42,6 +42,12 @@ type Bootcamp = {
   tanggal_batas_pembelajaran?: string;
 };
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 export function EditBootcampDialog({
   open,
   onOpenChange,
@@ -192,9 +198,9 @@ export function EditBootcampDialog({
               <Input
                 className="pl-9"
                 placeholder="0"
-                type="number"
-                value={form.harga}
-                onChange={(e) => setForm({ ...form, harga: e.target.value })}
+                type="text"
+                value={form.harga ? formatRupiahInput(form.harga) : ""}
+                onChange={(e) => setForm({ ...form, harga: e.target.value.replace(/\D/g, "") })}
               />
             </div>
           </div>
@@ -210,12 +216,12 @@ export function EditBootcampDialog({
               <Input
                 className="pl-9"
                 placeholder="Harus lebih besar dari harga awal"
-                type="number"
-                value={form.hargaCoret}
-                onChange={(e) => setForm({ ...form, hargaCoret: e.target.value })}
+                type="text"
+                value={form.hargaCoret ? formatRupiahInput(form.hargaCoret) : ""}
+                onChange={(e) => setForm({ ...form, hargaCoret: e.target.value.replace(/\D/g, "") })}
               />
             </div>
-            {form.harga && form.hargaCoret && Number(form.hargaCoret) <= Number(form.harga) && (
+            {form.harga && form.hargaCoret && Number(form.hargaCoret.replace(/\D/g, "")) <= Number(form.harga.replace(/\D/g, "")) && (
               <p className="text-xs text-red-500">Harga coret harus lebih besar dari harga awal</p>
             )}
           </div>

@@ -423,7 +423,69 @@ class SemuaProdukController extends Controller
 
     public function catalog(Request $request): Response
     {
-        $userId = $request->query('user_id') ?: $request->query('creator_id');
+        $userIdParam = $request->query('user_id') ?: $request->query('creator_id');
+        $creator = null;
+
+        // If no user_id/creator_id param exists, check if any of the query keys is a valid user slug/ID
+        if (!$userIdParam) {
+            $queryKeys = array_keys($request->query());
+            foreach ($queryKeys as $key) {
+                if (in_array($key, ['search', 'page', 'sort', 'filter'])) {
+                    continue;
+                }
+                
+                // Check if this key resolves to a user
+                $testCreator = \App\Models\User::find($key);
+                if (!$testCreator) {
+                    $testCreator = \App\Models\User::where('name', $key)->first();
+                }
+                if (!$testCreator) {
+                    $nameWithSpaces = str_replace('-', ' ', $key);
+                    $testCreator = \App\Models\User::where('name', 'like', $nameWithSpaces)->first();
+                }
+                if (!$testCreator) {
+                    $testCreator = \App\Models\User::whereRaw("LOWER(REPLACE(name, ' ', '-')) = ?", [strtolower($key)])->first();
+                }
+
+                if ($testCreator) {
+                    $userIdParam = $key;
+                    $creator = $testCreator;
+                    break;
+                }
+            }
+        }
+
+        $userId = $userIdParam;
+
+        if ($userIdParam && !$creator) {
+            // 1. First try to find by ID (UUID)
+            $creator = \App\Models\User::find($userIdParam);
+
+            // 2. If not found, try to search by exact name
+            if (!$creator) {
+                $creator = \App\Models\User::where('name', $userIdParam)->first();
+            }
+
+            // 3. If not found, try to search by case-insensitive name
+            if (!$creator) {
+                $creator = \App\Models\User::where('name', 'like', $userIdParam)->first();
+            }
+
+            // 4. If not found, try replacing hyphens with spaces (slugified names)
+            if (!$creator) {
+                $nameWithSpaces = str_replace('-', ' ', $userIdParam);
+                $creator = \App\Models\User::where('name', 'like', $nameWithSpaces)->first();
+            }
+
+            // 5. If not found, try raw lowercase replacement match
+            if (!$creator) {
+                $creator = \App\Models\User::whereRaw("LOWER(REPLACE(name, ' ', '-')) = ?", [strtolower($userIdParam)])->first();
+            }
+        }
+
+        if ($creator) {
+            $userId = $creator->id;
+        }
 
         $products = $this->getAllProducts($userId);
 

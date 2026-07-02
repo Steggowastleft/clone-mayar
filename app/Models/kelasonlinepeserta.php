@@ -13,7 +13,7 @@ class KelasOnlinePeserta extends Model
     protected $table = 'kelas_online_peserta';
 
     protected $fillable = [
-        'kelas_online_id', 'peserta_id', 'status', 'mendaftar_pada', 'order_id', 'snap_token',
+        'kelas_online_id', 'peserta_id', 'status', 'mendaftar_pada', 'order_id', 'snap_token', 'coupon_code',
     ];
 
     protected $casts = [

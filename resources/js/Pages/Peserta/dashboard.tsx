@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import RatingDialog from "./ratingdialog";
 import PesertaLayout from "@/layouts/PesertaLayout";
+import InvoiceDialog from "./invoicedialog";
 
 type PurchasedProductItem = {
   id: number;
@@ -37,6 +38,8 @@ type PurchasedProductItem = {
   owner_name?: string;
   batch?: string;
   content_type?: string | null;
+  order_id?: string | null;
+  harga_bayar?: number;
 };
 
 type Peserta = {
@@ -59,6 +62,7 @@ export default function PesertaDashboard({
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "settings">("overview");
   const [productFilter, setProductFilter] = useState<"all" | "bootcamp" | "kelas" | "digital">("all");
   const [ratingTarget, setRatingTarget] = useState<PurchasedProductItem | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -230,6 +234,23 @@ export default function PesertaDashboard({
 
         {/* MAIN CONTENT AREA */}
         <div className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-8">
+          
+          {/* Top navigation header breadcrumb & Invoice button */}
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="font-bold text-slate-800">Dashboard</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="capitalize">{activeTab === "overview" ? "Beranda" : activeTab === "products" ? "Produk Saya" : "Pengaturan"}</span>
+            </div>
+            
+            <button
+              onClick={() => setInvoiceOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm transition active:scale-[0.98]"
+            >
+              <FileText className="h-4 w-4 text-blue-600" />
+              <span>Struk & Faktur</span>
+            </button>
+          </div>
           
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
@@ -431,14 +452,29 @@ export default function PesertaDashboard({
                           </div>
                         </div>
 
-                        <div className="mt-5 flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-xl transition-colors group-hover:bg-indigo-100">
-                            <Play className="h-3 w-3" />
-                            MASUK KELAS
+                        <div className="mt-5 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-xl transition-colors group-hover:bg-indigo-100">
+                              <Play className="h-3 w-3" />
+                              MASUK KELAS
+                            </div>
+                            {ko.rating ? (
+                              <div className="flex items-center gap-0.5">
+                                <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
+                                <span className="text-[9px] font-bold text-slate-500">{ko.rating}</span>
+                              </div>
+                            ) : null}
                           </div>
-                          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
-                            Akses: {ko.tanggal_aktif}
-                          </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setRatingTarget(ko); }}
+                            className={`w-full py-1.5 text-[10px] font-bold rounded-xl border transition-all ${
+                              ko.rating
+                                ? "border-slate-250 text-slate-500 hover:bg-slate-50"
+                                : "border-yellow-200 text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
+                            }`}
+                          >
+                            {ko.rating ? "EDIT ULASAN" : "BERI ULASAN"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -558,74 +594,90 @@ export default function PesertaDashboard({
                           <p className="text-[10px] text-slate-400 mt-1">Status: <span className="text-emerald-600 font-bold uppercase">{p.status}</span></p>
                         </div>
 
-                        <div className="mt-5 flex items-center justify-between gap-2">
-                          {p.download_url ? (
-                            <button
-                              onClick={() => p.download_url && router.visit(p.download_url)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold rounded-xl shadow-md transition-all text-center"
-                            >
-                              {p.type === 'ebook' ? (
-                                <>
-                                  <BookOpen className="h-3.5 w-3.5" /> BACA EBOOK
-                                </>
-                              ) : p.type === 'tulisan' ? (
-                                <>
-                                  <BookOpen className="h-3.5 w-3.5" /> BACA TULISAN
-                                </>
-                              ) : p.type === 'webinar' ? (
-                                <>
-                                  <Play className="h-3.5 w-3.5" /> IKUTI WEBINAR
-                                </>
-                              ) : p.type === 'event' ? (
-                                <>
-                                  <Play className="h-3.5 w-3.5" /> DETAIL EVENT
-                                </>
-                              ) : p.type === 'coaching-mentoring' ? (
-                                <>
-                                  <Clock className="h-3.5 w-3.5" /> DETAIL COACHING
-                                </>
-                              ) : p.type === 'bundling' ? (
-                                <>
-                                  <Package className="h-3.5 w-3.5" /> LIHAT BUNDLE
-                                </>
-                              ) : p.type === 'produk-digital' ? (
-                                <>
-                                  {p.content_type === 'comic' || p.content_type === 'komik' ? (
-                                    <>
-                                      <BookOpen className="h-3.5 w-3.5" /> BACA KOMIK
-                                    </>
-                                  ) : p.content_type === 'text' || p.content_type === 'tulisan' ? (
-                                    <>
-                                      <FileText className="h-3.5 w-3.5" /> BACA MODUL
-                                    </>
-                                  ) : p.content_type === 'video' ? (
-                                    <>
-                                      <Play className="h-3.5 w-3.5" /> TONTON VIDEO
-                                    </>
-                                  ) : p.content_type === 'pdf' || p.content_type === 'ebook' || p.content_type === 'e-book' ? (
-                                    <>
-                                      <BookOpen className="h-3.5 w-3.5" /> BACA E-BOOK
-                                    </>
-                                  ) : (
-                                    <>
-                                      <BookOpen className="h-3.5 w-3.5" /> BUKA PRODUK
-                                    </>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <BookOpen className="h-3.5 w-3.5" /> BUKA PRODUK
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <span className="text-[10px] font-bold text-slate-400 italic">
-                              Tidak ada tautan akses
-                            </span>
-                          )}
-                          <p className="text-[9px] font-bold text-slate-300 uppercase shrink-0">
-                            {p.tanggal_aktif}
-                          </p>
+                        <div className="mt-5 flex flex-col gap-2">
+                          <div className="flex items-center justify-between gap-2">
+                            {p.download_url ? (
+                              <button
+                                onClick={() => p.download_url && router.visit(p.download_url)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold rounded-xl shadow-md transition-all text-center"
+                              >
+                                {p.type === 'ebook' ? (
+                                  <>
+                                    <BookOpen className="h-3.5 w-3.5" /> BACA EBOOK
+                                  </>
+                                ) : p.type === 'tulisan' ? (
+                                  <>
+                                    <BookOpen className="h-3.5 w-3.5" /> BACA TULISAN
+                                  </>
+                                ) : p.type === 'webinar' ? (
+                                  <>
+                                    <Play className="h-3.5 w-3.5" /> IKUTI WEBINAR
+                                  </>
+                                ) : p.type === 'event' ? (
+                                  <>
+                                    <Play className="h-3.5 w-3.5" /> DETAIL EVENT
+                                  </>
+                                ) : p.type === 'coaching-mentoring' ? (
+                                  <>
+                                    <Clock className="h-3.5 w-3.5" /> DETAIL COACHING
+                                  </>
+                                ) : p.type === 'bundling' ? (
+                                  <>
+                                    <Package className="h-3.5 w-3.5" /> LIHAT BUNDLE
+                                  </>
+                                ) : p.type === 'produk-digital' ? (
+                                  <>
+                                    {p.content_type === 'comic' || p.content_type === 'komik' ? (
+                                      <>
+                                        <BookOpen className="h-3.5 w-3.5" /> BACA KOMIK
+                                      </>
+                                    ) : p.content_type === 'text' || p.content_type === 'tulisan' ? (
+                                      <>
+                                        <FileText className="h-3.5 w-3.5" /> BACA MODUL
+                                      </>
+                                    ) : p.content_type === 'video' ? (
+                                      <>
+                                        <Play className="h-3.5 w-3.5" /> TONTON VIDEO
+                                      </>
+                                    ) : p.content_type === 'pdf' || p.content_type === 'ebook' || p.content_type === 'e-book' ? (
+                                      <>
+                                        <BookOpen className="h-3.5 w-3.5" /> BACA E-BOOK
+                                      </>
+                                    ) : (
+                                      <>
+                                        <BookOpen className="h-3.5 w-3.5" /> BUKA PRODUK
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <BookOpen className="h-3.5 w-3.5" /> BUKA PRODUK
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-[10px] font-bold text-slate-400 italic">
+                                Tidak ada tautan akses
+                              </span>
+                            )}
+                            {p.rating ? (
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
+                                <span className="text-[9px] font-bold text-slate-500">{p.rating}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setRatingTarget(p); }}
+                            className={`w-full py-1.5 text-[10px] font-bold rounded-xl border transition-all ${
+                              p.rating
+                                ? "border-slate-250 text-slate-500 hover:bg-slate-50"
+                                : "border-yellow-200 text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
+                            }`}
+                          >
+                            {p.rating ? "EDIT ULASAN" : "BERI ULASAN"}
+                          </button>
+
                         </div>
                       </div>
                     </div>
@@ -780,15 +832,28 @@ export default function PesertaDashboard({
           <RatingDialog
             open={!!ratingTarget}
             onOpenChange={(v) => { if (!v) setRatingTarget(null); }}
-            bootcampId={ratingTarget.id}
-            bootcampName={ratingTarget.name}
-            existingRating={ratingTarget.rating ? { id: 0, bintang: ratingTarget.rating, tampil_anonim: false } : null}
+            productId={ratingTarget.id}
+            productType={ratingTarget.type}
+            productName={ratingTarget.name}
+            existingRating={(ratingTarget as any).my_rating}
             onSuccess={(r) => {
-              setProductsList((prev) => prev.map((item) => item.id === ratingTarget.id && item.type === "bootcamp" ? { ...item, rating: r.bintang } : item));
+              setProductsList((prev) => prev.map((item) => 
+                item.id === ratingTarget.id && item.type === ratingTarget.type 
+                  ? { ...item, rating: r.bintang, my_rating: r } 
+                  : item
+              ));
               setRatingTarget(null);
             }}
           />
         )}
+
+        {/* Invoice Dialog */}
+        <InvoiceDialog
+          open={invoiceOpen}
+          onOpenChange={setInvoiceOpen}
+          peserta={peserta}
+          purchasedProducts={productsList}
+        />
       </div>
     </>
   );

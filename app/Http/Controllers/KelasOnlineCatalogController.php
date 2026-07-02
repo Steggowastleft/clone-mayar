@@ -12,6 +12,7 @@ class KelasOnlineCatalogController extends Controller
     public function index()
     {
         $query = KelasOnline::query()
+            ->with('instruktur')
             ->where('status', 'published')
             ->latest();
 
@@ -35,6 +36,8 @@ class KelasOnlineCatalogController extends Controller
                 'cover_url' => $k->thumbnail ? asset('storage/' . $k->thumbnail) : null,
                 'peserta_count' => $k->pesertaTerdaftar()->count(),
                 'status' => $k->status,
+                'instruktur' => $k->instruktur->pluck('nama')->implode(', '),
+                'syarat_ketentuan' => $k->syarat_ketentuan,
             ]);
 
         return Inertia::render('kelas-online/katalog', [

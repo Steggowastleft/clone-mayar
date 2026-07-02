@@ -67,8 +67,9 @@ export default function SemuaProduk({ produk = [] }: Props) {
 
   // Stats
   const totalProduk = produk.length;
-  const publikCount = produk.filter((p) => p.status === "published" || p.status === "aktif").length;
-  const tidakPublikCount = totalProduk - publikCount;
+  const aktifCount = produk.filter((p) => p.status === "published" || p.status === "aktif").length;
+  const unlistedCount = produk.filter((p) => p.status === "unlisted").length;
+  const tidakAktifCount = totalProduk - aktifCount - unlistedCount;
   const totalPendapatan = produk.reduce((acc, p) => acc + p.terjual * p.harga, 0);
 
   return (
@@ -80,19 +81,24 @@ export default function SemuaProduk({ produk = [] }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Semua Produk</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+            <div className="space-y-1.5 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Produk: <span className="font-bold text-slate-800">{totalProduk}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
-                </span>
                 <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                  +{aktifCount} Aktif
+                </span>
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(totalPendapatan)}</span></span>
-                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
                   +6% Dari bulan kemarin
                 </span>
               </div>
@@ -103,6 +109,7 @@ export default function SemuaProduk({ produk = [] }: Props) {
             <Button
               variant="outline"
               className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/pengaturan/ekspor?type=all", "_blank")}
             >
               <Download className="h-4 w-4" /> Ekspor Data
             </Button>
@@ -224,17 +231,17 @@ export default function SemuaProduk({ produk = [] }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Produk</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terjual</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Produk</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Pendapatan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -300,7 +307,7 @@ export default function SemuaProduk({ produk = [] }: Props) {
                         <td className="px-5 py-5 text-xs text-slate-400 font-semibold whitespace-nowrap">
                           {p.tanggal}
                         </td>
-                        <td className="px-5 py-5 text-right whitespace-nowrap">
+                        <td className="px-5 py-5 text-center whitespace-nowrap">
                           <button
                             onClick={() => router.visit(`/semua-produk/${p.id}`)}
                             className="text-sm font-bold text-blue-600 hover:text-blue-800 underline transition"

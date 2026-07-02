@@ -262,10 +262,10 @@ Route::middleware('auth.peserta')->prefix('peserta')->name('peserta.')->group(fu
     Route::post('/assignments/{assignment}/submit', [PesertaSubmissionController::class, 'store'])->name('assignment.submit');
     Route::post('/assignments/{assignment}/quiz',   [QuizController::class, 'submit'])->name('quiz.submit');
 
-    // Progress & Rating Bootcamp
+    // Progress & Rating Product
     Route::post('/bootcamp/{bootcamp}/materi/{materi}/selesai', [PesertaProgressController::class, 'tandaiMateri'])->name('materi.selesai');
-    Route::post('/bootcamp/{bootcamp}/rating',   [RatingController::class, 'store'])->name('rating.store');
-    Route::delete('/bootcamp/{bootcamp}/rating', [RatingController::class, 'destroy'])->name('rating.destroy');
+    Route::post('/rating/{type}/{id}',   [RatingController::class, 'store'])->name('rating.store');
+    Route::delete('/rating/{type}/{id}', [RatingController::class, 'destroy'])->name('rating.destroy');
 
     // Sertifikat Bootcamp
     Route::get('/bootcamp/{bootcamp}/sertifikat', [SertifikatController::class, 'show'])->name('sertifikat.show');
@@ -419,6 +419,8 @@ Route::middleware('auth')->group(function () {
 
     // ── Pengaturan ────────────────────────────────────────────
     Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
+    Route::get('/ekspor-data', [PengaturanController::class, 'eksporDataPage'])->name('ekspor-data.index');
+    Route::get('/pengaturan/ekspor', [PengaturanController::class, 'export'])->name('pengaturan.export');
 
     Route::get('/pengaturan/akun', function () {
         $user = Auth::user();

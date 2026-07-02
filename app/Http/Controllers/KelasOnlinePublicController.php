@@ -12,7 +12,7 @@ class KelasOnlinePublicController extends Controller
 {
     public function show(string $id)
     {
-        $kelas = KelasOnline::with(['owner', 'sesi'])
+        $kelas = KelasOnline::with(['owner', 'sesi', 'instruktur'])
             ->withCount('pesertaTerdaftar')
             ->findOrFail($id);
 
@@ -35,6 +35,16 @@ class KelasOnlinePublicController extends Controller
                 'require_quiz_sertifikat' => $kelas->require_quiz_sertifikat,
                 'nilai_minimum_quiz'      => $kelas->nilai_minimum_quiz,
                 'peserta_terdaftar_count' => $kelas->peserta_terdaftar_count,
+                'syarat_ketentuan'        => $kelas->syarat_ketentuan,
+                'instruktur'              => $kelas->instruktur->map(function ($ins) {
+                    return [
+                        'id' => $ins->id,
+                        'nama' => $ins->nama,
+                        'jabatan' => $ins->jabatan,
+                        'bio' => $ins->bio,
+                        'foto_url' => $ins->foto_url,
+                    ];
+                })->toArray(),
                 'owner'                   => [
                     'name' => $kelas->owner->name,
                 ],

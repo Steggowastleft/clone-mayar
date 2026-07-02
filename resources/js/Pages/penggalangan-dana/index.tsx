@@ -89,7 +89,7 @@ function DateTimePickerField({
 
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label>
         {label}{" "}
         {optional && <span className="text-gray-400 font-normal">(Opsional)</span>}
       </Label>
@@ -288,6 +288,7 @@ export default function Index({ produk = [] }: IndexProps) {
       onSuccess: () => {
         setCreateOpen(false);
         setIsSubmitting(false);
+        router.reload();
       },
       onError: () => {
         setIsSubmitting(false);
@@ -549,24 +550,17 @@ export default function Index({ produk = [] }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-t-lg sticky top-0 z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 rounded-lg p-2">
-                <Heart className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Penggalangan Dana Baru
-              </DialogTitle>
-            </div>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Buat penggalangan dana (Donasi atau Wakaf) dengan mudah
-            </p>
+          {/* Header */}
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Penggalangan Dana Baru
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Tipe Penggalangan Dana */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Tipe Penggalangan Dana <span className="text-red-500">*</span>
               </Label>
               <Select
@@ -591,7 +585,7 @@ export default function Index({ produk = [] }: IndexProps) {
             {/* Kategori (untuk Donasi) */}
             {formData.tipe === "donasi" && (
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label >
                   Kategori Penggalangan Dana{" "}
                   <span className="text-red-500">*</span>
                 </Label>
@@ -617,7 +611,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Nama */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Judul Penggalangan Dana
                 <span className="text-red-500">*</span>
               </Label>
@@ -634,7 +628,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Deskripsi <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
               <Textarea
@@ -649,7 +643,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Harga / Target */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Target <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
@@ -676,7 +670,7 @@ export default function Index({ produk = [] }: IndexProps) {
             {/* Minimal Donasi (untuk Donasi) */}
             {formData.tipe === "donasi" && (
               <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label >
                   Minimal Donasi{" "}
                   <span className="text-gray-400 font-normal">(Opsional)</span>
                 </Label>
@@ -706,7 +700,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Tujuan */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Tujuan
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -725,7 +719,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Penerima Manfaat */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Penerima Manfaat
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -743,7 +737,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Cerita / Deskripsi */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Cerita / Deskripsi
                 <span className="text-red-500">*</span>
               </Label>
@@ -763,7 +757,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Rincian Penggunaan Dana */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Rincian Penggunaan Dana Jika Terkumpul
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -781,43 +775,37 @@ export default function Index({ produk = [] }: IndexProps) {
             </div>
 
             {/* Cover */}
-            <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Cover (gambar/video untuk promo){" "}
-                <span className="text-gray-400 font-normal">(Opsional)</span>
-              </Label>
+            <div className="space-y-2">
+              <Label >Cover Gambar <span className="text-gray-400 font-normal">(opsional)</span></Label>
               <div
+                className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                 onClick={() => fileInputRef.current?.click()}
-                className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
               >
                 {coverPreview ? (
-                  <div>
-                    <img
-                      src={coverPreview}
-                      alt="Preview"
-                      className="max-h-32 mx-auto mb-2 rounded"
-                    />
-                    <p className="text-xs text-gray-500">Klik untuk ubah gambar</p>
-                  </div>
+                  <img src={coverPreview} alt="preview" className="max-h-40 mx-auto rounded-md object-cover" />
                 ) : (
-                  <div>
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-gray-600">
-                      Drag & drop image atau klik untuk upload
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      JPG, PNG, WebP | Max 5MB
-                    </p>
+                  <div className="flex items-center gap-3 justify-center">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                    >
+                      Select image...
+                    </button>
+                    <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Upload className="h-4 w-4 text-slate-400" />
+                      Drop image here
+                    </span>
                   </div>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverChange}
-                  className="hidden"
-                />
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
+              {coverFile && <p className="text-xs text-green-600">✓ {coverFile.name}</p>}
             </div>
 
             {/* Schedule */}
@@ -843,7 +831,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Catatan */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Catatan{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -859,7 +847,7 @@ export default function Index({ produk = [] }: IndexProps) {
 
             {/* Redirect URL */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Redirect URL{" "}
                 <span className="text-gray-400 font-normal">(Opsional)</span>
               </Label>
@@ -887,7 +875,7 @@ export default function Index({ produk = [] }: IndexProps) {
             {/* Options */}
             {(formData.tipe === "donasi" || formData.tipe === "wakaf") && (
               <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <Label className="text-sm font-medium text-gray-700">Opsi</Label>
+                <Label>Opsi</Label>
                 <div className="flex items-center justify-between">
                   <label className="text-sm text-gray-700">
                     Tampilkan Target {formData.tipe === "wakaf" ? "Wakaf" : "Donasi"}
@@ -917,21 +905,14 @@ export default function Index({ produk = [] }: IndexProps) {
 
           </div>
 
-          {/* Footer */}
-          <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end gap-3 rounded-b-lg sticky bottom-0 z-10">
+          {/* Buttons */}
+          <div className="flex justify-center pt-4 border-t border-slate-100 p-6 bg-white rounded-b-lg">
             <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={isSubmitting}
-            >
-              Batal
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Menyimpan..." : "Simpan"}
+              {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
             </Button>
           </div>
         </DialogContent>

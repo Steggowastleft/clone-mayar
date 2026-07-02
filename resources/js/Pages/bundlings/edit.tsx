@@ -23,6 +23,12 @@ import { useState, useRef } from "react";
 import { CalendarIcon, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 type Product = {
   id: number;
   id_type: string;
@@ -45,6 +51,7 @@ type BundlingData = {
   maksimalPembayaran?: number;
   redirectUrl?: string;
   bisaAffiliate: boolean;
+  status: string;
   produkIds: any[];
 };
 
@@ -66,6 +73,7 @@ export default function Edit({ bundling, products }: EditProps) {
     maksimalPembayaran: (bundling.maksimalPembayaran || "").toString(),
     redirectUrl: bundling.redirectUrl || "",
     bisaAffiliate: bundling.bisaAffiliate,
+    status: bundling.status || "unpublished",
     produkIds: bundling.produkIds || [],
   });
 
@@ -145,9 +153,10 @@ export default function Edit({ bundling, products }: EditProps) {
       ...data,
       produkIds: data.produkIds.map((p) => p.id),
       bisaAffiliate: data.bisaAffiliate ? 1 : 0,
+      status: data.status,
     };
 
-    router.post(`/bundling/${bundling.id}/`, payload, {
+    router.post(`/bundling/${bundling.id}`, payload, {
       forceFormData: true,
     });
   };
@@ -160,7 +169,7 @@ export default function Edit({ bundling, products }: EditProps) {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.visit("/bundling/")}
+            onClick={() => router.visit("/bundling")}
             className="text-blue-600 mb-4"
           >
             ← Kembali
@@ -280,10 +289,10 @@ export default function Edit({ bundling, products }: EditProps) {
               <div className="flex items-center">
                 <span className="text-gray-600 font-medium mr-2">Rp</span>
                 <Input
-                  type="number"
+                  type="text"
                   placeholder="0"
-                  value={data.harga}
-                  onChange={(e) => setData("harga", e.target.value)}
+                  value={data.harga ? formatRupiahInput(data.harga) : ""}
+                  onChange={(e) => setData("harga", e.target.value.replace(/\D/g, ""))}
                   className="flex-1"
                 />
               </div>
@@ -299,10 +308,10 @@ export default function Edit({ bundling, products }: EditProps) {
               <div className="flex items-center">
                 <span className="text-gray-600 font-medium mr-2">Rp</span>
                 <Input
-                  type="number"
+                  type="text"
                   placeholder="0"
-                  value={data.hargaCoret}
-                  onChange={(e) => setData("hargaCoret", e.target.value)}
+                  value={data.hargaCoret ? formatRupiahInput(data.hargaCoret) : ""}
+                  onChange={(e) => setData("hargaCoret", e.target.value.replace(/\D/g, ""))}
                   className="flex-1"
                 />
               </div>
@@ -452,12 +461,34 @@ export default function Edit({ bundling, products }: EditProps) {
             </p>
           </div>
 
+          {/* Status */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <Label className="text-sm font-semibold text-gray-700 mb-2 block">
+              Status Halaman
+            </Label>
+            <Select
+              value={data.status}
+              onValueChange={(v) => setData("status", v)}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Pilih Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="published">Publikasikan (Published)</SelectItem>
+                <SelectItem value="unpublished">Simpan sebagai Draft (Unpublished)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-2">
+              Tentukan apakah paket bundling ini langsung dipublikasikan atau disimpan sebagai draft terlebih dahulu
+            </p>
+          </div>
+
           {/* Buttons */}
           <div className="flex gap-4 pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.visit("/bundling/")}
+              onClick={() => router.visit("/bundling")}
             >
               Batal
             </Button>

@@ -16,6 +16,8 @@ type Produk = {
   tanggal: string;
   terjual: number;
   kategori: string;
+  pembicara?: string;
+  syarat_ketentuan?: string;
 };
 
 type Props = {
@@ -184,6 +186,12 @@ export default function Katalog({ produk }: Props) {
                     {p.nama}
                   </h2>
 
+                  {p.pembicara && (
+                    <p className="text-xs text-slate-500 font-medium">
+                      Pembicara: <span className="font-bold text-slate-700">{p.pembicara}</span>
+                    </p>
+                  )}
+
                   {/* STATS */}
                   <div className="flex flex-wrap gap-3 text-xs text-gray-500 pt-1">
                     <span className="flex items-center gap-1">
@@ -203,6 +211,14 @@ export default function Katalog({ produk }: Props) {
                       </span>
                     )}
                   </div>
+
+                  {/* Syarat & Ketentuan */}
+                  {p.syarat_ketentuan && (
+                    <div className="text-xs text-gray-500 border-t pt-2 mt-2 bg-slate-50/50 p-2 rounded-lg border-slate-100">
+                      <p className="font-bold text-gray-700 mb-0.5">Syarat & Ketentuan:</p>
+                      <p className="line-clamp-2 text-gray-500 leading-relaxed">{p.syarat_ketentuan}</p>
+                    </div>
+                  )}
 
                   {/* Status badge */}
                   {p.status && (

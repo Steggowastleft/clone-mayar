@@ -1,6 +1,6 @@
 import AppLayout from "@/layouts/app-layout";
 import { Head, router } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +22,8 @@ import TabAnalisis from "./detail/analisis";
 // Sidebar
 import { SidebarPanel } from "./detail/components/sidebarpanel";
 import DashboardLayout from "@/components/dashboard/dashboardlayout";
+
+const TabRating = lazy(() => import("../bootcamps/detail/rating"));
 
 // ─────────────────────────────────────────────
 // Types
@@ -110,6 +112,11 @@ export default function EventDetail({
       label: "ANALISIS",
       icon: <BarChart3 className="h-3 w-3" />,
     },
+    {
+      id: "rating",
+      label: "RATING",
+      icon: <Star className="h-3 w-3" />,
+    },
   ];
 
   const renderTab = () => {
@@ -120,6 +127,12 @@ export default function EventDetail({
         return <TabTransaksi transaksi={transaksi} />;
       case "analisis":
         return <TabAnalisis produk={event} analisis={analisis} />;
+      case "rating":
+        return (
+          <Suspense fallback={<div className="p-6 text-gray-400">Loading rating...</div>}>
+            <TabRating ratings={ratings} />
+          </Suspense>
+        );
       default:
         return (
           <TabPlaceholder

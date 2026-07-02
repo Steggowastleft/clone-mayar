@@ -23,8 +23,10 @@ import {
   Moon,
   Sun,
   Eye,
-  Type
+  Type,
+  Star
 } from "lucide-react";
+import RatingDialog, { type RatingData } from "./ratingdialog";
 
 type Peserta = {
   id: number;
@@ -82,6 +84,7 @@ type Props = {
   product: Product;
   productType: string;
   registration: Registration;
+  myRating?: RatingData | null;
 };
 
 type ReadingTheme = "light" | "sepia" | "dark";
@@ -165,10 +168,13 @@ export default function ProductViewer({
   peserta,
   product,
   productType,
-  registration
+  registration,
+  myRating
 }: Props) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [myRatingState, setMyRatingState] = useState<RatingData | null>(myRating ?? null);
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   // Tulisan Reader Settings
   const [theme, setTheme] = useState<ReadingTheme>("sepia");
@@ -340,7 +346,15 @@ export default function ProductViewer({
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setRatingOpen(true)}
+                className="px-3 py-1.5 text-[10px] font-bold rounded-xl border border-yellow-250 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 transition flex items-center gap-1 shrink-0 shadow-sm"
+              >
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                {myRatingState ? `Ulasan (${myRatingState.bintang}★)` : "Beri Ulasan"}
+              </button>
+
               <span className="text-[10px] font-bold text-slate-400 bg-slate-100 rounded-full px-3 py-1.5 hidden sm:inline-block">
                 Member ID: #{peserta.id}
               </span>
@@ -813,6 +827,19 @@ export default function ProductViewer({
             </div>
           </div>
         </div>
+
+        {/* Rating Dialog */}
+        <RatingDialog
+          open={ratingOpen}
+          onOpenChange={setRatingOpen}
+          productId={product.id}
+          productType={productType}
+          productName={product.nama}
+          existingRating={myRatingState}
+          onSuccess={(r) => {
+            setMyRatingState(r);
+          }}
+        />
       </div>
     </>
   );

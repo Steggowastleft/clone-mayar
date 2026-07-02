@@ -44,6 +44,12 @@ type Props = {
   coachings: Coaching[];
 };
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 const defaultForm = {
   nama: "",
   deskripsi: "",
@@ -359,10 +365,10 @@ export default function CoachingMentoringIndex({ coachings = [] }: Props) {
                     <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                     <Input
                       className="pl-9"
-                      type="number"
-                      min={0}
-                      value={formData.harga}
-                      onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                      type="text"
+                      placeholder="0"
+                      value={formData.harga ? formatRupiahInput(formData.harga) : ""}
+                      onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                     />
                   </div>
                 </div>
@@ -375,10 +381,10 @@ export default function CoachingMentoringIndex({ coachings = [] }: Props) {
                     <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                     <Input
                       className="pl-9"
-                      type="number"
-                      min={0}
-                      value={formData.harga_coret}
-                      onChange={(e) => setFormData({ ...formData, harga_coret: e.target.value })}
+                      type="text"
+                      placeholder="0"
+                      value={formData.harga_coret ? formatRupiahInput(formData.harga_coret) : ""}
+                      onChange={(e) => setFormData({ ...formData, harga_coret: e.target.value.replace(/\D/g, "") })}
                     />
                   </div>
                   {formData.harga && formData.harga_coret &&
@@ -402,11 +408,10 @@ export default function CoachingMentoringIndex({ coachings = [] }: Props) {
                   <span className="absolute left-3 top-2.5 text-sm text-gray-500">Rp</span>
                   <Input
                     className="pl-9"
-                    type="number"
-                    min={0}
+                    type="text"
                     placeholder="Kosongkan kalau bebas"
-                    value={formData.harga}
-                    onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+                    value={formData.harga ? formatRupiahInput(formData.harga) : ""}
+                    onChange={(e) => setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })}
                   />
                 </div>
                 <p className="text-xs text-gray-500">User nanti bebas isi nominal saat checkout</p>

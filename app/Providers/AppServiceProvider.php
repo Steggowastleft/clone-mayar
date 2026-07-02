@@ -29,10 +29,11 @@ class AppServiceProvider extends ServiceProvider
             'event' => \App\Models\Event::class,
             'webinar' => \App\Models\Webinar::class,
             'ebook' => \App\Models\Ebook::class,
-            'produkdigital' => \App\Models\Produkdigital::class,
+            'produkdigital' => \App\Models\ProdukDigital::class,
             'bundling' => \App\Models\Bundling::class,
             'user' => \App\Models\User::class,
             'kelas_online' => \App\Models\KelasOnline::class,
+            'payment_link' => \App\Models\PaymentLink::class,
         ]);
     }
 }

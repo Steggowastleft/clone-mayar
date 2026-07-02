@@ -18,6 +18,7 @@ class Pembayaran extends Model
         'order_id',
         'peserta_id',
         'confirmed_at',
+        'coupon_code',
     ];
 
     protected $casts = [

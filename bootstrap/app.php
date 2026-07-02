@@ -41,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'checkout/process',
             'checkout/validate',
             'checkout/notification',
+            'diskon/validate-coupon',
             // Soal quiz (penjual)
             'assignments/*/soal',
             'assignments/*/soal/*',

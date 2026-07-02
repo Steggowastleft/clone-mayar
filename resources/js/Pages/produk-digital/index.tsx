@@ -66,6 +66,8 @@ type OldFile = {
 type IndexProps = {
   produkList: ProdukDigital[];
   oldFiles: OldFile[];
+  totalRevenue?: number;
+  revenueGrowthText?: string;
 };
 
 // ─── DatePickerField ─────────────────────────────────────────────────
@@ -84,7 +86,7 @@ function DatePickerField({
   const [open, setOpen] = useState(false);
   return (
     <div className="space-y-1">
-      <Label className="text-sm font-medium text-gray-700">
+      <Label >
         {label}{" "}
         {optional && (
           <span className="text-gray-400 font-normal">(Opsional)</span>
@@ -283,7 +285,7 @@ const getCategoryTheme = (cat: string) => {
 
 // ─── Main ─────────────────────────────────────────────────────────────
 
-export default function Index({ produkList, oldFiles }: IndexProps) {
+export default function Index({ produkList, oldFiles, totalRevenue, revenueGrowthText }: IndexProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -556,9 +558,12 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
   // Stats
   const totalProduk = produkList.length;
-  const publikCount = produkList.filter((p) => p.status === "published").length;
-  const tidakPublikCount = totalProduk - publikCount;
-  const totalPendapatan = produkList.reduce((acc, p) => acc + p.total_penjualan * p.harga, 0);
+  const aktifCount = produkList.filter((p) => p.status === "published").length;
+  const unlistedCount = produkList.filter((p) => p.status === "unlisted").length;
+  const tidakAktifCount = totalProduk - aktifCount - unlistedCount;
+  const localPendapatan = produkList.reduce((acc, p) => acc + p.total_penjualan * p.harga, 0);
+  const displayRevenue = totalRevenue !== undefined ? totalRevenue : localPendapatan;
+  const growthText = revenueGrowthText || "+0% Dari bulan kemarin";
 
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -583,20 +588,25 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Produk Digital</h1>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 font-medium flex-wrap">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Baris 1: Status Produk */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
                 <span>Total Produk: <span className="font-bold text-slate-800">{totalProduk}</span></span>
-                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{tidakPublikCount} Tidak Publik
+                <span className="bg-green-50 text-green-655 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{aktifCount} Aktif
                 </span>
-                <span className="bg-green-50 text-green-650 border border-green-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +{publikCount} Publik
+                <span className="bg-red-50 text-red-655 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{tidakAktifCount} Tidak Aktif
+                </span>
+                <span className="bg-blue-50 text-blue-655 border border-blue-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  +{unlistedCount} Tidak Terdaftar (Unlisted)
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(totalPendapatan)}</span></span>
-                <span className="bg-red-50 text-red-650 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  +6% Dari bulan kemarin
+              {/* Baris 2: Pendapatan */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 font-medium flex-wrap">
+                <span>Total Pendapatan: <span className="font-bold text-slate-800">Rp. {formatRupiah(displayRevenue)}</span></span>
+                <span className="bg-emerald-50 text-emerald-655 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                  {growthText}
                 </span>
               </div>
             </div>
@@ -606,8 +616,9 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
             <Button
               variant="outline"
               className="border-gray-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-sm font-semibold flex items-center gap-1.5"
+              onClick={() => window.open("/produk-digital/katalog", "_blank")}
             >
-              <Download className="h-4 w-4" /> Ekspor Data
+              Katalog Publik
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
@@ -723,17 +734,17 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">No</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tampilan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama Produk Digital</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Harga</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Terjual</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dibuat</th>
-                  <th className="px-5 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Aksi</th>
+                <tr className="border-b border-slate-200 bg-blue-50/80">
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">No</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tampilan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Produk Digital</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Harga</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terjual</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Pendapatan</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Dibuat</th>
+                  <th className="px-5 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dashed divide-slate-200">
@@ -814,24 +825,16 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent aria-describedby={undefined} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className={cn("bg-gradient-to-br p-6 rounded-t-lg sticky top-0 z-10 text-white", theme.from, theme.to)}>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="bg-white/20 rounded-lg p-2">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Buat Produk Digital {formData.kategori && `(${theme.name})`}
-              </DialogTitle>
-            </div>
-            <p className={cn("text-sm leading-relaxed opacity-90")}>
-              Penjualan produk digital semakin mudah dengan otomasi download dan halaman produk keren
-            </p>
+          <div className="bg-white border-b border-slate-100 p-6 rounded-t-lg sticky top-0 z-10 flex items-center justify-between">
+            <DialogTitle className="text-slate-900 text-xl font-bold">
+              Buat Produk Digital {formData.kategori && `(${theme.name})`}
+            </DialogTitle>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Kategori Select (Selalu ditampilkan di atas) */}
             <div className="space-y-1">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label >
                 Kategori <span className="text-red-500">*</span>
               </Label>
               <Select
@@ -863,7 +866,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
               <>
                 {/* Judul Produk */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label >
                     Judul Produk <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -879,7 +882,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {(formData.kategori === "komik" || formData.kategori === "novel") && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Tipe Penulisan *</Label>
+                      <Label >Tipe Penulisan *</Label>
                       <Select
                         value={formData.tipeTulisan}
                         onValueChange={(value) => setFormData({ ...formData, tipeTulisan: value as any })}
@@ -895,7 +898,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">Mekanisme Pembayaran *</Label>
+                      <Label >Mekanisme Pembayaran *</Label>
                       <Select
                         value={formData.mekanismeBayar}
                         onValueChange={(value) => setFormData({ ...formData, mekanismeBayar: value as any })}
@@ -914,7 +917,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                 {/* Tipe Pembayaran */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">Tipe Pembayaran *</Label>
+                  <Label >Tipe Pembayaran *</Label>
                   <Select
                     value={formData.tipePembayaran}
                     onValueChange={(value) => setFormData({ ...formData, tipePembayaran: value as any })}
@@ -934,7 +937,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {formData.tipePembayaran !== "gratis" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-gray-700">
+                      <Label >
                         Harga <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
@@ -952,7 +955,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                     {/* Harga Coret hanya untuk Ebook */}
                     {formData.kategori === "e-book" && (
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">
+                        <Label >
                           Harga Coret (opsional)
                         </Label>
                         <div className="relative">
@@ -972,7 +975,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                 {/* Deskripsi/Sinopsis */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label >
                     {formData.kategori === "novel" || formData.kategori === "komik" ? "Deskripsi/Sinopsis" : "Deskripsi"}{" "}
                     <span className="text-red-500">*</span>
                   </Label>
@@ -994,7 +997,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {/* Transkrip (khusus video/podcast) */}
                 {formData.kategori === "video" && (
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">Transkrip</Label>
+                    <Label >Transkrip</Label>
                     <Textarea
                       placeholder="Tuliskan transkrip video / podcast..."
                       rows={4}
@@ -1005,14 +1008,10 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 )}
 
                 {/* Cover Produk */}
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Cover Produk <span className="text-red-500">*</span>
-                  </Label>
+                <div className="space-y-2">
+                  <Label>Cover Gambar <span className="text-red-500">*</span></Label>
                   <div
-                    className={cn(
-                      "border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
-                    )}
+                    className="border border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition flex flex-col items-center justify-center min-h-[140px]"
                     onClick={() => coverInputRef.current?.click()}
                   >
                     {coverPreview ? (
@@ -1022,10 +1021,17 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         className="max-h-40 mx-auto rounded-md object-cover"
                       />
                     ) : (
-                      <div className="space-y-2">
-                        <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                        <p className="text-sm text-gray-500 font-semibold text-blue-600">Select Image...</p>
-                        <p className="text-xs text-gray-400">Drop image here</p>
+                      <div className="flex items-center gap-3 justify-center">
+                        <button
+                          type="button"
+                          className="px-4 py-2 bg-[#eef2f6] text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition"
+                        >
+                          Select image...
+                        </button>
+                        <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                          <Upload className="h-4 w-4 text-slate-400" />
+                          Drop image here
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1062,7 +1068,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                 {/* Catatan */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">Catatan (Opsional)</Label>
+                  <Label >Catatan (Opsional)</Label>
                   <Textarea
                     placeholder="Catatan akan dilihat oleh pembeli setelah membayar..."
                     rows={3}
@@ -1075,7 +1081,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                 {/* Maksimum Jumlah Pembelian */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">Maksimum Jumlah Pembelian (Opsional)</Label>
+                  <Label >Maksimum Jumlah Pembelian (Opsional)</Label>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -1113,7 +1119,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {/* Tipe Pembaca (Khusus Komik) */}
                 {formData.kategori === "komik" && (
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">Tipe Pembaca</Label>
+                    <Label >Tipe Pembaca</Label>
                     <Select
                       value={formData.tipe_pembaca}
                       onValueChange={(value) => setFormData({ ...formData, tipe_pembaca: value })}
@@ -1136,7 +1142,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {formData.kategori === "e-book" && (
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Tidak Pakai File, Pakai Link saja</Label>
+                      <Label >Tidak Pakai File, Pakai Link saja</Label>
                       <p className="text-xs text-gray-400">Jika pakai upload file, setelah bayar file langsung terunduh. Jika pakai redirect URL, pelanggan akan diarahkan ke halaman tersebut setelah pembayaran.</p>
                     </div>
                     <Switch
@@ -1149,7 +1155,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                 {/* Jika Pakai Link */}
                 {formData.sumberFile === "link" ? (
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">Link URL</Label>
+                    <Label >Link URL</Label>
                     <Textarea
                       placeholder="Masukkan URL Link..."
                       rows={3}
@@ -1164,7 +1170,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                     <div className="space-y-4 p-4 border border-gray-100 rounded-lg bg-gray-50/50">
                       {/* File Digital Type */}
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">File Digital</Label>
+                        <Label >File Digital</Label>
                         <Select
                           value={formData.format}
                           onValueChange={(value) => setFormData({ ...formData, format: value })}
@@ -1196,7 +1202,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                       {/* Jumlah Halaman (Khusus Komik) */}
                       {formData.kategori === "komik" && (
                         <div className="space-y-1">
-                          <Label className="text-sm font-medium text-gray-700">
+                          <Label >
                             Jumlah Halaman <span className="text-red-500">*</span>
                           </Label>
                           <Input
@@ -1211,7 +1217,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                     {/* Sumber File */}
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Sumber File {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
+                        <Label >Sumber File {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
                         <Select
                           value={formData.sumberFile}
                           onValueChange={(value) => setFormData({ ...formData, sumberFile: value as any })}
@@ -1232,7 +1238,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           pageFiles.length > 0 ? (
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <Label className="text-sm font-medium text-gray-700">Upload Halaman Komik ({pageFiles.length} Halaman)</Label>
+                                <Label >Upload Halaman Komik ({pageFiles.length} Halaman)</Label>
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -1328,7 +1334,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                           )
                         ) : (
                           <div className="space-y-1">
-                            <Label className="text-sm font-medium text-gray-700">File/Konten {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
+                            <Label >File/Konten {formData.kategori === "tulisan" ? "(opsional)" : "*"}</Label>
                             <div
                               className={cn(
                                 "border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
@@ -1363,7 +1369,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                       ) : (
                         /* File Lama */
                         <div className="space-y-1">
-                          <Label className="text-sm font-medium text-gray-700">Pilih File Lama *</Label>
+                          <Label >Pilih File Lama *</Label>
                           <Select
                             value={formData.redirectUrl}
                             onValueChange={(value) => setFormData({ ...formData, redirectUrl: value })}
@@ -1384,7 +1390,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
 
                       {/* Bisa Download */}
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bisa Download</Label>
+                        <Label >Bisa Download</Label>
                         <Select
                           value={formData.bisaDidownload ? "Bisa" : "Tidak"}
                           onValueChange={(value) => setFormData({ ...formData, bisaDidownload: value === "Bisa" })}
@@ -1410,7 +1416,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   {formData.kategori === "novel" && (
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Genre</Label>
+                        <Label >Genre</Label>
                         <Select
                           value={formData.genre}
                           onValueChange={(value) => setFormData({ ...formData, genre: value })}
@@ -1436,7 +1442,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Penulis</Label>
+                        <Label >Penulis</Label>
                         <Input
                           placeholder="Nama Penulis"
                           value={formData.author}
@@ -1444,7 +1450,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Tag</Label>
+                        <Label >Tag</Label>
                         <Input
                           placeholder="tag1, tag2"
                           value={formData.isbn}
@@ -1453,7 +1459,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: fiksi, romance, bestseller)</p>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
+                        <Label >Umur Pembaca</Label>
                         <div className="flex items-center gap-2">
                           <Button
                             type="button"
@@ -1488,7 +1494,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                        <Label >Bahasa</Label>
                         <Input
                           placeholder="Indonesia"
                           value={formData.bahasa}
@@ -1502,7 +1508,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   {formData.kategori === "komik" && (
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Genre</Label>
+                        <Label >Genre</Label>
                         <Select
                           value={formData.genre}
                           onValueChange={(value) => setFormData({ ...formData, genre: value })}
@@ -1528,7 +1534,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Author</Label>
+                        <Label >Author</Label>
                         <Input
                           placeholder="Nama Author"
                           value={formData.author}
@@ -1536,7 +1542,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Penulis</Label>
+                        <Label >Penulis</Label>
                         <Input
                           placeholder="Nama Penulis"
                           value={formData.pembicara}
@@ -1544,7 +1550,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Artis</Label>
+                        <Label >Artis</Label>
                         <Input
                           placeholder="Nama Artis"
                           value={formData.artis}
@@ -1552,7 +1558,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">ISBN</Label>
+                        <Label >ISBN</Label>
                         <Input
                           placeholder="ISBN Komik"
                           value={formData.isbn}
@@ -1560,7 +1566,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                        <Label >Bahasa</Label>
                         <Input
                           placeholder="Indonesia"
                           value={formData.bahasa}
@@ -1574,7 +1580,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   {formData.kategori === "e-book" && (
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Author</Label>
+                        <Label >Author</Label>
                         <Input
                           placeholder="Nama Penulis"
                           value={formData.author}
@@ -1582,7 +1588,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">ISBN</Label>
+                        <Label >ISBN</Label>
                         <Input
                           placeholder="ISBN E-Book"
                           value={formData.isbn}
@@ -1590,7 +1596,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Format File</Label>
+                        <Label >Format File</Label>
                         <Select
                           value={formData.format}
                           onValueChange={(value) => setFormData({ ...formData, format: value })}
@@ -1604,7 +1610,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                        <Label >Bahasa</Label>
                         <Input
                           placeholder="Indonesia"
                           value={formData.bahasa}
@@ -1612,7 +1618,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Jumlah Halaman</Label>
+                        <Label >Jumlah Halaman</Label>
                         <Input
                           type="number"
                           placeholder="0"
@@ -1627,7 +1633,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   {formData.kategori === "tulisan" && (
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Genre</Label>
+                        <Label >Genre</Label>
                         <Select
                           value={formData.genre}
                           onValueChange={(value) => setFormData({ ...formData, genre: value })}
@@ -1661,7 +1667,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Author</Label>
+                        <Label >Author</Label>
                         <Input
                           placeholder="Nama Penulis"
                           value={formData.author}
@@ -1669,7 +1675,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                        <Label >Bahasa</Label>
                         <Input
                           placeholder="Indonesia"
                           value={formData.bahasa}
@@ -1677,7 +1683,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Jumlah Halaman</Label>
+                        <Label >Jumlah Halaman</Label>
                         <Input
                           type="number"
                           placeholder="0"
@@ -1692,7 +1698,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                   {formData.kategori === "video" && (
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Pembicara / Narator</Label>
+                        <Label >Pembicara / Narator</Label>
                         <Input
                           placeholder="Nama Pembicara"
                           value={formData.pembicara}
@@ -1700,7 +1706,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Durasi</Label>
+                        <Label >Durasi</Label>
                         <Input
                           placeholder="Contoh: 5 jam 30 menit"
                           value={formData.durasi}
@@ -1708,7 +1714,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Tag</Label>
+                        <Label >Tag</Label>
                         <Input
                           placeholder="tag1, tag2"
                           value={formData.genre}
@@ -1717,7 +1723,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         <p className="text-xs text-gray-400">Gunakan tanda koma (,) untuk memisahkan tag (Contoh: video, tutorial, tips)</p>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Umur Pembaca</Label>
+                        <Label >Umur Pembaca</Label>
                         <div className="flex items-center gap-2">
                           <Button
                             type="button"
@@ -1752,7 +1758,7 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Bahasa</Label>
+                        <Label >Bahasa</Label>
                         <Input
                           placeholder="Indonesia"
                           value={formData.bahasa}
@@ -1766,17 +1772,9 @@ export default function Index({ produkList, oldFiles }: IndexProps) {
             )}
 
             {/* Buttons */}
-            <div className="flex gap-3 pt-2 border-t border-gray-100">
+            <div className="flex justify-center pt-4 border-t border-gray-100">
               <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setCreateOpen(false)}
-                disabled={isSubmitting}
-              >
-                Batal
-              </Button>
-              <Button
-                className={cn("flex-1 text-white", theme.buttonClass)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 rounded-lg text-sm transition shadow-sm w-full md:w-auto min-w-[180px]"
                 onClick={handleSubmit}
                 disabled={isSubmitting || formData.kategori === ""}
               >

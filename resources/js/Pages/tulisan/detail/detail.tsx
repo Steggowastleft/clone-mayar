@@ -23,6 +23,12 @@ import { cn } from "@/lib/utils";
 import { router } from "@inertiajs/react";
 import type { Tulisan } from "../detail";
 
+const formatRupiahInput = (value: string | number) => {
+  if (value === undefined || value === null || value === "") return "";
+  const clean = String(value).replace(/\D/g, "");
+  return clean ? new Intl.NumberFormat("id-ID").format(Number(clean)) : "";
+};
+
 type Props = {
   tulisan: Tulisan;
 };
@@ -53,7 +59,11 @@ export default function DetailTab({ tulisan }: Props) {
 
   const handleSave = () => {
     setIsLoading(true);
-    router.put(`/tulisan/${tulisan.id}`, formData, {
+    const cleanedData = {
+      ...formData,
+      harga: formData.harga ? formData.harga.replace(/\D/g, "") : "0",
+    };
+    router.put(`/tulisan/${tulisan.id}`, cleanedData, {
       onSuccess: () => {
         setIsEditing(false);
       },
@@ -257,12 +267,13 @@ export default function DetailTab({ tulisan }: Props) {
                 <Label htmlFor="harga">Harga</Label>
                 <Input
                   id="harga"
-                  type="number"
-                  value={formData.harga}
+                  type="text"
+                  value={formatRupiahInput(formData.harga)}
                   onChange={(e) =>
-                    setFormData({ ...formData, harga: e.target.value })
+                    setFormData({ ...formData, harga: e.target.value.replace(/\D/g, "") })
                   }
                   placeholder="0"
+                  inputMode="numeric"
                 />
               </div>
             )}

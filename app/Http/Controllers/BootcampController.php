@@ -11,12 +11,42 @@ class BootcampController extends Controller
 {
     public function index()
     {
-        $bootcamps = Bootcamp::where('user_id', auth()->id())
+        $userId = auth()->id();
+        $bootcamps = Bootcamp::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $productIds = Bootcamp::where('user_id', $userId)->pluck('id');
+        
+        $totalRevenue = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->sum('harga_bayar');
+
+        $revenueThisMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        $revenueLastMonth = (float) \App\Models\Pendaftaran::whereIn('registrable_type', ['bootcamp', \App\Models\Bootcamp::class])
+            ->whereIn('registrable_id', $productIds)
+            ->whereIn('status', ['active', 'aktif'])
+            ->whereBetween('created_at', [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()])
+            ->sum('harga_bayar');
+
+        if ($revenueLastMonth > 0) {
+            $percentageChange = (($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } else {
+            $percentageChange = $revenueThisMonth > 0 ? 100.0 : 0.0;
+        }
+
+        $growthText = ($percentageChange >= 0 ? '+' : '') . number_format($percentageChange, 0) . '% Dari bulan kemarin';
+
         return Inertia::render('bootcamps/index', [
             'bootcamps' => $bootcamps,
+            'totalRevenue' => $totalRevenue,
+            'revenueGrowthText' => $growthText,
         ]);
     }
 
@@ -72,7 +102,8 @@ class BootcampController extends Controller
             'date'                       => now()->format('Y-m-d'),
         ]);
 
-        return redirect()->route('bootcamps.show', $bootcamp->id);
+        return redirect()->route('bootcamps.index')
+            ->with('success', 'Kelas Cohort / Bootcamp berhasil dibuat.');
     }
 
     public function show(Bootcamp $bootcamp)
@@ -90,6 +121,9 @@ class BootcampController extends Controller
             'assignments.submissions.peserta',
             'pendaftaran.peserta',
             'ratings.peserta',
+            'instruktur',
+            'landingContents',
+            'testimoni',
         ]);
 
         // ── Submissions (untuk tab Grade) ────────────────────────
@@ -210,6 +244,24 @@ class BootcampController extends Controller
                 'tanggal_tutup_daftar'       => $bootcamp->tanggal_tutup_daftar,
                 'tanggal_mulai_pembelajaran' => $bootcamp->tanggal_mulai_pembelajaran,
                 'tanggal_batas_pembelajaran' => $bootcamp->tanggal_batas_pembelajaran,
+                'created_at'                 => $bootcamp->created_at?->toISOString(),
+                'instruktur'                 => $bootcamp->instruktur->map(fn($ins) => [
+                    'id'        => $ins->id,
+                    'nama'      => $ins->nama,
+                    'jabatan'   => $ins->jabatan,
+                    'bio'       => $ins->bio,
+                    'foto_url'  => $ins->foto ? Storage::url($ins->foto) : null,
+                ])->values()->toArray(),
+                'landing_contents'           => $bootcamp->landingContents->map(fn($lc) => [
+                    'section' => $lc->section,
+                    'konten'  => json_decode($lc->konten, true) ?? [],
+                ])->values()->toArray(),
+                'testimoni'                  => $bootcamp->testimoni->map(fn($t) => [
+                    'nama'    => $t->nama,
+                    'profesi' => $t->profesi,
+                    'isi'     => $t->isi,
+                    'rating'  => $t->rating,
+                ])->values()->toArray(),
             ],
 
             // Sesi

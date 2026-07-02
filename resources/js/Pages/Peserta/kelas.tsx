@@ -5,8 +5,24 @@ import { useState } from "react";
 import {
   BookOpen, ChevronDown, ChevronUp, Play, FileText,
   ClipboardList, Award, LogOut, User, CheckCircle2,
-  ChevronLeft, Lock, Menu, X,
+  ChevronLeft, Lock, Menu, X, Star
 } from "lucide-react";
+import RatingDialog, { type RatingData } from "./ratingdialog";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+
+const formatTanggal = (dateStr?: string, showTime: boolean = false) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (showTime) {
+      return format(d, "dd MMM yyyy HH:mm", { locale: idLocale });
+    }
+    return format(d, "dd MMM yyyy", { locale: idLocale });
+  } catch {
+    return dateStr;
+  }
+};
 
 // ─────────────────────────────────────────────
 // Types
@@ -58,6 +74,7 @@ type Props = {
   babList: Bab[];
   assignments: Assignment[];
   progressPersen: number; // 0-100
+  myRating?: RatingData | null;
 };
 
 type SubmitForm = {
@@ -241,7 +258,7 @@ function Sidebar({
 // ─────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────
-export default function PesertaKelas({ peserta, bootcamp, babList: initialBabList, assignments: initialAssignments, progressPersen: initialProgress }: Props) {
+export default function PesertaKelas({ peserta, bootcamp, babList: initialBabList, assignments: initialAssignments, progressPersen: initialProgress, myRating }: Props) {
   const firstMateri = initialBabList[0]?.materis[0] ?? null;
   const [activeMateri,     setActiveMateri]     = useState<Materi | null>(firstMateri);
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
@@ -254,6 +271,8 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
   const [submitSuccess,    setSubmitSuccess]    = useState(false);
   const [progress,         setProgress]         = useState(initialProgress);
   const [babList,          setBabList]          = useState(initialBabList);
+  const [myRatingState,    setMyRatingState]    = useState<RatingData | null>(myRating ?? null);
+  const [ratingOpen,       setRatingOpen]       = useState(false);
 
   const handleSelectMateri = (m: Materi) => {
     setActiveMateri(m);
@@ -353,6 +372,13 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
               </div>
               <span className="text-xs font-semibold text-gray-500">{progress}%</span>
             </div>
+            <button
+              onClick={() => setRatingOpen(true)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-yellow-200 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 transition flex items-center gap-1 shrink-0 shadow-sm"
+            >
+              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+              {myRatingState ? `Ulasan (${myRatingState.bintang}★)` : "Beri Ulasan"}
+            </button>
             <div className="flex items-center gap-1.5 text-xs text-gray-600">
               <User className="h-3.5 w-3.5 text-gray-400" />
               <span className="hidden sm:block">{peserta.nama}</span>
@@ -563,12 +589,12 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
                       )}
                       {activeAssignment.tanggal_mulai && (
                         <span className="text-xs text-gray-400">
-                          Mulai: {activeAssignment.tanggal_mulai}
+                          Mulai: {formatTanggal(activeAssignment.tanggal_mulai)}
                         </span>
                       )}
                       {activeAssignment.tanggal_akhir && (
-                        <span className="text-xs text-gray-400">
-                          Deadline: {activeAssignment.tanggal_akhir}
+                        <span className="text-xs text-orange-500 font-medium">
+                          Deadline: {formatTanggal(activeAssignment.tanggal_akhir, true)}
                         </span>
                       )}
                     </div>
@@ -852,6 +878,19 @@ export default function PesertaKelas({ peserta, bootcamp, babList: initialBabLis
             )}
           </main>
         </div>
+        
+        {/* Rating Dialog */}
+        <RatingDialog
+          open={ratingOpen}
+          onOpenChange={setRatingOpen}
+          productId={bootcamp.id}
+          productType="bootcamp"
+          productName={bootcamp.name}
+          existingRating={myRatingState}
+          onSuccess={(r) => {
+            setMyRatingState(r);
+          }}
+        />
       </div>
     </>
   );

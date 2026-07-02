@@ -20,6 +20,7 @@ class Pendaftaran extends Model
         'tanggal_expired',
         'order_id',
         'snap_token',
+        'coupon_code',
     ];
 
     protected $casts = [
