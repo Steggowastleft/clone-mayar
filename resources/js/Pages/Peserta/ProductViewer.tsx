@@ -63,7 +63,12 @@ type Product = {
   booking_url?: string | null;
   pesan_setelah_bayar?: string | null;
   bundle_items?: Array<{ id: number; name: string; type: string; url: string }>;
+  content_type?: string | null;
+  content?: string | null;
+  file_urls?: string[];
 };
+
+import ProductContentRenderer from "./components/ProductContentRenderer";
 
 type Registration = {
   id: number;
@@ -745,68 +750,7 @@ export default function ProductViewer({
 
               {/* 6. PRODUK DIGITAL PANEL */}
               {productType === "produk-digital" && (
-                <div className="space-y-6">
-                  <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                    <div className="space-y-2">
-                      <span className="bg-blue-100 text-blue-800 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-blue-100">
-                        PRODUK DIGITAL
-                      </span>
-                      <h1 className="text-xl sm:text-2xl font-black text-slate-850 mt-2">{product.nama}</h1>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-8 items-start">
-                      {product.cover && (
-                        <img src={product.cover} alt={product.nama} className="w-full md:w-1/3 rounded-2xl object-cover border border-slate-100 shadow-sm" />
-                      )}
-                      <div className="flex-1 space-y-4">
-                        {product.file_url ? (
-                          <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-3">
-                            <div>
-                              <p className="text-xs font-bold text-blue-800">Unduhan File Produk</p>
-                              <p className="text-[10px] text-blue-600 font-semibold mt-0.5">Berkas digital milik Anda siap untuk diunduh secara instan.</p>
-                            </div>
-                            <a
-                              href={product.file_url}
-                              download
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl shadow transition"
-                            >
-                              <Download size={14} /> UNDUH SEKARANG
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-center py-6 text-slate-400">
-                            <AlertCircle className="mx-auto text-slate-300 mb-1" size={24} />
-                            <p className="text-xs font-bold">File tidak tersedia</p>
-                            <p className="text-[10px] mt-0.5">Silakan hubungi administrator terkait penyediaan file produk.</p>
-                          </div>
-                        )}
-
-                        {product.deskripsi && (
-                          <div className="space-y-1">
-                            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Deskripsi Produk</h4>
-                            <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{product.deskripsi}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {product.instruksi && (
-                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1.5">
-                        <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                          <Info size={14} /> Petunjuk Instalasi / Pemakaian
-                        </h4>
-                        <p className="text-xs text-slate-550 leading-relaxed whitespace-pre-wrap">{product.instruksi}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Render File Preview directly inline if supported format */}
-                  {product.file_url && (
-                    <FilePreview url={product.file_url} name={product.nama} />
-                  )}
-                </div>
+                <ProductContentRenderer product={product} />
               )}
 
               {/* 7. BUNDLING PANEL */}

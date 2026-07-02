@@ -36,6 +36,7 @@ type PurchasedProductItem = {
   download_url?: string;
   owner_name?: string;
   batch?: string;
+  content_type?: string | null;
 };
 
 type Peserta = {
@@ -198,7 +199,7 @@ export default function PesertaDashboard({
                 }`}
               >
                 <Package className="h-4 w-4" />
-                Produk yang Dibeli
+                Produk Saya
               </button>
             </nav>
           </div>
@@ -355,7 +356,7 @@ export default function PesertaDashboard({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                    Produk yang Dibeli
+                    Produk Saya
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
                     Berikut semua materi pembelajaran & konten digital milikmu
@@ -586,6 +587,30 @@ export default function PesertaDashboard({
                               ) : p.type === 'bundling' ? (
                                 <>
                                   <Package className="h-3.5 w-3.5" /> LIHAT BUNDLE
+                                </>
+                              ) : p.type === 'produk-digital' ? (
+                                <>
+                                  {p.content_type === 'comic' || p.content_type === 'komik' ? (
+                                    <>
+                                      <BookOpen className="h-3.5 w-3.5" /> BACA KOMIK
+                                    </>
+                                  ) : p.content_type === 'text' || p.content_type === 'tulisan' ? (
+                                    <>
+                                      <FileText className="h-3.5 w-3.5" /> BACA MODUL
+                                    </>
+                                  ) : p.content_type === 'video' ? (
+                                    <>
+                                      <Play className="h-3.5 w-3.5" /> TONTON VIDEO
+                                    </>
+                                  ) : p.content_type === 'pdf' || p.content_type === 'ebook' || p.content_type === 'e-book' ? (
+                                    <>
+                                      <BookOpen className="h-3.5 w-3.5" /> BACA E-BOOK
+                                    </>
+                                  ) : (
+                                    <>
+                                      <BookOpen className="h-3.5 w-3.5" /> BUKA PRODUK
+                                    </>
+                                  )}
                                 </>
                               ) : (
                                 <>

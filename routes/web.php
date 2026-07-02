@@ -491,14 +491,6 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('admin/Index');
     })->name('admin.index');
 
-    // Admin verification management
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/verifications', [AdminAccountVerificationController::class, 'index'])->name('verifications.index');
-        Route::get('/verifications/{id}', [AdminAccountVerificationController::class, 'show'])->name('verifications.show');
-        Route::post('/verifications/{id}/approve', [AdminAccountVerificationController::class, 'approve'])->name('verifications.approve');
-        Route::post('/verifications/{id}/decline', [AdminAccountVerificationController::class, 'decline'])->name('verifications.decline');
-    });
-
     // ── Penilaian dan Ulasan ──────────────────────────────────
     Route::get('/penilaian-ulasan', [\App\Http\Controllers\PenilaianUlasanController::class, 'index'])->name('penilaian-ulasan.index');
 
@@ -570,15 +562,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('produk-fisik/{id}',   [ProdukFisikController::class, 'destroy'])->name('produk-fisik.destroy');
 
     // ─────────────────────────────────────────────────────────
-    // ── Kelas Online (OD) ─────────────────────────────────────
+    // ── Kelas Online (OD) — routes managed by prefix group below
     // ─────────────────────────────────────────────────────────
-    Route::get('kelas-online',           [KelasOnlineController::class, 'index'])->name('kelas-online.index');
-    Route::get('kelas-online/create',    [KelasOnlineController::class, 'create'])->name('kelas-online.create');
-    Route::post('kelas-online',          [KelasOnlineController::class, 'store'])->name('kelas-online.store');
-    Route::get('kelas-online/{id}',      [KelasOnlineController::class, 'show'])->name('kelas-online.show');
-    Route::get('kelas-online/{id}/edit', [KelasOnlineController::class, 'edit'])->name('kelas-online.edit');
-    Route::put('kelas-online/{id}',      [KelasOnlineController::class, 'update'])->name('kelas-online.update');
-    Route::delete('kelas-online/{id}',   [KelasOnlineController::class, 'destroy'])->name('kelas-online.destroy');
 
     // ─────────────────────────────────────────────────────────
     // ── Coaching & Mentoring ──────────────────────────────────
@@ -747,9 +732,13 @@ Route::middleware('auth')->group(function () {
 
         // Index & CRUD
         Route::get('/',                [KelasOnlineController::class, 'index'])->name('index');
+        Route::get('/create',          [KelasOnlineController::class, 'create'])->name('create');
         Route::post('/',               [KelasOnlineController::class, 'store'])->name('store');
-        Route::get('/{id}/manage',     [KelasOnlineController::class, 'show'])->name('show');
+        Route::get('/{id}',            [KelasOnlineController::class, 'show'])->name('show');
+        Route::get('/{id}/manage',     [KelasOnlineController::class, 'show'])->name('manage');
+        Route::get('/{id}/edit',       [KelasOnlineController::class, 'edit'])->name('edit');
         Route::post('/{id}',            [KelasOnlineController::class, 'update'])->name('update');
+        Route::put('/{id}',            [KelasOnlineController::class, 'update'])->name('update-put');
         Route::post('/{id}/upload-materi', [KelasOnlineController::class, 'uploadMateri'])->name('upload-materi');
         Route::patch('/{id}/status',   [KelasOnlineController::class, 'updateStatus'])->name('status');
         Route::delete('/{id}',         [KelasOnlineController::class, 'destroy'])->name('destroy');
@@ -807,4 +796,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/{withdrawal}/mark-completed', [WithdrawalController::class, 'markCompleted'])->name('mark-completed');
     });
     Route::get('/admin/withdrawal/stats', [WithdrawalController::class, 'stats'])->name('withdrawal.stats');
+
+    
+    Route::get('/test-midtrans-key', function () {
+    return [
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'production' => env('MIDTRANS_IS_PRODUCTION'),
+    ];
+});
+
 });

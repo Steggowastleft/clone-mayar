@@ -102,6 +102,17 @@ class PesertaDashboardController extends Controller
                     $productType = 'produk-digital';
                     $kategori = 'Produk Digital';
                     $coverUrl = $p->registrable->cover_url ? asset('storage/' . $p->registrable->cover_url) : null;
+                } elseif ($type === 'DigitalProduct') {
+                    $productType = 'produk-digital';
+                    $contentTypeLabels = [
+                        'comic' => 'Komik',
+                        'text' => 'Tulisan / Modul',
+                        'video' => 'Video',
+                        'pdf' => 'E-Book',
+                    ];
+                    $kategori = $contentTypeLabels[strtolower($p->registrable->content_type)] ?? 'Produk Digital';
+                    $coverUrl = $p->registrable->cover_image ? asset('storage/' . $p->registrable->cover_image) : null;
+                    $downloadUrl = "/peserta/produk/produk-digital/" . $p->registrable->id;
                 } elseif ($type === 'CoachingMentoring') {
                     $downloadUrl = $p->registrable->booking_url;
                     $productType = 'coaching-mentoring';
@@ -120,15 +131,23 @@ class PesertaDashboardController extends Controller
                     $downloadUrl = "/peserta/produk/" . $productType . "/" . $p->registrable->id;
                 }
 
+                $contentType = null;
+                if ($type === 'DigitalProduct') {
+                    $contentType = $p->registrable->content_type;
+                } elseif ($type === 'Produkdigital' || $type === 'ProdukDigital') {
+                    $contentType = strtolower($p->registrable->kategori) === 'komik' ? 'comic' : (strtolower($p->registrable->kategori) === 'video' ? 'video' : (strtolower($p->registrable->kategori) === 'tulisan' ? 'text' : 'pdf'));
+                }
+
                 return [
                     'id'            => $p->registrable->id,
-                    'name'          => $p->registrable->nama ?? $p->registrable->name,
+                    'name'          => $p->registrable->nama ?? $p->registrable->name ?? $p->registrable->title ?? '',
                     'cover_url'     => $coverUrl,
                     'status'        => $p->status,
                     'tanggal_aktif' => $p->tanggal_aktif?->format('d M Y') ?? $p->created_at->format('d M Y'),
                     'type'          => $productType,
                     'kategori'      => $kategori,
                     'download_url'  => $downloadUrl,
+                    'content_type'  => $contentType,
                 ];
             })
             ->filter()
@@ -334,7 +353,7 @@ class PesertaDashboardController extends Controller
             'webinar' => \App\Models\Webinar::class,
             'event' => \App\Models\Event::class,
             'coaching-mentoring' => \App\Models\CoachingMentoring::class,
-            'produk-digital' => \App\Models\Produkdigital::class,
+            'produk-digital' => \App\Models\DigitalProduct::class,
             'bundling' => \App\Models\Bundling::class,
         ];
 
@@ -343,6 +362,19 @@ class PesertaDashboardController extends Controller
         }
 
         $class = $typeMapping[$type];
+
+        // Check product existence
+        $product = $class::find($id);
+        if (!$product) {
+            // Check backward compatibility for old Produkdigital
+            if ($type === 'produk-digital') {
+                $class = \App\Models\Produkdigital::class;
+                $product = $class::find($id);
+            }
+            if (!$product) {
+                abort(404, 'Data produk tidak ditemukan');
+            }
+        }
 
         // Cek pendaftaran aktif
         if ($type === 'bundling') {
@@ -360,7 +392,7 @@ class PesertaDashboardController extends Controller
             }
 
             if (!$pendaftaran) {
-                abort(404, 'Pendaftaran bundling tidak ditemukan');
+                abort(403, 'Pendaftaran bundling tidak ditemukan');
             }
 
             $product = $pendaftaran->registrable ?? ($pendaftaran->bundling ?? null);
@@ -403,7 +435,8 @@ class PesertaDashboardController extends Controller
                     ]);
                     $pendaftaran->id = 0; // dummy id
                 } else {
-                    abort(404, 'Anda belum membeli produk ini atau akses Anda telah berakhir.');
+                    // Return 403 Forbidden for unauthorized access
+                    abort(403, 'Anda belum membeli produk ini atau akses Anda telah berakhir.');
                 }
             }
         }
@@ -415,7 +448,7 @@ class PesertaDashboardController extends Controller
         // Map data agar standard di frontend
         $mappedProduct = [
             'id' => $product->id,
-            'nama' => $product->nama ?? $product->name,
+            'nama' => $product->nama ?? $product->name ?? $product->title ?? '',
             'cover' => $type === 'ebook'
                 ? ($product->cover ? asset('storage/' . $product->cover) : null)
                 : ($type === 'tulisan'
@@ -425,11 +458,11 @@ class PesertaDashboardController extends Controller
                         : ($type === 'event'
                             ? ($product->cover ? asset('storage/' . $product->cover) : null)
                             : ($type === 'produk-digital'
-                                ? ($product->cover_url ? asset('storage/' . $product->cover_url) : null)
+                                ? ($product->cover_image ? asset('storage/' . $product->cover_image) : ($product->cover_url ? asset('storage/' . $product->cover_url) : null))
                                 : ($type === 'bundling'
                                     ? ($product->cover ? asset('storage/' . $product->cover) : null)
                                     : null))))),
-            'deskripsi' => $product->deskripsi,
+            'deskripsi' => $product->deskripsi ?? $product->description ?? '',
             'created_at' => $product->created_at->format('d M Y'),
         ];
 
@@ -473,8 +506,46 @@ class PesertaDashboardController extends Controller
             $mappedProduct['jumlah_sesi'] = $product->jumlah_sesi ?? 1;
             $mappedProduct['durasi_menit'] = $product->durasi_menit ?? 60;
         } elseif ($type === 'produk-digital') {
-            $mappedProduct['file_url'] = $product->file_url ? (str_starts_with($product->file_url, 'http') ? $product->file_url : asset('storage/' . $product->file_url)) : null;
-            $mappedProduct['instruksi'] = $product->instruksi ?? $product->catatan ?? null;
+            if ($class === \App\Models\DigitalProduct::class) {
+                $mappedProduct['content_type'] = $product->content_type;
+                $mappedProduct['content'] = $product->content;
+                
+                $fileUrls = $product->file_urls;
+                if (is_array($fileUrls)) {
+                    $mappedProduct['file_urls'] = array_map(function($url) {
+                        if (str_starts_with($url, 'http')) {
+                            return $url;
+                        }
+                        if (str_starts_with($url, '/storage') || str_starts_with($url, 'storage')) {
+                            return str_starts_with($url, '/') ? asset($url) : asset('storage/' . $url);
+                        }
+                        return asset('storage/' . $url);
+                    }, $fileUrls);
+                } else {
+                    $mappedProduct['file_urls'] = [];
+                }
+                
+                $mappedProduct['file_url'] = $mappedProduct['file_urls'][0] ?? null;
+            } else {
+                $mappedProduct['file_url'] = $product->file_url ? (str_starts_with($product->file_url, 'http') ? $product->file_url : asset('storage/' . $product->file_url)) : null;
+                $mappedProduct['instruksi'] = $product->instruksi ?? $product->catatan ?? null;
+                $mappedProduct['content_type'] = strtolower($product->kategori) === 'komik' ? 'comic' : (strtolower($product->kategori) === 'video' ? 'video' : (strtolower($product->kategori) === 'tulisan' ? 'text' : 'pdf'));
+                
+                $decodedUrls = json_decode($product->file_url, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decodedUrls)) {
+                    $mappedProduct['file_urls'] = array_map(function($url) {
+                        if (str_starts_with($url, 'http')) {
+                            return $url;
+                        }
+                        if (str_starts_with($url, '/storage') || str_starts_with($url, 'storage')) {
+                            return str_starts_with($url, '/') ? asset($url) : asset('storage/' . $url);
+                        }
+                        return asset('storage/' . $url);
+                    }, $decodedUrls);
+                } else {
+                    $mappedProduct['file_urls'] = $mappedProduct['file_url'] ? [$mappedProduct['file_url']] : [];
+                }
+            }
         } elseif ($type === 'bundling') {
             $mappedProduct['pesan_setelah_bayar'] = $product->pesan_setelah_bayar;
             $product->load('items.itemable');

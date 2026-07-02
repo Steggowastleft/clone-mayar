@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class ProdukDigital extends Model
+class Produkdigital extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -17,7 +17,6 @@ class ProdukDigital extends Model
         'user_id',
         'nama',
         'deskripsi',
-        'kategori',
         'slug',
         'tipe_pembayaran',
         'harga',
@@ -36,8 +35,7 @@ class ProdukDigital extends Model
         'bisa_affiliate',
         'status',
         'total_penjualan',
-        
-        // Specific Fields
+        // fields from add_specific_fields migration
         'author',
         'isbn',
         'format',
@@ -48,46 +46,27 @@ class ProdukDigital extends Model
         'tipe_tulisan',
         'mekanisme_bayar',
         'genre',
-        'transkrip',
-        'pembicara',
-        'durasi',
-        'artis',
-        'kategori_produk',
-        'tipe_pembaca',
+        // fields from add_podcast_and_komik_fields migration
+        'content_type',
+        'content',
+        'file_urls',
+        // reading_time if exists
+        'reading_time',
     ];
 
     protected $casts = [
+        'file_urls'        => 'array',
         'harga'            => 'integer',
         'harga_coret'      => 'integer',
-        'max_pembayaran'   => 'integer',
-        'total_penjualan'  => 'integer',
         'bisa_affiliate'   => 'boolean',
+        'bisa_didownload'  => 'boolean',
+        'jumlah_halaman'   => 'integer',
+        'total_penjualan'  => 'integer',
+        'max_pembayaran'   => 'integer',
         'waktu_mulai_jual' => 'datetime',
         'tanggal_kadaluarsa' => 'date',
+        'tanggal_publish'  => 'date',
     ];
-
-    // ─── Relationships ───────────────────────────────────────────────
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    // ─── Accessors ───────────────────────────────────────────────────
-
-    public function getFormattedHargaAttribute(): string
-    {
-        return 'Rp ' . number_format($this->harga, 0, ',', '.');
-    }
-
-    public function getFormattedHargaCoretAttribute(): ?string
-    {
-        return $this->harga_coret
-            ? 'Rp ' . number_format($this->harga_coret, 0, ',', '.')
-            : null;
-    }
-
-    // ─── Boot ────────────────────────────────────────────────────────
 
     protected static function boot()
     {
@@ -98,5 +77,12 @@ class ProdukDigital extends Model
                 $model->slug = Str::slug($model->nama) . '-' . Str::random(6);
             }
         });
+    }
+
+    // ─── Relationships ──────────────────────────────────────────────────
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

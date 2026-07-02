@@ -543,10 +543,12 @@ class ProdukDigitalController extends Controller
         ]);
     }
 
-    public function publicShow(ProdukDigital $produkDigital)
+    public function publicShow($id)
     {
-        // Only show published products
-        if ($produkDigital->status !== 'published') {
+        $produkDigital = ProdukDigital::findOrFail($id);
+
+        // Only show published products, unless the logged-in user is the owner/creator of the product
+        if ($produkDigital->status !== 'published' && $produkDigital->user_id !== Auth::id()) {
             abort(404);
         }
 

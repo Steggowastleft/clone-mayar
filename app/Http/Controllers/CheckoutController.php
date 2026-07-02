@@ -13,6 +13,7 @@ use App\Models\Event;
 use App\Models\KelasOnline;
 use App\Models\Ebook;
 use App\Models\Produkdigital;
+use App\Models\DigitalProduct;
 use App\Models\CoachingMentoring;
 use App\Models\Tulisan;
 use App\Models\Bundling;
@@ -64,7 +65,7 @@ class CheckoutController extends Controller
             'event'              => Event::class,
             'kelas-online'       => KelasOnline::class,
             'ebook'              => Ebook::class,
-            'produk-digital'     => Produkdigital::class,
+            'produk-digital'     => DigitalProduct::class,
             'coaching-mentoring' => CoachingMentoring::class,
             'tulisan'            => Tulisan::class,
             'bundling'           => Bundling::class,
